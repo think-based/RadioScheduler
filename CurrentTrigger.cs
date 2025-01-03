@@ -1,3 +1,5 @@
+using System;
+
 public class CurrentTrigger
 {
     public string Event { get; set; } // نام تریگر (مانند "afternoon")

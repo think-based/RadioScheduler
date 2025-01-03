@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 public class ScheduleItem
 {
     public int ItemId { get; set; } // شناسه منحصر به فرد
