@@ -1,1 +1,38 @@
-<!
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>وضعیت زمان‌بندی رادیو</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>وضعیت زمان‌بندی رادیو</h1>
+
+        <section class="current-time">
+            <h2>زمان فعلی</h2>
+            <ul>
+                <li><strong>میلادی:</strong> <span id="gregorian-time"></span></li>
+                <li><strong>شمسی:</strong> <span id="persian-time"></span></li>
+                <li><strong>قمری:</strong> <span id="hijri-time"></span></li>
+            </ul>
+        </section>
+
+        <section class="playlist-status">
+            <h2>وضعیت پخش</h2>
+            <ul id="playlist-items">
+                <!-- آیتم‌های پخش اینجا نمایش داده می‌شوند -->
+            </ul>
+        </section>
+
+        <section class="log-management">
+            <h2>مدیریت لاگ‌ها</h2>
+            <button onclick="clearLog()">پاک کردن لاگ‌ها</button>
+            <a href="/viewlog" target="_blank">مشاهده لاگ‌ها</a>
+        </section>
+    </div>
+
+    <script src="scripts.js"></script>
+</body>
+</html>
