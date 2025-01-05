@@ -21,12 +21,33 @@ public static class CalendarHelper
     };
 
     /// <summary>
+    /// تبدیل تاریخ به تقویم مورد نظر و برگرداندن به صورت رشته
+    /// </summary>
+    /// <param name="date">تاریخ ورودی</param>
+    /// <param name="calendarType">نوع تقویم (Gregorian, Persian, Hijri)</param>
+    /// <returns>تاریخ تبدیل‌شده به صورت رشته</returns>
+    public static string ConvertDateToString(DateTime date, string calendarType)
+    {
+        switch (calendarType.ToLower())
+        {
+            case "hijri":
+                HijriCalendar hijri = new HijriCalendar();
+                return $"{hijri.GetYear(date):0000}-{hijri.GetMonth(date):00}-{hijri.GetDayOfMonth(date):00} {date.ToString("HH:mm:ss")}";
+            case "persian":
+                PersianCalendar persian = new PersianCalendar();
+                return $"{persian.GetYear(date):0000}-{persian.GetMonth(date):00}-{persian.GetDayOfMonth(date):00} {date.ToString("HH:mm:ss")}";
+            default: // Gregorian
+                return date.ToString("yyyy-MM-dd HH:mm:ss");
+        }
+    }
+
+    /// <summary>
     /// تبدیل تاریخ به تقویم مورد نظر و برگرداندن به صورت DateTime
     /// </summary>
     /// <param name="date">تاریخ ورودی</param>
     /// <param name="calendarType">نوع تقویم (Gregorian, Persian, Hijri)</param>
     /// <returns>تاریخ تبدیل‌شده به صورت DateTime</returns>
-    public static DateTime ConvertDate(DateTime date, string calendarType)
+    public static DateTime ConvertDateToDateTime(DateTime date, string calendarType)
     {
         switch (calendarType.ToLower())
         {
