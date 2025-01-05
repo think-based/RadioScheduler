@@ -44,32 +44,17 @@ public class WebServer
         try
         {
             string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", path.TrimStart('/'));
+
+            // اگر مسیر ریشه (/) درخواست شد، به index.html هدایت شود
+            if (path == "/")
+            {
+                filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", "index.html");
+            }
+
             if (File.Exists(filePath))
             {
                 // خواندن فایل HTML
                 string htmlContent = File.ReadAllText(filePath);
-
-                // جایگزینی متغیرها در فایل HTML
-                if (path == "/index.html" || path == "/")
-                {
-                    htmlContent = htmlContent
-                        .Replace("{{GregorianDate}}", CalendarHelper.ConvertDateToString(DateTime.Now, "Gregorian"))
-                        .Replace("{{PersianDate}}", CalendarHelper.ConvertDateToString(DateTime.Now, "Persian"))
-                        .Replace("{{HijriDate}}", CalendarHelper.ConvertDateToString(DateTime.Now, "Hijri"));
-
-                    // اضافه کردن آیتم‌های پلی‌لیست
-                    var playlistItems = new StringBuilder();
-                    foreach (var item in _scheduler.GetScheduledItems())
-                    {
-                        playlistItems.Append($"<li>Item ID: {item.ItemId}, Type: {item.Type}, Trigger: {item.Trigger ?? "N/A"}</li>");
-                    }
-                    htmlContent = htmlContent.Replace("{{PlaylistItems}}", playlistItems.ToString());
-                }
-                else if (path == "/viewlog.html")
-                {
-                    string logContent = File.Exists(Logger.LogFilePath) ? File.ReadAllText(Logger.LogFilePath) : "Log file not found.";
-                    htmlContent = htmlContent.Replace("{{LogContent}}", logContent);
-                }
 
                 // ارسال پاسخ به کاربر
                 byte[] buffer = Encoding.UTF8.GetBytes(htmlContent);
