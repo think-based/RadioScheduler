@@ -57,7 +57,7 @@ public class AudioPlayer
         string currentFile = _currentPlaylist[_currentIndex];
         if (!File.Exists(currentFile))
         {
-            Logger.LogMessage($"File not found: {currentFile}");
+            Logger.LogMessage($"File not found: {currentFile}"); // ثبت لاگ برای فایل‌های ناموجود
             _currentIndex++;
             PlayNextFile();
             return;
@@ -76,10 +76,12 @@ public class AudioPlayer
             // به‌روزرسانی وضعیت پخش
             IsPlaying = true;
             CurrentFile = currentFile;
+
+            //Logger.LogMessage($"Now playing: {currentFile}"); // غیرفعال شده
         }
         catch (Exception ex)
         {
-            Logger.LogMessage($"Error playing file {currentFile}: {ex.Message}");
+            Logger.LogMessage($"Error playing file {currentFile}: {ex.Message}"); // ثبت لاگ برای خطاها
             _currentIndex++;
             PlayNextFile();
         }
