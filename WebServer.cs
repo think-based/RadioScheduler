@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -52,6 +51,10 @@ public class WebServer
             Logger.ClearLog();
             responseString = "Log file cleared.";
         }
+        else if (request.Url.PathAndQuery == "/viewlog")
+        {
+            responseString = ReadLogFile();
+        }
         else
         {
             responseString = "404 - Page not found.";
@@ -95,7 +98,28 @@ public class WebServer
         html.Append("<button type='submit'>Clear Log</button>");
         html.Append("</form>");
 
+        // لینک مشاهده لاگ‌ها
+        html.Append("<h2>View Logs</h2>");
+        html.Append("<a href='/viewlog'>View Log File</a>");
+
         html.Append("</body></html>");
         return html.ToString();
+    }
+
+    private string ReadLogFile()
+    {
+        try
+        {
+            if (File.Exists(Logger.LogFilePath))
+            {
+                string logContent = File.ReadAllText(Logger.LogFilePath);
+                return $"<html><head><title>Log File</title></head><body><pre>{logContent}</pre></body></html>";
+            }
+            return "Log file not found.";
+        }
+        catch (Exception ex)
+        {
+            return $"Error reading log file: {ex.Message}";
+        }
     }
 }
