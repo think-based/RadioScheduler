@@ -49,7 +49,7 @@ public class WebServer
         else if (request.Url.PathAndQuery == "/clearlog")
         {
             Logger.ClearLog();
-            responseString = "Log file cleared.";
+            responseString = GenerateStatusPage(); // بازگشت به صفحه اصلی پس از حذف لاگ
         }
         else if (request.Url.PathAndQuery == "/viewlog")
         {
@@ -57,8 +57,7 @@ public class WebServer
         }
         else
         {
-            responseString = "404 - Page not found.";
-            response.StatusCode = 404;
+            responseString = GenerateStatusPage(); // بازگشت به صفحه اصلی در صورت درخواست نامعتبر
         }
 
         byte[] buffer = Encoding.UTF8.GetBytes(responseString);
