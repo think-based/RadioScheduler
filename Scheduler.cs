@@ -97,7 +97,6 @@ public class Scheduler
                 // بررسی تغییرات فایل کانفیگ
                 if (!HasConfigChanged())
                 {
-                    // پیام "Config file has not changed. Skipping reload." حذف شده است
                     return;
                 }
 
@@ -166,7 +165,6 @@ public class Scheduler
                 // اگر زمان شروع در گذشته باشد، از این آیتم صرف‌نظر می‌کنیم
                 if (startTime < now)
                 {
-                    //Logger.LogMessage($"Skipping ItemID: {scheduleItem.ItemId} - Start time is in the past."); // غیرفعال شده
                     continue;
                 }
 
@@ -179,8 +177,6 @@ public class Scheduler
                 timer.Elapsed += (sender, e) => OnPlaylistStart(scheduleItem);
                 timer.Start();
                 _timers.Add(timer);
-
-                //Logger.LogMessage($"Timer Created - ItemID: {scheduleItem.ItemId}, Type: {scheduleItem.TriggerType}, StartTime: {startTime:yyyy-MM-dd HH:mm:ss}, EndTime: {nextOccurrence:yyyy-MM-dd HH:mm:ss}, Trigger: {scheduleItem.Trigger ?? "N/A"}"); // غیرفعال شده
             }
         }
     }
@@ -189,8 +185,10 @@ public class Scheduler
     {
         DateTime nextOccurrence = DateTime.MinValue;
 
-        // بررسی تقویم (ماه و روز هفته)
+        // تبدیل تاریخ به تقویم مورد نظر
         DateTime convertedDate = CalendarHelper.ConvertDate(now, scheduleItem.CalendarType);
+
+        // بررسی تقویم (ماه و روز هفته)
         if (!MatchesCronField(scheduleItem.DayOfMonth, convertedDate.Day.ToString())) return nextOccurrence;
         if (!MatchesCronField(scheduleItem.Month, convertedDate.Month.ToString())) return nextOccurrence;
         if (!MatchesCronField(scheduleItem.DayOfWeek, ((int)convertedDate.DayOfWeek).ToString())) return nextOccurrence;
