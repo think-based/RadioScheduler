@@ -1,47 +1,85 @@
+//Be Naame Khoda
+//FileName: Scheduler.cs
+
 using System;
 using System.Collections.Generic;
-using System.Timers;
 using System.IO;
+using System.Timers;
 using Newtonsoft.Json;
 
 public class Scheduler
 {
-    // اونت‌ها
-    public event Action BeforePlayback;
-    public event Action AfterPlayback;
-
     private AudioPlayer _audioPlayer;
-    private CurrentTrigger _currentTrigger; // تریگر فعلی
+    private CurrentTrigger _currentTrigger;
     private List<ScheduleItem> _scheduleItems;
-    private readonly object _configLock = new object(); // برای مدیریت همزمانی
-    private string _configFilePath = "audio.conf"; // مسیر فایل کانفیگ
-    private List<Timer> _timers; // لیست تایمرها
+    private readonly object _configLock = new object();
+    private string _configFilePath = "audio.conf";
+    private List<Timer> _timers;
+    private string _lastConfigHash;
+    private FileSystemWatcher _configWatcher;
 
     public Scheduler()
     {
         _audioPlayer = new AudioPlayer();
-        _audioPlayer.PlaylistFinished += OnPlaylistFinished; // اتصال رویداد اتمام پخش کل لیست
-        _currentTrigger = new CurrentTrigger(); // مقداردهی اولیه
+        _audioPlayer.PlaylistFinished += OnPlaylistFinished;
+        _currentTrigger = new CurrentTrigger();
         _scheduleItems = new List<ScheduleItem>();
         _timers = new List<Timer>();
+
+        // محاسبه هش اولیه فایل کانفیگ
+        _lastConfigHash = FileHashHelper.CalculateFileHash(_configFilePath);
+
+        // راه‌اندازی FileSystemWatcher
+        _configWatcher = new FileSystemWatcher
+        {
+            Path = Path.GetDirectoryName(_configFilePath),
+            Filter = Path.GetFileName(_configFilePath),
+            NotifyFilter = NotifyFilters.LastWrite
+        };
+
+        // رویداد تغییر فایل
+        _configWatcher.Changed += OnConfigFileChanged;
+        _configWatcher.EnableRaisingEvents = true;
 
         // بارگذاری اولیه کانفیگ
         ReloadScheduleConfig();
     }
 
-    // متد برای تنظیم تریگر
-    public void SetTrigger(string triggerEvent, DateTime? triggerTime = null)
+    private void OnConfigFileChanged(object sender, FileSystemEventArgs e)
     {
-        _currentTrigger.Event = triggerEvent;
-        _currentTrigger.Time = triggerTime;
+        // فایل کانفیگ تغییر کرده است
+        Logger.LogMessage("Config file changed. Reloading...");
+        ReloadScheduleConfig();
+    }
+
+    private bool HasConfigChanged()
+    {
+        // محاسبه هش فعلی فایل کانفیگ
+        string currentHash = FileHashHelper.CalculateFileHash(_configFilePath);
+
+        // مقایسه هش فعلی با هش قبلی
+        if (currentHash != _lastConfigHash)
+        {
+            _lastConfigHash = currentHash; // به‌روزرسانی هش
+            return true; // فایل تغییر کرده است
+        }
+
+        return false; // فایل تغییر نکرده است
     }
 
     public void ReloadScheduleConfig()
     {
-        lock (_configLock) // برای جلوگیری از دسترسی همزمان
+        lock (_configLock)
         {
             try
             {
+                // بررسی تغییرات فایل کانفیگ
+                if (!HasConfigChanged())
+                {
+                    Logger.LogMessage("Config file has not changed. Skipping reload.");
+                    return;
+                }
+
                 if (File.Exists(_configFilePath))
                 {
                     string json = File.ReadAllText(_configFilePath);
