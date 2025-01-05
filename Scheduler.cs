@@ -16,7 +16,7 @@ public class Scheduler
     private CurrentTrigger _currentTrigger;
     private List<ScheduleItem> _scheduleItems;
     private readonly object _configLock = new object();
-    private string _configFilePath = "audio.conf";
+    private string _configFilePath;
     private List<Timer> _timers;
     private string _lastConfigHash;
     private FileSystemWatcher _configWatcher;
@@ -29,15 +29,19 @@ public class Scheduler
         _scheduleItems = new List<ScheduleItem>();
         _timers = new List<Timer>();
 
+        // تنظیم مسیر کامل فایل کانفیگ
+        _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf");
+
         // اگر فایل کانفیگ وجود نداشت، آن را ایجاد کن
         EnsureConfigFileExists();
 
         _lastConfigHash = FileHashHelper.CalculateFileHash(_configFilePath);
 
+        // تنظیم FileSystemWatcher
         _configWatcher = new FileSystemWatcher
         {
-            Path = Path.GetDirectoryName(_configFilePath),
-            Filter = Path.GetFileName(_configFilePath),
+            Path = Path.GetDirectoryName(_configFilePath), // مسیر دایرکتوری فایل کانفیگ
+            Filter = Path.GetFileName(_configFilePath), // نام فایل کانفیگ
             NotifyFilter = NotifyFilters.LastWrite
         };
 
