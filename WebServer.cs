@@ -56,6 +56,28 @@ public class WebServer
                 // خواندن فایل HTML
                 string htmlContent = File.ReadAllText(filePath);
 
+                // جایگزینی متغیرها در فایل HTML
+                if (path == "/index.html" || path == "/")
+                {
+                    htmlContent = htmlContent
+                        .Replace("{{GregorianDate}}", CalendarHelper.ConvertDateToString(DateTime.Now, "Gregorian"))
+                        .Replace("{{PersianDate}}", CalendarHelper.ConvertDateToString(DateTime.Now, "Persian"))
+                        .Replace("{{HijriDate}}", CalendarHelper.ConvertDateToString(DateTime.Now, "Hijri"));
+
+                    // اضافه کردن آیتم‌های پلی‌لیست
+                    var playlistItems = new StringBuilder();
+                    foreach (var item in _scheduler.GetScheduledItems())
+                    {
+                        playlistItems.Append($"<li>Item ID: {item.ItemId}, Type: {item.Type}, Trigger: {item.Trigger ?? "N/A"}</li>");
+                    }
+                    htmlContent = htmlContent.Replace("{{PlaylistItems}}", playlistItems.ToString());
+                }
+                else if (path == "/viewlog.html")
+                {
+                    string logContent = File.Exists(Logger.LogFilePath) ? File.ReadAllText(Logger.LogFilePath) : "Log file not found.";
+                    htmlContent = htmlContent.Replace("{{LogContent}}", logContent);
+                }
+
                 // ارسال پاسخ به کاربر
                 byte[] buffer = Encoding.UTF8.GetBytes(htmlContent);
                 response.ContentType = "text/html; charset=UTF-8";
