@@ -37,6 +37,9 @@ public class Scheduler
 
         _lastConfigHash = FileHashHelper.CalculateFileHash(_configFilePath);
 
+        // ثبت پیام آغاز برنامه در لاگ
+        Logger.LogMessage("Radio Scheduler Service started.");
+
         // تنظیم FileSystemWatcher
         _configWatcher = new FileSystemWatcher
         {
@@ -94,7 +97,7 @@ public class Scheduler
                 // بررسی تغییرات فایل کانفیگ
                 if (!HasConfigChanged())
                 {
-                    Logger.LogMessage("Config file has not changed. Skipping reload.");
+                    // پیام "Config file has not changed. Skipping reload." حذف شده است
                     return;
                 }
 
@@ -163,7 +166,7 @@ public class Scheduler
                 // اگر زمان شروع در گذشته باشد، از این آیتم صرف‌نظر می‌کنیم
                 if (startTime < now)
                 {
-                    Logger.LogMessage($"Skipping ItemID: {scheduleItem.ItemId} - Start time is in the past.");
+                    //Logger.LogMessage($"Skipping ItemID: {scheduleItem.ItemId} - Start time is in the past."); // غیرفعال شده
                     continue;
                 }
 
@@ -177,8 +180,7 @@ public class Scheduler
                 timer.Start();
                 _timers.Add(timer);
 
-                // نمایش اطلاعات تایمر
-                Logger.LogMessage($"Timer Created - ItemID: {scheduleItem.ItemId}, Type: {scheduleItem.TriggerType}, StartTime: {startTime:yyyy-MM-dd HH:mm:ss}, EndTime: {nextOccurrence:yyyy-MM-dd HH:mm:ss}, Trigger: {scheduleItem.Trigger ?? "N/A"}");
+                //Logger.LogMessage($"Timer Created - ItemID: {scheduleItem.ItemId}, Type: {scheduleItem.TriggerType}, StartTime: {startTime:yyyy-MM-dd HH:mm:ss}, EndTime: {nextOccurrence:yyyy-MM-dd HH:mm:ss}, Trigger: {scheduleItem.Trigger ?? "N/A"}"); // غیرفعال شده
             }
         }
     }
