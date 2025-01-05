@@ -46,16 +46,43 @@ public class WebServer
             string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", path.TrimStart('/'));
             if (File.Exists(filePath))
             {
-                byte[] buffer = File.ReadAllBytes(filePath);
-                response.ContentType = GetContentType(filePath);
+                // خواندن فایل HTML
+                string htmlContent = File.ReadAllText(filePath);
+
+                // جایگزینی متغیرها در فایل HTML
+                if (path == "/index.html" || path == "/")
+                {
+                    htmlContent = htmlContent
+                        .Replace("{{GregorianDate}}", CalendarHelper.ConvertDateToString(DateTime.Now, "Gregorian"))
+                        .Replace("{{PersianDate}}", CalendarHelper.ConvertDateToString(DateTime.Now, "Persian"))
+                        .Replace("{{HijriDate}}", CalendarHelper.ConvertDateToString(DateTime.Now, "Hijri"));
+
+                    // اضافه کردن آیتم‌های پلی‌لیست
+                    var playlistItems = new StringBuilder();
+                    foreach (var item in _scheduler.GetScheduledItems())
+                    {
+                        playlistItems.Append($"<li>Item ID: {item.ItemId}, Type: {item.Type}, Trigger: {item.Trigger ?? "N/A"}</li>");
+                    }
+                    htmlContent = htmlContent.Replace("{{PlaylistItems}}", playlistItems.ToString());
+                }
+                else if (path == "/viewlog.html")
+                {
+                    string logContent = File.Exists(Logger.LogFilePath) ? File.ReadAllText(Logger.LogFilePath) : "Log file not found.";
+                    htmlContent = htmlContent.Replace("{{LogContent}}", logContent);
+                }
+
+                // ارسال پاسخ به کاربر
+                byte[] buffer = Encoding.UTF8.GetBytes(htmlContent);
+                response.ContentType = "text/html; charset=UTF-8";
                 response.ContentLength64 = buffer.Length;
                 response.OutputStream.Write(buffer, 0, buffer.Length);
             }
             else
             {
                 response.StatusCode = (int)HttpStatusCode.NotFound;
-                string notFoundMessage = "صفحه مورد نظر یافت نشد.";
+                string notFoundMessage = "Page not found.";
                 byte[] buffer = Encoding.UTF8.GetBytes(notFoundMessage);
+                response.ContentType = "text/plain; charset=UTF-8";
                 response.ContentLength64 = buffer.Length;
                 response.OutputStream.Write(buffer, 0, buffer.Length);
             }
@@ -68,17 +95,6 @@ public class WebServer
         finally
         {
             response.OutputStream.Close();
-        }
-    }
-
-    private string GetContentType(string filePath)
-    {
-        switch (Path.GetExtension(filePath).ToLower())
-        {
-            case ".html": return "text/html";
-            case ".css": return "text/css";
-            case ".js": return "application/javascript";
-            default: return "application/octet-stream";
         }
     }
 }
