@@ -1,4 +1,5 @@
-using System.Collections.Generic;
+//Be Naame Khoda
+//FileName: ScheduleItem.cs
 
 public class ScheduleItem
 {
