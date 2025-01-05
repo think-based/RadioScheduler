@@ -13,40 +13,36 @@ public class AudioPlayer
     private List<string> _currentPlaylist;
     private int _currentIndex;
 
-    // رویداد اتمام پخش کل لیست
+    // ویژگی‌های جدید
+    public bool IsPlaying { get; private set; }
+    public string CurrentFile { get; private set; }
+
     public event Action PlaylistFinished;
 
     public AudioPlayer()
     {
         _audioPlayerWaveOut = new WaveOutEvent();
         _audioPlayerWaveOut.PlaybackStopped += OnPlaybackStopped;
+        IsPlaying = false;
+        CurrentFile = null;
     }
 
     public void Play(List<string> audioFilePaths)
     {
-        // توقف پلی‌لیست قبلی (اگر در حال پخش باشد)
         Stop();
-
-        // شروع پلی‌لیست جدید
         _currentPlaylist = audioFilePaths;
         _currentIndex = 0;
-
-        // پخش اولین فایل
         PlayNextFile();
     }
 
     public void Stop()
     {
-        if (_audioPlayerWaveOut != null)
-        {
-            _audioPlayerWaveOut.Stop();
-            _audioPlayerWaveOut.Dispose();
-        }
-        if (_currentAudioFile != null)
-        {
-            _currentAudioFile.Dispose();
-        }
-        _currentPlaylist = null; // پلی‌لیست فعلی را پاک کن
+        _audioPlayerWaveOut?.Stop();
+        _audioPlayerWaveOut?.Dispose();
+        _currentAudioFile?.Dispose();
+        _currentPlaylist = null;
+        IsPlaying = false;
+        CurrentFile = null;
     }
 
     private void PlayNextFile()
@@ -54,45 +50,47 @@ public class AudioPlayer
         if (_currentIndex >= _currentPlaylist.Count)
         {
             Stop();
-            PlaylistFinished?.Invoke(); // اطلاع‌رسانی اتمام پلی‌لیست
+            PlaylistFinished?.Invoke();
             return;
         }
 
-        // بررسی وجود فایل
         string currentFile = _currentPlaylist[_currentIndex];
         if (!File.Exists(currentFile))
         {
             Logger.LogMessage($"File not found: {currentFile}");
-            _currentIndex++; // از این فایل صرف‌نظر کرده و به فایل بعدی برو
+            _currentIndex++;
             PlayNextFile();
             return;
         }
 
-        // توقف پخش قبلی (اگر در حال پخش باشد)
-        if (_audioPlayerWaveOut != null)
-        {
-            _audioPlayerWaveOut.Stop();
-            _audioPlayerWaveOut.Dispose();
-        }
+        _audioPlayerWaveOut?.Stop();
+        _audioPlayerWaveOut?.Dispose();
 
-        // بارگذاری فایل صوتی جدید
         try
         {
             _currentAudioFile = new AudioFileReader(currentFile);
             _audioPlayerWaveOut = new WaveOutEvent();
             _audioPlayerWaveOut.Init(_currentAudioFile);
             _audioPlayerWaveOut.Play();
+
+            // به‌روزرسانی وضعیت پخش
+            IsPlaying = true;
+            CurrentFile = currentFile;
         }
         catch (Exception ex)
         {
             Logger.LogMessage($"Error playing file {currentFile}: {ex.Message}");
-            _currentIndex++; // از این فایل صرف‌نظر کرده و به فایل بعدی برو
+            _currentIndex++;
             PlayNextFile();
         }
     }
 
     private void OnPlaybackStopped(object sender, StoppedEventArgs e)
     {
+        // به‌روزرسانی وضعیت پخش
+        IsPlaying = false;
+        CurrentFile = null;
+
         // پخش فایل بعدی در پلی‌لیست
         _currentIndex++;
         PlayNextFile();
