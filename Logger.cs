@@ -6,7 +6,6 @@ using System.IO;
 
 public static class Logger
 {
-    // تغییر سطح دسترسی به public
     public static readonly string LogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.log");
 
     static Logger()
@@ -45,11 +44,13 @@ public static class Logger
     {
         try
         {
+            // پاک کردن محتوای فایل لاگ
             File.WriteAllText(LogFilePath, string.Empty);
+            Logger.LogMessage("Log file cleared."); // ثبت پیام در لاگ پس از پاک کردن
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error clearing log file: {ex.Message}");
+            Logger.LogMessage($"Error clearing log file: {ex.Message}");
         }
     }
 }
