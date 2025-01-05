@@ -1,4 +1,5 @@
-using System;
+//Be Naame Khoda
+//FileName: CurrentTrigger.cs
 
 public class CurrentTrigger
 {
