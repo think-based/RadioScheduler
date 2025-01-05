@@ -8,6 +8,22 @@ public static class Logger
 {
     private static readonly string LogFilePath = "app.log";
 
+    static Logger()
+    {
+        // اگر فایل لاگ وجود نداشت، آن را ایجاد کن
+        if (!File.Exists(LogFilePath))
+        {
+            try
+            {
+                File.Create(LogFilePath).Close(); // ایجاد فایل و بستن آن
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating log file: {ex.Message}");
+            }
+        }
+    }
+
     public static void LogMessage(string message)
     {
         try
