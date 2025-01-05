@@ -15,6 +15,12 @@ namespace RadioSchedulerService
             {
                 new RadioSchedulerService()
             };
+
+            // راه‌اندازی وب سرور
+            var scheduler = new Scheduler();
+            var webServer = new WebServer(scheduler);
+            webServer.Start();
+
             ServiceBase.Run(ServicesToRun);
         }
     }
