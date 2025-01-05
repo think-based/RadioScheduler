@@ -9,6 +9,10 @@ using Newtonsoft.Json;
 
 public class Scheduler
 {
+    // اونت‌ها
+    public event Action BeforePlayback;
+    public event Action AfterPlayback; // تعریف رویداد AfterPlayback
+
     private AudioPlayer _audioPlayer;
     private CurrentTrigger _currentTrigger;
     private List<ScheduleItem> _scheduleItems;
@@ -21,7 +25,7 @@ public class Scheduler
     public Scheduler()
     {
         _audioPlayer = new AudioPlayer();
-        _audioPlayer.PlaylistFinished += OnPlaylistFinished;
+        _audioPlayer.PlaylistFinished += OnPlaylistFinished; // اتصال رویداد اتمام پخش کل لیست
         _currentTrigger = new CurrentTrigger();
         _scheduleItems = new List<ScheduleItem>();
         _timers = new List<Timer>();

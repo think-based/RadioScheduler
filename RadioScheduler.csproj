@@ -80,6 +80,7 @@
     <Compile Include="AudioPlayer.cs" />
     <Compile Include="CalendarHelper.cs" />
     <Compile Include="CurrentTrigger.cs" />
+    <Compile Include="FileHashHelper.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

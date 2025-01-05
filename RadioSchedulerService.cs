@@ -14,7 +14,7 @@ namespace RadioSchedulerService
 
         public RadioSchedulerService()
         {
-            InitializeComponent();
+            //InitializeComponent();
         }
 
         protected override void OnStart(string[] args)

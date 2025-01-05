@@ -1,6 +1,8 @@
 //Be Naame Khoda
 //FileName: FileHashHelper.cs
 
+using System;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
