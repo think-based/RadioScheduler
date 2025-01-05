@@ -50,6 +50,11 @@ public class WebServer
             {
                 filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", "index.html");
             }
+            // اگر مسیر /viewlog درخواست شد، به viewlog.html هدایت شود
+            else if (path == "/viewlog" || path == "/viewlog.html")
+            {
+                filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", "viewlog.html");
+            }
 
             if (File.Exists(filePath))
             {
@@ -72,7 +77,7 @@ public class WebServer
                     }
                     htmlContent = htmlContent.Replace("{{PlaylistItems}}", playlistItems.ToString());
                 }
-                else if (path == "/viewlog.html")
+                else if (path == "/viewlog" || path == "/viewlog.html")
                 {
                     string logContent = File.Exists(Logger.LogFilePath) ? File.ReadAllText(Logger.LogFilePath) : "Log file not found.";
                     htmlContent = htmlContent.Replace("{{LogContent}}", logContent);
