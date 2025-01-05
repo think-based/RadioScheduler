@@ -47,7 +47,7 @@ public static class CalendarHelper
     /// <param name="date">تاریخ ورودی</param>
     /// <param name="calendarType">نوع تقویم (Gregorian, Persian, Hijri)</param>
     /// <returns>تاریخ تبدیل‌شده به صورت DateTime</returns>
-    public static DateTime ConvertDateToDateTime(DateTime date, string calendarType)
+    public static DateTime ConvertDate(DateTime date, string calendarType)
     {
         switch (calendarType.ToLower())
         {
