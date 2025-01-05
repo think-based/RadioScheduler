@@ -6,6 +6,20 @@ using System.Globalization;
 
 public static class CalendarHelper
 {
+    // آرایه نام ماه‌های شمسی
+    private static readonly string[] PersianMonthNames = new[]
+    {
+        "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+        "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
+    };
+
+    // آرایه نام ماه‌های قمری
+    private static readonly string[] HijriMonthNames = new[]
+    {
+        "محرم", "صفر", "ربیع‌الاول", "ربیع‌الثانی", "جمادی‌الاول", "جمادی‌الثانی",
+        "رجب", "شعبان", "رمضان", "شوال", "ذی‌القعده", "ذی‌الحجه"
+    };
+
     /// <summary>
     /// تبدیل تاریخ به تقویم مورد نظر و برگرداندن به صورت رشته
     /// </summary>
@@ -89,12 +103,17 @@ public static class CalendarHelper
     /// <returns>نام ماه</returns>
     public static string GetMonthName(int month, string calendarType)
     {
+        if (month < 1 || month > 12)
+        {
+            throw new ArgumentOutOfRangeException(nameof(month), "ماه باید بین ۱ تا ۱۲ باشد.");
+        }
+
         switch (calendarType.ToLower())
         {
             case "hijri":
-                return new HijriCalendar().GetMonthName(month);
+                return HijriMonthNames[month - 1]; // آرایه از ۰ شروع می‌شود
             case "persian":
-                return new PersianCalendar().GetMonthName(month);
+                return PersianMonthNames[month - 1]; // آرایه از ۰ شروع می‌شود
             default: // Gregorian
                 return new DateTime(2023, month, 1).ToString("MMMM", CultureInfo.InvariantCulture);
         }
