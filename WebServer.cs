@@ -43,6 +43,13 @@ public class WebServer
 
         try
         {
+            // مدیریت درخواست‌های خاص
+            if (path == "/clearlog")
+            {
+                ClearLog(response);
+                return;
+            }
+
             string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", path.TrimStart('/'));
 
             // اگر مسیر ریشه (/) درخواست شد، به index.html هدایت شود
@@ -107,6 +114,28 @@ public class WebServer
         finally
         {
             response.OutputStream.Close();
+        }
+    }
+
+    private void ClearLog(HttpListenerResponse response)
+    {
+        try
+        {
+            // پاک کردن فایل لاگ
+            if (File.Exists(Logger.LogFilePath))
+            {
+                File.WriteAllText(Logger.LogFilePath, string.Empty);
+                Logger.LogMessage("Log file cleared.");
+            }
+
+            // هدایت به صفحه اصلی
+            response.StatusCode = (int)HttpStatusCode.Found;
+            response.RedirectLocation = "/";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error clearing log file: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }
     }
 }
