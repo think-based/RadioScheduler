@@ -89,9 +89,9 @@ public class WebServer
         // نمایش تاریخ و ساعت در تقویم‌های مختلف
         html.Append("<h2>Current Date and Time</h2>");
         html.Append("<ul>");
-        html.Append($"<li>Gregorian: {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}</li>");
-        html.Append($"<li>Persian: {CalendarHelper.ConvertDate(DateTime.Now, "Persian").ToString("yyyy-MM-dd HH:mm:ss")}</li>");
-        html.Append($"<li>Hijri: {CalendarHelper.ConvertDate(DateTime.Now, "Hijri").ToString("yyyy-MM-dd HH:mm:ss")}</li>");
+        html.Append($"<li>Gregorian: {CalendarHelper.ConvertDate(DateTime.Now, "Gregorian")}</li>");
+        html.Append($"<li>Persian: {CalendarHelper.ConvertDate(DateTime.Now, "Persian")}</li>");
+        html.Append($"<li>Hijri: {CalendarHelper.ConvertDate(DateTime.Now, "Hijri")}</li>");
         html.Append("</ul>");
 
         // نمایش وضعیت پلی‌لیست‌ها
