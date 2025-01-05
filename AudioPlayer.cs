@@ -1,3 +1,6 @@
+//Be Naame Khoda
+//FileName: AudioPlayer.cs
+
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
