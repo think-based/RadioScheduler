@@ -42,22 +42,25 @@ public class WebServer
 
         string responseString = "";
 
-        if (request.Url.PathAndQuery == "/")
+        // بررسی آدرس درخواست بدون در نظر گرفتن پارامترها
+        string path = request.Url.AbsolutePath;
+
+        if (path == "/")
         {
             responseString = GenerateStatusPage();
         }
-        else if (request.Url.PathAndQuery == "/clearlog")
+        else if (path == "/clearlog")
         {
-            Logger.ClearLog();
-            responseString = GenerateStatusPage(); // بازگشت به صفحه اصلی پس از حذف لاگ
+            Logger.ClearLog(); // فراخوانی متد پاک کردن لاگ
+            responseString = GenerateStatusPage(); // بازگشت به صفحه اصلی
         }
-        else if (request.Url.PathAndQuery == "/viewlog")
+        else if (path == "/viewlog")
         {
             responseString = ReadLogFile();
         }
         else
         {
-            responseString = GenerateStatusPage(); // بازگشت به صفحه اصلی در صورت درخواست نامعتبر
+            responseString = GenerateStatusPage(); // بازگشت به صفحه اصلی برای درخواست‌های نامعتبر
         }
 
         byte[] buffer = Encoding.UTF8.GetBytes(responseString);
@@ -71,7 +74,16 @@ public class WebServer
     private string GenerateStatusPage()
     {
         var html = new StringBuilder();
-        html.Append("<html><head><title>Radio Scheduler Status</title></head><body>");
+        html.Append("<html><head><title>Radio Scheduler Status</title>");
+        
+        // اضافه کردن JavaScript برای ارسال درخواست GET بدون ?
+        html.Append("<script>");
+        html.Append("function clearLog() {");
+        html.Append("  fetch('/clearlog', { method: 'GET' })");
+        html.Append("    .then(response => window.location.reload());"); // رفرش صفحه پس از پاک کردن لاگ
+        html.Append("}");
+        html.Append("</script>");
+        html.Append("</head><body>");
         html.Append("<h1>Radio Scheduler Status</h1>");
 
         // نمایش تاریخ و ساعت در تقویم‌های مختلف
@@ -91,11 +103,9 @@ public class WebServer
         }
         html.Append("</ul>");
 
-        // دکمه پاک کردن لاگ
+        // دکمه پاک کردن لاگ با JavaScript
         html.Append("<h2>Log Management</h2>");
-        html.Append("<form action='/clearlog' method='get'>");
-        html.Append("<button type='submit'>Clear Log</button>");
-        html.Append("</form>");
+        html.Append("<button onclick='clearLog()'>Clear Log</button>");
 
         // لینک مشاهده لاگ‌ها
         html.Append("<h2>View Logs</h2>");
