@@ -23,4 +23,16 @@ public static class Logger
             Console.WriteLine($"Error writing to log file: {ex.Message}");
         }
     }
+
+    public static void ClearLog()
+    {
+        try
+        {
+            File.WriteAllText(LogFilePath, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error clearing log file: {ex.Message}");
+        }
+    }
 }
