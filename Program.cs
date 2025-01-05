@@ -2,20 +2,19 @@
 //FileName: Program.cs
 
 using System;
-using System.ServiceProcess;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace RadioSchedulerService
+class Program
 {
-    static class Program
+    static async Task Main(string[] args)
     {
-        static void Main()
+        List<string> playlist = new List<string>
         {
-            ServiceBase[] ServicesToRun;
-            ServicesToRun = new ServiceBase[]
-            {
-                new RadioSchedulerService()
-            };
-            ServiceBase.Run(ServicesToRun);
-        }
-    }
-}
+            "audio1.mp3",
+            "audio2.mp3",
+            "audio3.mp3"
+        };
+
+        WebServer webServer = new WebServer(playlist);
+        await webServer.StartAsync
