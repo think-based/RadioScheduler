@@ -6,18 +6,18 @@ using System.Globalization;
 
 public static class CalendarHelper
 {
-    public static DateTime ConvertDate(DateTime date, string calendarType)
+    public static string ConvertDate(DateTime date, string calendarType)
     {
         switch (calendarType)
         {
             case "Hijri":
                 HijriCalendar hijri = new HijriCalendar();
-                return new DateTime(hijri.GetYear(date), hijri.GetMonth(date), hijri.GetDayOfMonth(date));
+                return $"{hijri.GetYear(date):0000}-{hijri.GetMonth(date):00}-{hijri.GetDayOfMonth(date):00} {date.ToString("HH:mm:ss")}";
             case "Persian":
                 PersianCalendar persian = new PersianCalendar();
-                return new DateTime(persian.GetYear(date), persian.GetMonth(date), persian.GetDayOfMonth(date));
+                return $"{persian.GetYear(date):0000}-{persian.GetMonth(date):00}-{persian.GetDayOfMonth(date):00} {date.ToString("HH:mm:ss")}";
             default: // Gregorian
-                return date;
+                return date.ToString("yyyy-MM-dd HH:mm:ss");
         }
     }
 }
