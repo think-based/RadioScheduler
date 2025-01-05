@@ -57,4 +57,67 @@ public class AudioPlayer
         string currentFile = _currentPlaylist[_currentIndex];
         if (!File.Exists(currentFile))
         {
-            Logger.LogMessage($"File not found: {currentFile}"); // ثبت لاگ برای فایل
+            Logger.LogMessage($"File not found: {currentFile}"); // ثبت لاگ برای فایل‌های ناموجود
+            _currentIndex++;
+            PlayNextFile();
+            return;
+        }
+
+        _audioPlayerWaveOut?.Stop();
+        _audioPlayerWaveOut?.Dispose();
+
+        try
+        {
+            _currentAudioFile = new AudioFileReader(currentFile);
+            _audioPlayerWaveOut = new WaveOutEvent();
+            _audioPlayerWaveOut.Init(_currentAudioFile);
+            _audioPlayerWaveOut.Play();
+
+            // به‌روزرسانی وضعیت پخش
+            IsPlaying = true;
+            CurrentFile = currentFile;
+
+            //Logger.LogMessage($"Now playing: {currentFile}"); // غیرفعال شده
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error playing file {currentFile}: {ex.Message}"); // ثبت لاگ برای خطاها
+            _currentIndex++;
+            PlayNextFile();
+        }
+    }
+
+    private void OnPlaybackStopped(object sender, StoppedEventArgs e)
+    {
+        // به‌روزرسانی وضعیت پخش
+        IsPlaying = false;
+        CurrentFile = null;
+
+        // پخش فایل بعدی در پلی‌لیست
+        _currentIndex++;
+        PlayNextFile();
+    }
+
+    public TimeSpan CalculateTotalDuration(List<string> audioFilePaths)
+    {
+        TimeSpan totalDuration = TimeSpan.Zero;
+        foreach (var file in audioFilePaths)
+        {
+            if (File.Exists(file))
+            {
+                try
+                {
+                    using (var reader = new AudioFileReader(file))
+                    {
+                        totalDuration += reader.TotalTime;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogMessage($"Error calculating duration for file {file}: {ex.Message}");
+                }
+            }
+        }
+        return totalDuration;
+    }
+}
