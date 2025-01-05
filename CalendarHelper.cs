@@ -63,6 +63,17 @@ public static class CalendarHelper
     }
 
     /// <summary>
+    /// تبدیل تاریخ به تقویم مورد نظر (متد اصلی)
+    /// </summary>
+    /// <param name="date">تاریخ ورودی</param>
+    /// <param name="calendarType">نوع تقویم (Gregorian, Persian, Hijri)</param>
+    /// <returns>تاریخ تبدیل‌شده به صورت رشته</returns>
+    public static string ConvertDate(DateTime date, string calendarType)
+    {
+        return ConvertDateToString(date, calendarType);
+    }
+
+    /// <summary>
     /// بررسی معتبر بودن تاریخ در تقویم مورد نظر
     /// </summary>
     /// <param name="year">سال</param>
