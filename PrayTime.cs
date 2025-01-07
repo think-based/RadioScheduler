@@ -17,7 +17,7 @@ public class PrayTime
         Tehran
     }
 
-    public enum AsrMethod
+    public enum AsrMethods
     {
         Shafii,
         Hanafi
@@ -39,246 +39,262 @@ public class PrayTime
         Floating
     }
 
-    private static readonly string[] TimeNames = { "Fajr", "Sunrise", "Dhuhr", "Asr", "Sunset", "Maghrib", "Isha" };
-    private const string InvalidTime = "----";
+    public static string[] timeNames = { "Fajr", "Sunrise", "Dhuhr", "Asr", "Sunset", "Maghrib", "Isha" };
+    private static string InvalidTime = "----";
 
-    private CalculationMethod _calcMethod = CalculationMethod.Tehran;
-    private AsrMethod _asrMethod = AsrMethod.Shafii;
-    private int _dhuhrMinutes;
-    private AdjustingMethod _adjustHighLats = AdjustingMethod.MidNight;
-    private TimeFormat _timeFormat = TimeFormat.Time24;
-    private double _adjustTime = 0.5;
-    private double _lat;
-    private double _lng;
-    private double _timeZone;
-    private double _jDate;
+    private CalculationMethod calcMethod = CalculationMethod.Tehran;
+    private AsrMethods asrJuristic = AsrMethods.Shafii;
+    private int dhuhrMinutes = 0;
+    private AdjustingMethod adjustHighLats = AdjustingMethod.MidNight;
+    private TimeFormat timeFormat = TimeFormat.Time24;
+    private double adjustTime = 0.5;
+    private double lat;
+    private double lng;
+    private double timeZone;
+    private double JDate;
+    private int[] times;
 
-    private readonly double[][] _methodParams;
+    private int numIterations = 1;
+
+    private double[][] methodParams;
 
     public PrayTime()
     {
-        _methodParams = new[]
+        times = new int[7];
+        methodParams = new double[8][];
+        methodParams[(int)CalculationMethod.Jafari] = new double[] { 16, 0, 4, 0, 14 };
+        methodParams[(int)CalculationMethod.Karachi] = new double[] { 18, 1, 0, 0, 18 };
+        methodParams[(int)CalculationMethod.ISNA] = new double[] { 15, 1, 0, 0, 15 };
+        methodParams[(int)CalculationMethod.MWL] = new double[] { 18, 1, 0, 0, 17 };
+        methodParams[(int)CalculationMethod.Makkah] = new double[] { 18.5, 1, 0, 1, 90 };
+        methodParams[(int)CalculationMethod.Egypt] = new double[] { 19.5, 1, 0, 0, 17.5 };
+        methodParams[(int)CalculationMethod.Tehran] = new double[] { 17.7, 0, 4.5, 0, 14 };
+        methodParams[(int)CalculationMethod.Custom] = new double[] { 18, 1, 0, 0, 17 };
+    }
+
+    public string[] getPrayerTimes(int year, int month, int day, double latitude, double longitude, int timeZone)
+    {
+        return this.getDatePrayerTimes(year, month, day, latitude, longitude, timeZone);
+    }
+
+    public void setCalcMethod(CalculationMethod method)
+    {
+        this.calcMethod = method;
+    }
+
+    public void setAsrMethod(AsrMethods method)
+    {
+        this.asrJuristic = method;
+    }
+
+    public void setFajrAngle(double angle)
+    {
+        this.setCustomParams(new int[] { (int)angle, -1, -1, -1, -1 });
+    }
+
+    public void setMaghribAngle(double angle)
+    {
+        this.setCustomParams(new int[] { -1, 0, (int)angle, -1, -1 });
+    }
+
+    public void setIshaAngle(double angle)
+    {
+        this.setCustomParams(new int[] { -1, -1, -1, 0, (int)angle });
+    }
+
+    public void setDhuhrMinutes(int minutes)
+    {
+        this.dhuhrMinutes = minutes;
+    }
+
+    public void setMaghribMinutes(int minutes)
+    {
+        this.setCustomParams(new int[] { -1, 1, minutes, -1, -1 });
+    }
+
+    public void setIshaMinutes(int minutes)
+    {
+        this.setCustomParams(new int[] { -1, -1, -1, 1, minutes });
+    }
+
+    public void setCustomParams(int[] param)
+    {
+        for (int i = 0; i < 5; i++)
         {
-            new[] { 16, 0, 4, 0, 14 }, // Jafari
-            new[] { 18, 1, 0, 0, 18 }, // Karachi
-            new[] { 15, 1, 0, 0, 15 }, // ISNA
-            new[] { 18, 1, 0, 0, 17 }, // MWL
-            new[] { 18.5, 1, 0, 1, 90 }, // Makkah
-            new[] { 19.5, 1, 0, 0, 17.5 }, // Egypt
-            new[] { 17.7, 0, 4.5, 0, 14 }, // Tehran
-            new[] { 18, 1, 0, 0, 17 } // Custom
-        };
-    }
-
-    public string[] GetPrayerTimes(int year, int month, int day, double latitude, double longitude, double timeZone)
-    {
-        SetLocation(latitude, longitude, timeZone);
-        SetJulianDate(year, month, day);
-        return ComputeDayTimes();
-    }
-
-    public TimeSpan[] GetPrayerTimeSpans(int year, int month, int day, double latitude, double longitude, double timeZone)
-    {
-        SetLocation(latitude, longitude, timeZone);
-        SetJulianDate(year, month, day);
-        return ComputeDayTimeSpans();
-    }
-
-    private void SetLocation(double latitude, double longitude, double timeZone)
-    {
-        _lat = latitude;
-        _lng = longitude;
-        _timeZone = timeZone;
-    }
-
-    private void SetJulianDate(int year, int month, int day)
-    {
-        _jDate = JulianDate(year, month, day) - _lng / (15 * 24);
-    }
-
-    private string[] ComputeDayTimes()
-    {
-        double[] times = { 5, 6, 12, 13, 18, 18, 18 };
-        times = ComputeTimes(times);
-        times = AdjustTimes(times);
-        return FormatTimes(times);
-    }
-
-    private TimeSpan[] ComputeDayTimeSpans()
-    {
-        double[] times = { 5, 6, 12, 13, 18, 18, 18 };
-        times = ComputeTimes(times);
-        times = AdjustTimes(times);
-        return FormatTimeSpans(times);
-    }
-
-    private double[] ComputeTimes(double[] times)
-    {
-        double[] t = DayPortion(times);
-        double fajr = ComputeTime(180 - _methodParams[(int)_calcMethod][0], t[0]);
-        double sunrise = ComputeTime(180 - 0.833, t[1]);
-        double dhuhr = ComputeMidDay(t[2]);
-        double asr = ComputeAsr(1 + (int)_asrMethod, t[3]);
-        double sunset = ComputeTime(0.833, t[4]);
-        double maghrib = ComputeTime(_methodParams[(int)_calcMethod][2], t[5]);
-        double isha = ComputeTime(_methodParams[(int)_calcMethod][4], t[6]);
-        return new[] { fajr, sunrise, dhuhr, asr, sunset, maghrib, isha };
-    }
-
-    private double[] AdjustTimes(double[] times)
-    {
-        for (int i = 0; i < 7; i++)
-        {
-            times[i] += _timeZone - _lng / 15;
+            if (param[i] == -1)
+                this.methodParams[(int)CalculationMethod.Custom][i] = methodParams[(int)calcMethod][i];
+            else
+                this.methodParams[(int)CalculationMethod.Custom][i] = param[i];
         }
-        times[2] += _dhuhrMinutes / 60;
-
-        if (_methodParams[(int)_calcMethod][1] == 1)
-            times[5] = times[4] + _methodParams[(int)_calcMethod][2] / 60.0;
-
-        if (_methodParams[(int)_calcMethod][3] == 1)
-            times[6] = times[5] + _methodParams[(int)_calcMethod][4] / 60.0;
-
-        if (_adjustHighLats != AdjustingMethod.None)
-        {
-            times = AdjustHighLatTimes(times);
-        }
-
-        return times;
+        this.calcMethod = CalculationMethod.Custom;
     }
 
-    private string[] FormatTimes(double[] times)
+    public void setHighLatsMethod(AdjustingMethod method)
     {
-        string[] formatted = new string[times.Length];
-        for (int i = 0; i < 7; i++)
-        {
-            formatted[i] = FormatTime(times[i]);
-        }
-        return formatted;
+        this.adjustHighLats = method;
     }
 
-    private TimeSpan[] FormatTimeSpans(double[] times)
+    public void setTimeFormat(TimeFormat timeFormat)
     {
-        TimeSpan[] formatted = new TimeSpan[times.Length];
-        for (int i = 0; i < 7; i++)
-        {
-            formatted[i] = FloatToTimeSpan(times[i]);
-        }
-        return formatted;
+        this.timeFormat = timeFormat;
     }
 
-    private string FormatTime(double time)
-    {
-        if (_timeFormat == TimeFormat.Time12)
-            return FloatToTime12(time, false);
-        if (_timeFormat == TimeFormat.Time12NS)
-            return FloatToTime12(time, true);
-        return FloatToTime24(time);
-    }
-
-    private string FloatToTime24(double time)
+    public string floatToTime24(double time)
     {
         if (time < 0)
             return InvalidTime;
-        time = FixHour(time + _adjustTime / 60);
-        int hours = (int)Math.Floor(time);
-        int minutes = (int)Math.Floor((time - hours) * 60);
-        int seconds = (int)Math.Floor((time - (hours + minutes / 60.0)) * 3600);
-        return $"{hours:00}:{minutes:00}:{seconds:00}";
+        time = this.FixHour(time + adjustTime / 60);
+        double hours = Math.Floor(time);
+        double minutes = Math.Floor((time - hours) * 60);
+        double secounds = Math.Floor((time - (hours + (minutes / 60))) * 3600);
+        return this.twoDigitsFormat((int)hours) + ":" + this.twoDigitsFormat((int)minutes) + ":" + this.twoDigitsFormat((int)secounds);
     }
 
-    private TimeSpan FloatToTimeSpan(double time)
+    public TimeSpan floatToTimeSpan(double time)
     {
         if (time < 0)
             return TimeSpan.Zero;
-        time = FixHour(time + _adjustTime / 60);
-        int hours = (int)Math.Floor(time);
-        int minutes = (int)Math.Floor((time - hours) * 60);
-        int seconds = (int)Math.Floor((time - (hours + minutes / 60.0)) * 3600);
-        return new TimeSpan(hours, minutes, seconds);
+        time = this.FixHour(time + adjustTime / 60);
+        double hours = Math.Floor(time);
+        double minutes = Math.Floor((time - hours) * 60);
+        double secounds = Math.Floor((time - (hours + (minutes / 60))) * 3600);
+        return new TimeSpan((int)hours, (int)minutes, (int)secounds);
     }
 
-    private string FloatToTime12(double time, bool noSuffix)
+    public string floatToTime12(double time, bool noSuffix)
     {
         if (time < 0)
             return InvalidTime;
-        time = FixHour(time + _adjustTime / 60);
-        int hours = (int)Math.Floor(time);
-        int minutes = (int)Math.Floor((time - hours) * 60);
+        time = this.FixHour(time + adjustTime / 60);
+        double hours = Math.Floor(time);
+        double minutes = Math.Floor((time - hours) * 60);
         string suffix = hours >= 12 ? " pm" : " am";
         hours = (hours + 12 - 1) % 12 + 1;
-        return $"{hours}:{minutes:00}{(noSuffix ? "" : suffix)}";
+        return ((int)hours) + ":" + this.twoDigitsFormat((int)minutes) + (noSuffix ? "" : suffix);
     }
 
-    private double JulianDate(int year, int month, int day)
+    public string floatToTime12NS(double time)
     {
-        if (month <= 2)
-        {
-            year -= 1;
-            month += 12;
-        }
-        double A = Math.Floor(year / 100.0);
-        double B = 2 - A + Math.Floor(A / 4);
-        return Math.Floor(365.25 * (year + 4716)) + Math.Floor(30.6001 * (month + 1)) + day + B - 1524.5;
+        return this.floatToTime12(time, true);
     }
 
-    private double ComputeMidDay(double t)
+    public string[] getDatePrayerTimes(int year, int month, int day, double latitude, double longitude,
+        double timeZone)
     {
-        double T = EquationOfTime(_jDate + t);
-        return FixHour(12 - T);
+        this.lat = latitude;
+        this.lng = longitude;
+        this.timeZone = timeZone;
+        this.JDate = this.JulianDate(year, month, day) - longitude / (15 * 24);
+        return this.computeDayTimes();
     }
 
-    private double ComputeTime(double angle, double t)
+    public TimeSpan[] getDatePrayerTimeSpans(int year, int month, int day, double latitude, double longitude,
+      double timeZone)
     {
-        double D = SunDeclination(_jDate + t);
-        double Z = ComputeMidDay(t);
-        double V = (1.0 / 15) * Darccos((-Dsin(angle) - Dsin(D) * Dsin(_lat)) / (Dcos(D) * Dcos(_lat)));
-        return Z + (angle > 90 ? -V : V);
+        this.lat = latitude;
+        this.lng = longitude;
+        this.timeZone = timeZone;
+        this.JDate = this.JulianDate(year, month, day) - longitude / (15 * 24);
+        return this.computeDayTimeSpans();
     }
 
-    private double ComputeAsr(int step, double t)
+    public double[] sunPosition(double jd)
     {
-        double D = SunDeclination(_jDate + t);
-        double G = -Darccot(step + Dtan(Math.Abs(_lat - D)));
-        return ComputeTime(G, t);
+        double D = jd - 2451545.0;
+        double g = this.FixAngle(357.529 + 0.98560028 * D);
+        double q = this.FixAngle(280.459 + 0.98564736 * D);
+        double L = this.FixAngle(q + 1.915 * this.dsin(g) + 0.020 * this.dsin(2 * g));
+        double R = 1.00014 - 0.01671 * this.dcos(g) - 0.00014 * this.dcos(2 * g);
+        double e = 23.439 - 0.00000036 * D;
+        double d = this.darcsin(this.dsin(e) * this.dsin(L));
+        double RA = this.darctan2(this.dcos(e) * this.dsin(L), this.dcos(L)) / 15;
+        RA = this.FixHour(RA);
+        double EqT = q / 15 - RA;
+        return new double[] { d, EqT };
     }
 
-    private double[] AdjustHighLatTimes(double[] times)
+    public double equationOfTime(double jd)
     {
-        double nightTime = GetTimeDifference(times[4], times[1]);
-        double fajrDiff = NightPortion(_methodParams[(int)_calcMethod][0]) * nightTime;
-        if (GetTimeDifference(times[0], times[1]) > fajrDiff)
-            times[0] = times[1] - fajrDiff;
+        return this.sunPosition(jd)[1];
+    }
 
-        double ishaAngle = _methodParams[(int)_calcMethod][3] == 0 ? _methodParams[(int)_calcMethod][4] : 18;
-        double ishaDiff = NightPortion(ishaAngle) * nightTime;
-        if (GetTimeDifference(times[4], times[6]) > ishaDiff)
-            times[6] = times[4] + ishaDiff;
+    public double sunDeclination(double jd)
+    {
+        return this.sunPosition(jd)[0];
+    }
 
-        double maghribAngle = _methodParams[(int)_calcMethod][1] == 0 ? _methodParams[(int)_calcMethod][2] : 4;
-        double maghribDiff = NightPortion(maghribAngle) * nightTime;
-        if (GetTimeDifference(times[4], times[5]) > maghribDiff)
-            times[5] = times[4] + maghribDiff;
+    public double computeMidDay(double t)
+    {
+        double T = this.equationOfTime(this.JDate + t);
+        double Z = this.FixHour(12 - T);
+        return Z;
+    }
+
+    public double computeTime(double G, double t)
+    {
+        double D = this.sunDeclination(this.JDate + t);
+        double Z = this.computeMidDay(t);
+        double V = ((double)1 / 15) * this.darccos((-this.dsin(G) - this.dsin(D) * this.dsin(this.lat)) /
+                                                    (this.dcos(D) * this.dcos(this.lat)));
+        return Z + (G > 90 ? -V : V);
+    }
+
+    public double computeAsr(int step, double t)
+    {
+        double D = this.sunDeclination(this.JDate + t);
+        double G = -this.darccot(step + this.dtan(Math.Abs(this.lat - D)));
+        return this.computeTime(G, t);
+    }
+
+    public double[] computeTimes(double[] times)
+    {
+        double[] t = this.dayPortion(times);
+        double Fajr = this.computeTime(180 - this.methodParams[(int)calcMethod][0], t[0]);
+        double Sunrise = this.computeTime(180 - 0.833, t[1]);
+        double Dhuhr = this.computeMidDay(t[2]);
+        double Asr = this.computeAsr(1 + (int)asrJuristic, t[3]);
+        double Sunset = this.computeTime(0.833, t[4]);
+        double Maghrib = this.computeTime(this.methodParams[(int)calcMethod][2], t[5]);
+        double Isha = this.computeTime(this.methodParams[(int)calcMethod][4], t[6]);
+        return new double[] { Fajr, Sunrise, Dhuhr, Asr, Sunset, Maghrib, Isha };
+    }
+
+    public double[] adjustHighLatTimes(double[] times)
+    {
+        double nightTime = this.GetTimeDifference(times[4], times[1]);
+
+        double FajrDiff = this.nightPortion(this.methodParams[(int)calcMethod][0]) * nightTime;
+        if (this.GetTimeDifference(times[0], times[1]) > FajrDiff)
+            times[0] = times[1] - FajrDiff;
+
+        double IshaAngle = (this.methodParams[(int)calcMethod][3] == 0)
+            ? this.methodParams[(int)calcMethod][4]
+            : 18;
+        double IshaDiff = this.nightPortion(IshaAngle) * nightTime;
+        if (this.GetTimeDifference(times[4], times[6]) > IshaDiff)
+            times[6] = times[4] + IshaDiff;
+
+        double MaghribAngle = (methodParams[(int)calcMethod][1] == 0) ? this.methodParams[(int)calcMethod][2] : 4;
+        double MaghribDiff = this.nightPortion(MaghribAngle) * nightTime;
+        if (this.GetTimeDifference(times[4], times[5]) > MaghribDiff)
+            times[5] = times[4] + MaghribDiff;
 
         return times;
     }
 
-    private double NightPortion(double angle)
+    public double nightPortion(double angle)
     {
-        switch (_adjustHighLats)
-        {
-            case AdjustingMethod.AngleBased:
-                return angle / 60.0;
-            case AdjustingMethod.MidNight:
-                return 0.5;
-            case AdjustingMethod.OneSeventh:
-                return 1.0 / 7.0;
-            default:
-                return 0;
-        }
+        double val = 0;
+        if (this.adjustHighLats == AdjustingMethod.AngleBased)
+            val = 1.0 / 60.0 * angle;
+        if (this.adjustHighLats == AdjustingMethod.MidNight)
+            val = 1.0 / 2.0;
+        if (this.adjustHighLats == AdjustingMethod.OneSeventh)
+            val = 1.0 / 7.0;
+        return val;
     }
 
-    private double[] DayPortion(double[] times)
+    public double[] dayPortion(double[] times)
     {
         for (int i = 0; i < times.Length; i++)
         {
@@ -287,31 +303,169 @@ public class PrayTime
         return times;
     }
 
-    private double GetTimeDifference(double time1, double time2)
+    public string[] computeDayTimes()
     {
-        return FixHour(time2 - time1);
+        double[] times = { 5, 6, 12, 13, 18, 18, 18 };
+        for (int i = 0; i < this.numIterations; i++)
+        {
+            times = this.computeTimes(times);
+        }
+        times = this.adjustTimes(times);
+        return this.adjustTimesFormat(times);
     }
 
-    private double FixHour(double hour)
+    public TimeSpan[] computeDayTimeSpans()
     {
-        hour = hour - 24 * Math.Floor(hour / 24);
-        return hour < 0 ? hour + 24 : hour;
+        double[] times = { 5, 6, 12, 13, 18, 18, 18 };
+        for (int i = 0; i < this.numIterations; i++)
+        {
+            times = this.computeTimes(times);
+        }
+        times = this.adjustTimes(times);
+        return this.adjustTimeSpansFormat(times);
     }
 
-    private double FixAngle(double angle)
+    public double[] adjustTimes(double[] times)
     {
-        angle = angle - 360 * Math.Floor(angle / 360);
-        return angle < 0 ? angle + 360 : angle;
+        for (int i = 0; i < 7; i++)
+        {
+            times[i] += this.timeZone - this.lng / 15;
+        }
+        times[2] += this.dhuhrMinutes / 60;
+        if (this.methodParams[(int)calcMethod][1] == 1)
+            times[5] = times[4] + this.methodParams[(int)calcMethod][2] / 60.0;
+        if (this.methodParams[(int)calcMethod][3] == 1)
+            times[6] = times[5] + this.methodParams[(int)calcMethod][4] / 60.0;
+        if (this.adjustHighLats != AdjustingMethod.None)
+        {
+            times = this.adjustHighLatTimes(times);
+        }
+        return times;
     }
 
-    private double Dsin(double d) => Math.Sin(DegreeToRadian(d));
-    private double Dcos(double d) => Math.Cos(DegreeToRadian(d));
-    private double Dtan(double d) => Math.Tan(DegreeToRadian(d));
-    private double Darcsin(double x) => RadianToDegree(Math.Asin(x));
-    private double Darccos(double x) => RadianToDegree(Math.Acos(x));
-    private double Darctan(double x) => RadianToDegree(Math.Atan(x));
-    private double Darctan2(double y, double x) => RadianToDegree(Math.Atan2(y, x));
-    private double Darccot(double x) => RadianToDegree(Math.Atan(1 / x));
-    private double RadianToDegree(double radian) => radian * 180 / Math.PI;
-    private double DegreeToRadian(double degree) => degree * Math.PI / 180;
+    public string[] adjustTimesFormat(double[] times)
+    {
+        string[] formatted = new string[times.Length];
+        if (this.timeFormat == TimeFormat.Floating)
+        {
+            for (int i = 0; i < times.Length; ++i)
+            {
+                formatted[i] = times[i] + "";
+            }
+            return formatted;
+        }
+        for (int i = 0; i < 7; i++)
+        {
+            if (this.timeFormat == TimeFormat.Time12)
+                formatted[i] = this.floatToTime12(times[i], true);
+            else if (this.timeFormat == TimeFormat.Time12NS)
+                formatted[i] = this.floatToTime12NS(times[i]);
+            else
+                formatted[i] = this.floatToTime24(times[i]);
+        }
+        return formatted;
+    }
+
+    public TimeSpan[] adjustTimeSpansFormat(double[] times)
+    {
+        TimeSpan[] formatted = new TimeSpan[times.Length];
+        for (int i = 0; i < 7; i++)
+        {
+            formatted[i] = this.floatToTimeSpan(times[i]);
+        }
+        return formatted;
+    }
+
+    public double GetTimeDifference(double c1, double c2)
+    {
+        double diff = this.FixHour(c2 - c1);
+        return diff;
+    }
+
+    public string twoDigitsFormat(int num)
+    {
+        return (num < 10) ? "0" + num : num + "";
+    }
+
+    public double JulianDate(int year, int month, int day)
+    {
+        if (month <= 2)
+        {
+            year -= 1;
+            month += 12;
+        }
+        double A = (double)Math.Floor(year / 100.0);
+        double B = 2 - A + Math.Floor(A / 4);
+        double JD = Math.Floor(365.25 * (year + 4716)) + Math.Floor(30.6001 * (month + 1)) + day + B - 1524.5;
+        return JD;
+    }
+
+    public bool UseDayLightaving(int year, int month, int day)
+    {
+        return TimeZone.CurrentTimeZone.IsDaylightSavingTime(new DateTime(year, month, day));
+    }
+
+    public double dsin(double d)
+    {
+        return Math.Sin(this.DegreeToRadian(d));
+    }
+
+    public double dcos(double d)
+    {
+        return Math.Cos(this.DegreeToRadian(d));
+    }
+
+    public double dtan(double d)
+    {
+        return Math.Tan(this.DegreeToRadian(d));
+    }
+
+    public double darcsin(double x)
+    {
+        return this.RadianToDegree(Math.Asin(x));
+    }
+
+    public double darccos(double x)
+    {
+        return this.RadianToDegree(Math.Acos(x));
+    }
+
+    public double darctan(double x)
+    {
+        return this.RadianToDegree(Math.Atan(x));
+    }
+
+    public double darctan2(double y, double x)
+    {
+        return this.RadianToDegree(Math.Atan2(y, x));
+    }
+
+    public double darccot(double x)
+    {
+        return this.RadianToDegree(Math.Atan(1 / x));
+    }
+
+    public double RadianToDegree(double radian)
+    {
+        return (radian * 180.0) / Math.PI;
+    }
+
+    public double DegreeToRadian(double degree)
+    {
+        return (degree * Math.PI) / 180.0;
+    }
+
+    public double FixAngle(double angel)
+    {
+        angel = angel - 360.0 * (Math.Floor(angel / 360.0));
+        angel = angel < 0 ? angel + 360.0 : angel;
+        return angel;
+    }
+
+    public double FixHour(double hour)
+    {
+        hour = hour - 24.0 * (Math.Floor(hour / 24.0));
+        hour = hour < 0 ? hour + 24.0 : hour;
+        return hour;
+    }
 }
