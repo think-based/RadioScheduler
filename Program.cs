@@ -29,9 +29,15 @@ namespace RadioSchedulerService
             // تنظیمات مناطق با عرض جغرافیایی بالا
             Settings.AdjustHighLats = PrayTime.AdjustingMethod.MidNight;
 
-            PrayTime prayTime = new PrayTime();
+            // ایجاد نمونه‌ای از Scheduler
+            var scheduler = new Scheduler();
 
-            // نمایش زمان‌های شرعی
+            // راه‌اندازی وب سرور
+            var webServer = new WebServer(scheduler);
+            webServer.Start();
+            Console.WriteLine("Web server started. Press Ctrl+C to stop...");
+
+            // نمایش زمان‌های شرعی در کنسول
             DisplayPrayerTimes();
 
             // منتظر سیگنال برای توقف برنامه
