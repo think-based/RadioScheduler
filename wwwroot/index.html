@@ -1,1 +1,46 @@
-<!
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radio Scheduler Status</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        function clearLog() {
+            fetch('/clearlog', { method: 'GET' })
+                .then(response => window.location.reload());
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Radio Scheduler Status</h1>
+            <p>Welcome to the Radio Scheduler service. Manage your playlists and view logs easily.</p>
+        </header>
+
+        <section class="current-time">
+            <h2>Current Date and Time</h2>
+            <ul>
+                <li><strong>Gregorian:</strong> {{GregorianDate}}</li>
+                <li><strong>Persian:</strong> {{PersianDate}}</li>
+                <li><strong>Hijri:</strong> {{HijriDate}}</li>
+            </ul>
+        </section>
+
+        <section class="playlist-status">
+            <h2>Playlist Status</h2>
+            <ul id="playlist-items">
+                {{PlaylistItems}}
+            </ul>
+        </section>
+
+        <section class="log-management">
+            <h2>Log Management</h2>
+            <button onclick="clearLog()" class="btn-clear-log">Clear Log</button>
+            <a href="/viewlog" class="btn-view-log">View Log File</a>
+        </section>
+    </div>
+</body>
+</html>
