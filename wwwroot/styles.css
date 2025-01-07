@@ -15,7 +15,7 @@ body {
 }
 
 .container {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
     background: #fff;
     padding: 20px;
@@ -52,12 +52,12 @@ h2 {
     padding-bottom: 5px;
 }
 
-ul {
+ul.pure-menu-list {
     list-style-type: none;
     padding: 0;
 }
 
-ul li {
+ul.pure-menu-list li.pure-menu-item {
     background: #ecf0f1;
     margin: 5px 0;
     padding: 10px;
@@ -67,29 +67,23 @@ ul li {
 }
 
 /* Buttons */
-.btn-clear-log, .btn-view-log {
-    display: inline-block;
-    padding: 10px 20px;
-    font-size: 1rem;
-    color: #fff;
-    background-color: #3498db;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background-color 0.3s ease;
+.pure-button {
+    margin-right: 10px;
 }
 
-.btn-clear-log:hover, .btn-view-log:hover {
+.pure-button-primary {
+    background-color: #3498db;
+}
+
+.pure-button-primary:hover {
     background-color: #2980b9;
 }
 
-.btn-view-log {
+.pure-button-secondary {
     background-color: #27ae60;
-    margin-left: 10px;
 }
 
-.btn-view-log:hover {
+.pure-button-secondary:hover {
     background-color: #219653;
 }
 
@@ -103,7 +97,7 @@ ul li {
         font-size: 1.5rem;
     }
 
-    .btn-clear-log, .btn-view-log {
+    .pure-button {
         width: 100%;
         margin: 5px 0;
     }
