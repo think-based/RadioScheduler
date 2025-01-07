@@ -10,7 +10,7 @@ public static class Settings
     public static double Longitude { get; set; } = 52.5837; // طول جغرافیایی شیراز
 
     // منطقه زمانی
-    public static double TimeZone { get; set; } = 3.5; // منطقه زمانی شیراز
+    public static double TimeZone { get; set; } = 3.5; // منطقه زمانی شیراز (UTC+3.5)
 
     // روش محاسبه
     public static PrayTime.CalculationMethod CalculationMethod { get; set; } = PrayTime.CalculationMethod.Tehran;
