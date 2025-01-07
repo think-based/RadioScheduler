@@ -265,13 +265,17 @@ public class PrayTime
 
     private double NightPortion(double angle)
     {
-        return _adjustHighLats switch
+        switch (_adjustHighLats)
         {
-            AdjustingMethod.AngleBased => angle / 60.0,
-            AdjustingMethod.MidNight => 0.5,
-            AdjustingMethod.OneSeventh => 1.0 / 7.0,
-            _ => 0
-        };
+            case AdjustingMethod.AngleBased:
+                return angle / 60.0;
+            case AdjustingMethod.MidNight:
+                return 0.5;
+            case AdjustingMethod.OneSeventh:
+                return 1.0 / 7.0;
+            default:
+                return 0;
+        }
     }
 
     private double[] DayPortion(double[] times)
