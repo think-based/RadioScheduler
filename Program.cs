@@ -2,7 +2,6 @@
 //FileName: Program.cs
 
 using System;
-using System.Runtime;
 using System.ServiceProcess;
 using System.Threading;
 
@@ -14,13 +13,13 @@ namespace RadioSchedulerService
 
         static void Main()
         {
-            // تنظیمات کاربر
-            Settings.Latitude = 36.2972; // عرض جغرافیایی تبریز
-            Settings.Longitude = 59.6067; // طول جغرافیایی تبریز
-            Settings.TimeZone = 3.5; // منطقه زمانی تبریز
+            // تنظیمات کاربر (موقعیت جغرافیایی شیراز)
+            Settings.Latitude = 29.5916; // عرض جغرافیایی شیراز
+            Settings.Longitude = 52.5837; // طول جغرافیایی شیراز
+            Settings.TimeZone = 3.5; // منطقه زمانی شیراز
             Settings.CalculationMethod = PrayTime.CalculationMethod.Tehran;
             Settings.AsrMethod = PrayTime.AsrMethods.Shafii;
-            Settings.TimeFormat = PrayTime.TimeFormat.Time12;
+            Settings.TimeFormat = PrayTime.TimeFormat.Time24;
 
             // راه‌اندازی وب سرور
             var webScheduler = new Scheduler(); // تغییر نام متغیر برای جلوگیری از تداخل
@@ -31,6 +30,9 @@ namespace RadioSchedulerService
             // ایجاد نمونه‌ای از PrayTimeScheduler
             var prayTimeScheduler = new PrayTimeScheduler(); // تغییر نام متغیر برای جلوگیری از تداخل
 
+            // نمایش زمان‌های شرعی
+            DisplayPrayerTimes();
+
             // منتظر سیگنال برای توقف برنامه
             Console.CancelKeyPress += (sender, e) =>
             {
@@ -38,20 +40,32 @@ namespace RadioSchedulerService
                 _waitHandle.Set(); // سیگنال برای توقف برنامه
             };
 
-            Settings.Latitude = 36.2972; // عرض جغرافیایی تبریز
-            Settings.Longitude = 59.6067; // طول جغرافیایی تبریز
-            Settings.TimeZone = 3.5; // منطقه زمانی تبریز
-            Settings.CalculationMethod = PrayTime.CalculationMethod.Tehran;
-            Settings.AsrMethod = PrayTime.AsrMethods.Shafii;
-            Settings.TimeFormat = PrayTime.TimeFormat.Time12;
-
-            // ایجاد نمونه‌ای از PrayTimeScheduler
-            PrayTimeScheduler scheduler = new PrayTimeScheduler();
-
             _waitHandle.WaitOne(); // منتظر بمان تا سیگنال دریافت شود
 
             // اگر برنامه یک سرویس ویندوز است، از این خط استفاده کنید:
             // ServiceBase.Run(new ServiceBase[] { new RadioSchedulerService() });
+        }
+
+        private static void DisplayPrayerTimes()
+        {
+            // تاریخ و زمان فعلی
+            DateTime now = DateTime.Now;
+            int year = now.Year;
+            int month = now.Month;
+            int day = now.Day;
+
+            // محاسبه زمان‌های شرعی برای امروز
+            string[] prayerTimes = new PrayTime().getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
+
+            // نمایش زمان‌های شرعی
+            Console.WriteLine("Prayer Times for Today:");
+            Console.WriteLine($"Fajr: {prayerTimes[0]}");
+            Console.WriteLine($"Sunrise: {prayerTimes[1]}");
+            Console.WriteLine($"Dhuhr: {prayerTimes[2]}");
+            Console.WriteLine($"Asr: {prayerTimes[3]}");
+            Console.WriteLine($"Sunset: {prayerTimes[4]}");
+            Console.WriteLine($"Maghrib: {prayerTimes[5]}");
+            Console.WriteLine($"Isha: {prayerTimes[6]}");
         }
     }
 }
