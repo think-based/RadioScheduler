@@ -71,10 +71,21 @@ public class WebServer
                 // جایگزینی متغیرها در فایل HTML
                 if (path == "/index.html" || path == "/")
                 {
+                    // دریافت زمان‌های شرعی
+                    string[] prayerTimes = new PrayTime().getPrayerTimes(
+                        DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day,
+                        Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone
+                    );
+
+                    // جایگزینی زمان‌های شرعی در HTML
                     htmlContent = htmlContent
-                        .Replace("{{GregorianDate}}", CalendarHelper.ConvertDateToString(DateTime.Now, "Gregorian"))
-                        .Replace("{{PersianDate}}", CalendarHelper.ConvertDateToString(DateTime.Now, "Persian"))
-                        .Replace("{{HijriDate}}", CalendarHelper.ConvertDateToString(DateTime.Now, "Hijri"));
+                        .Replace("{{Fajr}}", prayerTimes[0])
+                        .Replace("{{Sunrise}}", prayerTimes[1])
+                        .Replace("{{Dhuhr}}", prayerTimes[2])
+                        .Replace("{{Asr}}", prayerTimes[3])
+                        .Replace("{{Sunset}}", prayerTimes[4])
+                        .Replace("{{Maghrib}}", prayerTimes[5])
+                        .Replace("{{Isha}}", prayerTimes[6]);
 
                     // اضافه کردن آیتم‌های پلی‌لیست
                     var playlistItems = new StringBuilder();
