@@ -48,34 +48,72 @@ public class PrayTimeScheduler
 
         // زمان‌های شرعی به ترتیب: فجر، طلوع آفتاب، ظهر، عصر، غروب آفتاب، مغرب، عشاء
         DateTime fajrTime = ParseTime(prayerTimes[0]);
+        DateTime sunriseTime = ParseTime(prayerTimes[1]);
         DateTime dhuhrTime = ParseTime(prayerTimes[2]);
+        DateTime asrTime = ParseTime(prayerTimes[3]);
+        DateTime sunsetTime = ParseTime(prayerTimes[4]);
         DateTime maghribTime = ParseTime(prayerTimes[5]);
+        DateTime ishaTime = ParseTime(prayerTimes[6]);
 
         // زمان فعلی
         DateTime currentTime = DateTime.Now;
 
         // بررسی زمان شرعی بعدی
-        DateTime nextPrayTime;
-        string nextPrayName;
+        DateTime nextPrayTime = DateTime.MaxValue;
+        string nextPrayName = "";
 
-        if (currentTime < fajrTime)
+        // بررسی فجر
+        if (currentTime < fajrTime && fajrTime < nextPrayTime)
         {
             nextPrayTime = fajrTime;
             nextPrayName = "Fajr";
         }
-        else if (currentTime < dhuhrTime)
+
+        // بررسی طلوع آفتاب
+        if (currentTime < sunriseTime && sunriseTime < nextPrayTime)
+        {
+            nextPrayTime = sunriseTime;
+            nextPrayName = "Sunrise";
+        }
+
+        // بررسی ظهر
+        if (currentTime < dhuhrTime && dhuhrTime < nextPrayTime)
         {
             nextPrayTime = dhuhrTime;
             nextPrayName = "Dhuhr";
         }
-        else if (currentTime < maghribTime)
+
+        // بررسی عصر
+        if (currentTime < asrTime && asrTime < nextPrayTime)
+        {
+            nextPrayTime = asrTime;
+            nextPrayName = "Asr";
+        }
+
+        // بررسی غروب آفتاب
+        if (currentTime < sunsetTime && sunsetTime < nextPrayTime)
+        {
+            nextPrayTime = sunsetTime;
+            nextPrayName = "Sunset";
+        }
+
+        // بررسی مغرب
+        if (currentTime < maghribTime && maghribTime < nextPrayTime)
         {
             nextPrayTime = maghribTime;
             nextPrayName = "Maghrib";
         }
-        else
+
+        // بررسی عشاء
+        if (currentTime < ishaTime && ishaTime < nextPrayTime)
         {
-            // اگر زمان فعلی بعد از مغرب باشد، زمان شرعی بعدی فردا فجر است
+            nextPrayTime = ishaTime;
+            nextPrayName = "Isha";
+        }
+
+        // اگر زمان شرعی بعدی پیدا نشد، برای فردا فجر تنظیم کنید
+        if (nextPrayTime == DateTime.MaxValue)
+        {
             nextPrayTime = fajrTime.AddDays(1);
             nextPrayName = "Fajr";
         }
@@ -105,7 +143,21 @@ public class PrayTimeScheduler
     {
         // تبدیل زمان از رشته به DateTime
         DateTime now = DateTime.Now;
-        return DateTime.ParseExact(time, "HH:mm:ss", null)
-                       .AddDays(now.Date > DateTime.ParseExact(time, "HH:mm:ss", null).Date ? 1 : 0);
+        try
+        {
+            DateTime parsedTime = DateTime.ParseExact(time, "HH:mm:ss", null);
+            if (parsedTime < now)
+            {
+                // اگر زمان گذشته باشد، برای فردا تنظیم کنید
+                parsedTime = parsedTime.AddDays(1);
+            }
+            return parsedTime;
+        }
+        catch (FormatException)
+        {
+            // اگر فرمت زمان نادرست باشد، زمان پیش‌فرض برگردانید
+            Logger.LogMessage($"Error parsing time: {time}");
+            return now.AddHours(1); // زمان پیش‌فرض: ۱ ساعت بعد
+        }
     }
 }
