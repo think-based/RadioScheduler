@@ -29,9 +29,7 @@ namespace RadioSchedulerService
             // تنظیمات مناطق با عرض جغرافیایی بالا
             Settings.AdjustHighLats = PrayTime.AdjustingMethod.MidNight;
 
-            // تنظیم adjustTime به ۰٫۵ ساعت (30 دقیقه تأخیر)
             PrayTime prayTime = new PrayTime();
-            prayTime.adjustTime = 0.5; // یا در کلاس PrayTime، مقدار پیش‌فرض را به ۰٫۵ تغییر دهید
 
             // نمایش زمان‌های شرعی
             DisplayPrayerTimes();
