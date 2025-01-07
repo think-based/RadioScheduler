@@ -14,19 +14,22 @@ namespace RadioSchedulerService
 
         static void Main()
         {
-            ServiceBase[] ServicesToRun;
-            ServicesToRun = new ServiceBase[]
-            {
-                new RadioSchedulerService()
-            };
+            // تنظیمات کاربر
+            Settings.Latitude = 36.2972; // عرض جغرافیایی تبریز
+            Settings.Longitude = 59.6067; // طول جغرافیایی تبریز
+            Settings.TimeZone = 3.5; // منطقه زمانی تبریز
+            Settings.CalculationMethod = PrayTime.CalculationMethod.Tehran;
+            Settings.AsrMethod = PrayTime.AsrMethods.Shafii;
+            Settings.TimeFormat = PrayTime.TimeFormat.Time12;
 
             // راه‌اندازی وب سرور
-            var scheduler = new Scheduler();
-            var webServer = new WebServer(scheduler);
+            var webScheduler = new Scheduler(); // تغییر نام متغیر برای جلوگیری از تداخل
+            var webServer = new WebServer(webScheduler);
             webServer.Start();
-            Console.WriteLine("Web server started. Press Enter to stop...");
-            Console.ReadLine();
             Console.WriteLine("Web server started. Press Ctrl+C to stop...");
+
+            // ایجاد نمونه‌ای از PrayTimeScheduler
+            var prayTimeScheduler = new PrayTimeScheduler(); // تغییر نام متغیر برای جلوگیری از تداخل
 
             // منتظر سیگنال برای توقف برنامه
             Console.CancelKeyPress += (sender, e) =>
@@ -46,7 +49,9 @@ namespace RadioSchedulerService
             PrayTimeScheduler scheduler = new PrayTimeScheduler();
 
             _waitHandle.WaitOne(); // منتظر بمان تا سیگنال دریافت شود
-            // ServiceBase.Run(ServicesToRun);
+
+            // اگر برنامه یک سرویس ویندوز است، از این خط استفاده کنید:
+            // ServiceBase.Run(new ServiceBase[] { new RadioSchedulerService() });
         }
     }
 }
