@@ -57,17 +57,15 @@ public class PrayTime
 
     public PrayTime()
     {
-        _methodParams = new[]
-        {
-            new[] { 16, 0, 4, 0, 14 }, // Jafari
-            new[] { 18, 1, 0, 0, 18 }, // Karachi
-            new[] { 15, 1, 0, 0, 15 }, // ISNA
-            new[] { 18, 1, 0, 0, 17 }, // MWL
-            new[] { 18.5, 1, 0, 1, 90 }, // Makkah
-            new[] { 19.5, 1, 0, 0, 17.5 }, // Egypt
-            new[] { 17.7, 0, 4.5, 0, 14 }, // Tehran
-            new[] { 18, 1, 0, 0, 17 } // Custom
-        };
+        _methodParams = new double[8][];
+        _methodParams[0] = new double[] { 16, 0, 4, 0, 14 }; // Jafari
+        _methodParams[1] = new double[] { 18, 1, 0, 0, 18 }; // Karachi
+        _methodParams[2] = new double[] { 15, 1, 0, 0, 15 }; // ISNA
+        _methodParams[3] = new double[] { 18, 1, 0, 0, 17 }; // MWL
+        _methodParams[4] = new double[] { 18.5, 1, 0, 1, 90 }; // Makkah
+        _methodParams[5] = new double[] { 19.5, 1, 0, 0, 17.5 }; // Egypt
+        _methodParams[6] = new double[] { 17.7, 0, 4.5, 0, 14 }; // Tehran
+        _methodParams[7] = new double[] { 18, 1, 0, 0, 17 }; // Custom
     }
 
     public string[] GetPrayerTimes(int year, int month, int day, double latitude, double longitude, double timeZone)
@@ -265,13 +263,17 @@ public class PrayTime
 
     private double NightPortion(double angle)
     {
-        return _adjustHighLats switch
+        switch (_adjustHighLats)
         {
-            AdjustingMethod.AngleBased => angle / 60.0,
-            AdjustingMethod.MidNight => 0.5,
-            AdjustingMethod.OneSeventh => 1.0 / 7.0,
-            _ => 0
-        };
+            case AdjustingMethod.AngleBased:
+                return angle / 60.0;
+            case AdjustingMethod.MidNight:
+                return 0.5;
+            case AdjustingMethod.OneSeventh:
+                return 1.0 / 7.0;
+            default:
+                return 0;
+        }
     }
 
     private double[] DayPortion(double[] times)

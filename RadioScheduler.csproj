@@ -82,6 +82,7 @@
     <Compile Include="CurrentTrigger.cs" />
     <Compile Include="FileHashHelper.cs" />
     <Compile Include="Logger.cs" />
+    <Compile Include="PrayTime.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RadioSchedulerService.cs">
@@ -89,6 +90,7 @@
     </Compile>
     <Compile Include="ScheduleItem.cs" />
     <Compile Include="Scheduler.cs" />
+    <Compile Include="WebServer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
