@@ -47,7 +47,7 @@ public class PrayTime
     private int dhuhrMinutes = 0;
     private AdjustingMethod adjustHighLats = AdjustingMethod.MidNight;
     private TimeFormat timeFormat = TimeFormat.Time24;
-    private double adjustTime = 30.15M;
+    private double adjustTime = 30.15;
     private double lat;
     private double lng;
     private double timeZone;
