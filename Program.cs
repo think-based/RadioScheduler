@@ -16,7 +16,7 @@ namespace RadioSchedulerService
             // تنظیم موقعیت جغرافیایی (شیراز)
             Settings.Latitude = 29.5916; // عرض جغرافیایی شیراز
             Settings.Longitude = 52.5837; // طول جغرافیایی شیراز
-            Settings.TimeZone = 3.5; // منطقه زمانی شیراز (UTC+3.5)
+            Settings.TimeZone = 3.5; // منطقه زمانی پیش‌فرض (UTC+3.5)
 
             // تنظیم خودکار زاویه‌های فجر و عشاء
             Settings.AutoSetAngles();
@@ -31,6 +31,9 @@ namespace RadioSchedulerService
 
             // ایجاد نمونه‌ای از Scheduler
             var scheduler = new Scheduler();
+
+            // ایجاد نمونه‌ای از PrayTimeScheduler
+            var prayTimeScheduler = new PrayTimeScheduler();
 
             // راه‌اندازی وب سرور
             var webServer = new WebServer(scheduler);
