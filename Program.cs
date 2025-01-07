@@ -13,10 +13,20 @@ namespace RadioSchedulerService
 
         static void Main()
         {
+            // تشخیص زمان‌زون سیستم
+            TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
+            double utcOffset = systemTimeZone.BaseUtcOffset.TotalHours;
+
+            // تنظیم زمان‌زون در Settings
+            Settings.TimeZone = utcOffset;
+
+            // نمایش زمان‌زون سیستم
+            Console.WriteLine($"System TimeZone: {systemTimeZone.DisplayName}");
+            Console.WriteLine($"UTC Offset: {utcOffset}");
+
             // تنظیم موقعیت جغرافیایی (شیراز)
             Settings.Latitude = 29.5916; // عرض جغرافیایی شیراز
             Settings.Longitude = 52.5837; // طول جغرافیایی شیراز
-            Settings.TimeZone = 3.5; // منطقه زمانی پیش‌فرض (UTC+3.5)
 
             // تنظیم خودکار زاویه‌های فجر و عشاء
             Settings.AutoSetAngles();
