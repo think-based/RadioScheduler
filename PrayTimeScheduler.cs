@@ -32,8 +32,9 @@ public class PrayTimeScheduler
 
     private void SetNextPrayTime()
     {
-        // تاریخ و زمان فعلی
-        DateTime now = DateTime.Now;
+        // تاریخ و زمان فعلی (با توجه به زمان‌زون اوقات شرعی)
+        DateTime now = ConvertToPrayTimeZone(DateTime.Now);
+
         int year = now.Year;
         int month = now.Month;
         int day = now.Day;
@@ -55,8 +56,8 @@ public class PrayTimeScheduler
         DateTime maghribTime = ParseTime(prayerTimes[5]);
         DateTime ishaTime = ParseTime(prayerTimes[6]);
 
-        // زمان فعلی
-        DateTime currentTime = DateTime.Now;
+        // زمان فعلی (با توجه به زمان‌زون اوقات شرعی)
+        DateTime currentTime = now;
 
         // بررسی زمان شرعی بعدی
         DateTime nextPrayTime = DateTime.MaxValue;
@@ -142,7 +143,7 @@ public class PrayTimeScheduler
     private DateTime ParseTime(string time)
     {
         // تبدیل زمان از رشته به DateTime
-        DateTime now = DateTime.Now;
+        DateTime now = ConvertToPrayTimeZone(DateTime.Now);
         try
         {
             DateTime parsedTime = DateTime.ParseExact(time, "HH:mm:ss", null);
@@ -159,5 +160,18 @@ public class PrayTimeScheduler
             Logger.LogMessage($"Error parsing time: {time}");
             return now.AddHours(1); // زمان پیش‌فرض: ۱ ساعت بعد
         }
+    }
+
+    private DateTime ConvertToPrayTimeZone(DateTime dateTime)
+    {
+        // تبدیل زمان سیستم به زمان‌زون اوقات شرعی (UTC+3.5)
+        TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
+        TimeZoneInfo prayTimeZone = TimeZoneInfo.CreateCustomTimeZone(
+            "PrayTimeZone",
+            TimeSpan.FromHours(Settings.TimeZone),
+            "PrayTimeZone",
+            "PrayTimeZone");
+
+        return TimeZoneInfo.ConvertTime(dateTime, systemTimeZone, prayTimeZone);
     }
 }
