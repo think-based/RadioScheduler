@@ -21,6 +21,14 @@ namespace RadioSchedulerService
             Settings.AsrMethod = PrayTime.AsrMethods.Shafii;
             Settings.TimeFormat = PrayTime.TimeFormat.Time24;
 
+            // تنظیم زاویه فجر و عشاء
+            Settings.setFajrAngle(17.7); // زاویه فجر برای تهران
+            Settings.setIshaAngle(14); // زاویه عشاء برای تهران
+
+            // تنظیمات مناطق با عرض جغرافیایی بالا
+            Settings.AdjustHighLats = PrayTime.AdjustingMethod.MidNight;
+
+
             // راه‌اندازی وب سرور
             var webScheduler = new Scheduler(); // تغییر نام متغیر برای جلوگیری از تداخل
             var webServer = new WebServer(webScheduler);
