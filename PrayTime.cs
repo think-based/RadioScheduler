@@ -60,79 +60,6 @@ public class PrayTime
 
     public PrayTime()
     {
-<<<<<<< HEAD
-        _methodParams = new double[8][];
-        _methodParams[0] = new double[] { 16, 0, 4, 0, 14 }; // Jafari
-        _methodParams[1] = new double[] { 18, 1, 0, 0, 18 }; // Karachi
-        _methodParams[2] = new double[] { 15, 1, 0, 0, 15 }; // ISNA
-        _methodParams[3] = new double[] { 18, 1, 0, 0, 17 }; // MWL
-        _methodParams[4] = new double[] { 18.5, 1, 0, 1, 90 }; // Makkah
-        _methodParams[5] = new double[] { 19.5, 1, 0, 0, 17.5 }; // Egypt
-        _methodParams[6] = new double[] { 17.7, 0, 4.5, 0, 14 }; // Tehran
-        _methodParams[7] = new double[] { 18, 1, 0, 0, 17 }; // Custom
-    }
-
-    public string[] GetPrayerTimes(int year, int month, int day, double latitude, double longitude, double timeZone)
-    {
-        SetLocation(latitude, longitude, timeZone);
-        SetJulianDate(year, month, day);
-        return ComputeDayTimes();
-    }
-
-    public TimeSpan[] GetPrayerTimeSpans(int year, int month, int day, double latitude, double longitude, double timeZone)
-    {
-        SetLocation(latitude, longitude, timeZone);
-        SetJulianDate(year, month, day);
-        return ComputeDayTimeSpans();
-    }
-
-    private void SetLocation(double latitude, double longitude, double timeZone)
-    {
-        _lat = latitude;
-        _lng = longitude;
-        _timeZone = timeZone;
-    }
-
-    private void SetJulianDate(int year, int month, int day)
-    {
-        _jDate = JulianDate(year, month, day) - _lng / (15 * 24);
-    }
-
-    private string[] ComputeDayTimes()
-    {
-        double[] times = { 5, 6, 12, 13, 18, 18, 18 };
-        times = ComputeTimes(times);
-        times = AdjustTimes(times);
-        return FormatTimes(times);
-    }
-
-    private TimeSpan[] ComputeDayTimeSpans()
-    {
-        double[] times = { 5, 6, 12, 13, 18, 18, 18 };
-        times = ComputeTimes(times);
-        times = AdjustTimes(times);
-        return FormatTimeSpans(times);
-    }
-
-    private double[] ComputeTimes(double[] times)
-    {
-        double[] t = DayPortion(times);
-        double fajr = ComputeTime(180 - _methodParams[(int)_calcMethod][0], t[0]);
-        double sunrise = ComputeTime(180 - 0.833, t[1]);
-        double dhuhr = ComputeMidDay(t[2]);
-        double asr = ComputeAsr(1 + (int)_asrMethod, t[3]);
-        double sunset = ComputeTime(0.833, t[4]);
-        double maghrib = ComputeTime(_methodParams[(int)_calcMethod][2], t[5]);
-        double isha = ComputeTime(_methodParams[(int)_calcMethod][4], t[6]);
-        return new[] { fajr, sunrise, dhuhr, asr, sunset, maghrib, isha };
-    }
-
-    private double[] AdjustTimes(double[] times)
-    {
-        for (int i = 0; i < 7; i++)
-        {
-            times[i] += _timeZone - _lng / 15;
-=======
         times = new int[7];
         methodParams = new double[8][];
         methodParams[(int)CalculationMethod.Jafari] = new double[] { 16, 0, 4, 0, 14 };
@@ -198,7 +125,6 @@ public class PrayTime
                 this.methodParams[(int)CalculationMethod.Custom][i] = methodParams[(int)calcMethod][i];
             else
                 this.methodParams[(int)CalculationMethod.Custom][i] = param[i];
->>>>>>> 6902863464ec5a8ea49a4487d52440bea58382ca
         }
         this.calcMethod = CalculationMethod.Custom;
     }
@@ -358,19 +284,6 @@ public class PrayTime
 
     public double nightPortion(double angle)
     {
-<<<<<<< HEAD
-        switch (_adjustHighLats)
-        {
-            case AdjustingMethod.AngleBased:
-                return angle / 60.0;
-            case AdjustingMethod.MidNight:
-                return 0.5;
-            case AdjustingMethod.OneSeventh:
-                return 1.0 / 7.0;
-            default:
-                return 0;
-        }
-=======
         double val = 0;
         if (this.adjustHighLats == AdjustingMethod.AngleBased)
             val = 1.0 / 60.0 * angle;
@@ -379,7 +292,6 @@ public class PrayTime
         if (this.adjustHighLats == AdjustingMethod.OneSeventh)
             val = 1.0 / 7.0;
         return val;
->>>>>>> 6902863464ec5a8ea49a4487d52440bea58382ca
     }
 
     public double[] dayPortion(double[] times)
