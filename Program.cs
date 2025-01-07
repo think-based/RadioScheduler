@@ -61,9 +61,6 @@ namespace RadioSchedulerService
             };
 
             _waitHandle.WaitOne(); // منتظر بمان تا سیگنال دریافت شود
-
-            // اگر برنامه یک سرویس ویندوز است، از این خط استفاده کنید:
-            // ServiceBase.Run(new ServiceBase[] { new RadioSchedulerService() });
         }
 
         private static void DisplayPrayerTimes()
