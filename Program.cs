@@ -16,9 +16,9 @@ namespace RadioSchedulerService
             // تنظیم موقعیت جغرافیایی (شیراز)
             Settings.Latitude = 29.5916; // عرض جغرافیایی شیراز
             Settings.Longitude = 52.5837; // طول جغرافیایی شیراز
-            Settings.TimeZone = 3.5; // منطقه زمانی شیراز
+            Settings.TimeZone = 3.5; // منطقه زمانی شیراز (UTC+3.5)
 
-            // تنظیم خودکار زاویه‌های فجر و عشاء بر اساس موقعیت جغرافیایی
+            // تنظیم خودکار زاویه‌های فجر و عشاء
             Settings.AutoSetAngles();
 
             // تنظیم روش محاسبه
@@ -29,14 +29,9 @@ namespace RadioSchedulerService
             // تنظیمات مناطق با عرض جغرافیایی بالا
             Settings.AdjustHighLats = PrayTime.AdjustingMethod.MidNight;
 
-            // راه‌اندازی وب سرور
-            var webScheduler = new Scheduler();
-            var webServer = new WebServer(webScheduler);
-            webServer.Start();
-            Console.WriteLine("Web server started. Press Ctrl+C to stop...");
-
-            // ایجاد نمونه‌ای از PrayTimeScheduler
-            var prayTimeScheduler = new PrayTimeScheduler();
+            // تنظیم adjustTime به ۰٫۵ ساعت (30 دقیقه تأخیر)
+            PrayTime prayTime = new PrayTime();
+            prayTime.adjustTime = 0.5; // یا در کلاس PrayTime، مقدار پیش‌فرض را به ۰٫۵ تغییر دهید
 
             // نمایش زمان‌های شرعی
             DisplayPrayerTimes();
