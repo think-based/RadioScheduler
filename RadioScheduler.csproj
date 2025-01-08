@@ -77,10 +77,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AppSettings.cs" />
     <Compile Include="AudioPlayer.cs" />
     <Compile Include="CalendarHelper.cs" />
+    <Compile Include="ConfigManager.cs" />
     <Compile Include="CurrentTrigger.cs" />
     <Compile Include="FileHashHelper.cs" />
+    <Compile Include="InstantPlayManager.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="PrayTime.cs" />
     <Compile Include="PrayTimeScheduler.cs" />
