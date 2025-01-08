@@ -1,4 +1,4 @@
 {
-  "include": ["*.js", "*.json" , "*.html" , "*.MD" , "*.cs" "audio.conf"], 
+  "include": ["*.js","*.json","*.html","*.MD","*.cs","audio.conf"], 
   "exclude": ["*.config","*.sln","*.csproj" ,"Properties/*"] 
 }
