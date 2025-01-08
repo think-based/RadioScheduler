@@ -59,10 +59,10 @@ namespace RadioSchedulerService
                 Settings.AmplifierApiUrl = appSettings.AmplifierApiUrl;
 
                 // تنظیم روش محاسبه و فرمت زمان از فایل کانفیگ
-                Settings.CalculationMethod = Enum.Parse<PrayTime.CalculationMethod>(appSettings.CalculationMethod);
-                Settings.AsrMethod = Enum.Parse<PrayTime.AsrMethods>(appSettings.AsrMethod);
-                Settings.TimeFormat = Enum.Parse<PrayTime.TimeFormat>(appSettings.TimeFormat);
-                Settings.AdjustHighLats = Enum.Parse<PrayTime.AdjustingMethod>(appSettings.AdjustHighLats);
+                Settings.CalculationMethod = (PrayTime.CalculationMethod)Enum.Parse(typeof(PrayTime.CalculationMethod), appSettings.CalculationMethod);
+                Settings.AsrMethod = (PrayTime.AsrMethods)Enum.Parse(typeof(PrayTime.AsrMethods), appSettings.AsrMethod);
+                Settings.TimeFormat = (PrayTime.TimeFormat)Enum.Parse(typeof(PrayTime.TimeFormat), appSettings.TimeFormat);
+                Settings.AdjustHighLats = (PrayTime.AdjustingMethod)Enum.Parse(typeof(PrayTime.AdjustingMethod), appSettings.AdjustHighLats);
 
                 Logger.LogMessage("Settings loaded from configuration file.");
             }
