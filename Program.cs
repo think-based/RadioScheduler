@@ -1,5 +1,5 @@
-//Be Naame Khoda
-//FileName: Program.cs
+// Be Naame Khoda
+// FileName: Program.cs
 
 using System;
 using System.Threading;
@@ -17,6 +17,10 @@ namespace RadioSchedulerService
 
             // تنظیم خودکار زاویه‌های فجر و عشاء
             Settings.AutoSetAngles();
+
+            // Initialize the InstantPlayManager
+            string instantPlayFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InstantPlay");
+            var instantPlayManager = new InstantPlayManager(instantPlayFolderPath);
 
             // ایجاد نمونه‌ای از Scheduler
             var scheduler = new Scheduler();
