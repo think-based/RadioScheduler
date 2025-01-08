@@ -12,21 +12,6 @@ public class Settings
     // Private constructor
     private Settings()
     {
-        // Load settings from config file
-        var config = ConfigManager.LoadConfig();
-        var appSettings = config.Application;
-
-        Latitude = appSettings.Latitude;
-        Longitude = appSettings.Longitude;
-        TimeZone = appSettings.TimeZone;
-        CalculationMethod = Enum.Parse<PrayTime.CalculationMethod>(appSettings.CalculationMethod);
-        AsrMethod = Enum.Parse<PrayTime.AsrMethods>(appSettings.AsrMethod);
-        TimeFormat = Enum.Parse<PrayTime.TimeFormat>(appSettings.TimeFormat);
-        AdjustHighLats = Enum.Parse<PrayTime.AdjustingMethod>(appSettings.AdjustHighLats);
-        TimerIntervalInMinutes = appSettings.TimerIntervalInMinutes;
-        AmplifierEnabled = appSettings.AmplifierEnabled;
-        AmplifierApiUrl = appSettings.AmplifierApiUrl;
-
         // Automatically set angles based on latitude
         AutoSetAngles();
     }
