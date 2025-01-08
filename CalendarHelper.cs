@@ -23,9 +23,6 @@ public static class CalendarHelper
     /// <summary>
     /// تبدیل تاریخ به تقویم مورد نظر و برگرداندن به صورت رشته
     /// </summary>
-    /// <param name="date">تاریخ ورودی</param>
-    /// <param name="calendarType">نوع تقویم (Gregorian, Persian, Hijri)</param>
-    /// <returns>تاریخ تبدیل‌شده به صورت رشته</returns>
     public static string ConvertDateToString(DateTime date, string calendarType)
     {
         switch (calendarType.ToLower())
@@ -44,9 +41,6 @@ public static class CalendarHelper
     /// <summary>
     /// تبدیل تاریخ به تقویم مورد نظر و برگرداندن به صورت DateTime
     /// </summary>
-    /// <param name="date">تاریخ ورودی</param>
-    /// <param name="calendarType">نوع تقویم (Gregorian, Persian, Hijri)</param>
-    /// <returns>تاریخ تبدیل‌شده به صورت DateTime</returns>
     public static DateTime ConvertDate(DateTime date, string calendarType)
     {
         switch (calendarType.ToLower())
@@ -65,11 +59,6 @@ public static class CalendarHelper
     /// <summary>
     /// بررسی معتبر بودن تاریخ در تقویم مورد نظر
     /// </summary>
-    /// <param name="year">سال</param>
-    /// <param name="month">ماه</param>
-    /// <param name="day">روز</param>
-    /// <param name="calendarType">نوع تقویم (Gregorian, Persian, Hijri)</param>
-    /// <returns>true اگر تاریخ معتبر باشد، در غیر این صورت false</returns>
     public static bool IsValidDate(int year, int month, int day, string calendarType)
     {
         try
@@ -98,9 +87,6 @@ public static class CalendarHelper
     /// <summary>
     /// دریافت نام ماه بر اساس نوع تقویم
     /// </summary>
-    /// <param name="month">عدد ماه (1 تا 12)</param>
-    /// <param name="calendarType">نوع تقویم (Gregorian, Persian, Hijri)</param>
-    /// <returns>نام ماه</returns>
     public static string GetMonthName(int month, string calendarType)
     {
         if (month < 1 || month > 12)
@@ -116,6 +102,30 @@ public static class CalendarHelper
                 return PersianMonthNames[month - 1]; // آرایه از ۰ شروع می‌شود
             default: // Gregorian
                 return new DateTime(2023, month, 1).ToString("MMMM", CultureInfo.InvariantCulture);
+        }
+    }
+
+    /// <summary>
+    /// تبدیل روز هفته بر اساس Region
+    /// </summary>
+    public static int GetDayOfWeek(DateTime date, string region)
+    {
+        try
+        {
+            // Create a CultureInfo object for the specified region
+            var cultureInfo = new CultureInfo(region);
+
+            // Get the first day of the week for the region
+            DayOfWeek firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
+
+            // Calculate the day of the week based on the first day
+            int dayOfWeek = ((int)date.DayOfWeek - (int)firstDayOfWeek + 7) % 7;
+
+            return dayOfWeek;
+        }
+        catch (CultureNotFoundException)
+        {
+            throw new ArgumentException($"Unsupported region: {region}");
         }
     }
 }
