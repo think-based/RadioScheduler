@@ -3,7 +3,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.IO; // Ensure this is included
 using System.Timers;
 
 public class InstantPlayManager
@@ -25,25 +25,18 @@ public class InstantPlayManager
         // Initialize the timer
         _instantPlayTimer = new Timer(1000); // Check every second
         _instantPlayTimer.Elapsed += OnInstantPlayTimerElapsed;
-        _instantPlayTimer.AutoReset = true; // Ensure the timer repeats
+        _instantPlayTimer.AutoReset = true;
         _instantPlayTimer.Enabled = true;
-
-        Logger.LogMessage("InstantPlayManager initialized.");
     }
 
     private void OnInstantPlayTimerElapsed(object sender, ElapsedEventArgs e)
     {
         // Prevent re-entrancy
-        if (_isProcessing)
-        {
-            Logger.LogMessage("Timer elapsed while processing. Skipping.");
-            return;
-        }
+        if (_isProcessing) return;
         _isProcessing = true;
 
         // Stop the timer while processing the file
         _instantPlayTimer.Stop();
-        Logger.LogMessage("Timer stopped for processing.");
 
         try
         {
