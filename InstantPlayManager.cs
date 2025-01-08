@@ -2,7 +2,7 @@
 //FileName: InstantPlayManager.cs
 
 using System;
-using System.Collections.Generic; // For List<T>
+using System.Collections.Generic;
 using System.IO;
 using System.Timers;
 
@@ -66,7 +66,10 @@ public class InstantPlayManager
         catch (Exception ex)
         {
             Logger.LogMessage($"Error: {ex.Message}");
-            // Restart the timer in case of an error
+        }
+        finally
+        {
+            // Restart the timer after processing is complete
             _isProcessing = false;
             _instantPlayTimer.Start();
         }
@@ -86,12 +89,6 @@ public class InstantPlayManager
         catch (Exception ex)
         {
             Logger.LogMessage($"Error deleting file: {ex.Message}");
-        }
-        finally
-        {
-            // Restart the timer after playback and file deletion are complete
-            _isProcessing = false;
-            _instantPlayTimer.Start();
         }
     }
 }
