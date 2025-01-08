@@ -2,9 +2,8 @@
 //FileName: InstantPlayManager.cs
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Generic; // Added for List<T>
 using System.IO;
-using System.Threading.Tasks;
 using System.Timers;
 
 public class InstantPlayManager
@@ -13,6 +12,7 @@ public class InstantPlayManager
     private AudioPlayer _audioPlayer;
     private string _instantPlayFolderPath;
     private bool _isProcessing = false; // Flag to prevent re-entrancy
+    private string _currentAudioFile; // Track the current audio file being played
 
     public InstantPlayManager(string instantPlayFolderPath)
     {
@@ -29,7 +29,7 @@ public class InstantPlayManager
         _instantPlayTimer.Enabled = true;
     }
 
-    private async void OnInstantPlayTimerElapsed(object sender, ElapsedEventArgs e)
+    private void OnInstantPlayTimerElapsed(object sender, ElapsedEventArgs e)
     {
         // Prevent re-entrancy
         if (_isProcessing) return;
@@ -55,18 +55,11 @@ public class InstantPlayManager
             }
 
             // Play the first audio file found
-            string audioFile = audioFiles[0];
-            Logger.LogMessage($"Playing file: {Path.GetFileName(audioFile)}");
+            _currentAudioFile = audioFiles[0];
+            Logger.LogMessage($"Playing file: {Path.GetFileName(_currentAudioFile)}");
 
-            // Play the file asynchronously
-            _audioPlayer.Play(new List<FilePathItem> { new FilePathItem { Path = audioFile } });
-
-            // Wait for the PlaylistFinished event to be triggered
-            await WaitForPlaybackCompletion();
-
-            // Delete the file after playback
-            File.Delete(audioFile);
-            Logger.LogMessage($"Deleted file: {Path.GetFileName(audioFile)}");
+            // Play the file
+            _audioPlayer.Play(new List<FilePathItem> { new FilePathItem { Path = _currentAudioFile } });
         }
         catch (Exception ex)
         {
@@ -80,25 +73,20 @@ public class InstantPlayManager
         }
     }
 
-    private Task WaitForPlaybackCompletion()
-    {
-        // Create a TaskCompletionSource to wait for the PlaylistFinished event
-        var tcs = new TaskCompletionSource<bool>();
-
-        // Subscribe to the PlaylistFinished event
-        Action playbackFinishedHandler = null;
-        playbackFinishedHandler = () =>
-        {
-            _audioPlayer.PlaylistFinished -= playbackFinishedHandler; // Unsubscribe
-            tcs.SetResult(true); // Signal completion
-        };
-        _audioPlayer.PlaylistFinished += playbackFinishedHandler;
-
-        return tcs.Task;
-    }
-
     private void OnPlaylistFinished()
     {
-        // No logging here, as we only log when a file is played or deleted
+        try
+        {
+            // Delete the file after playback
+            if (!string.IsNullOrEmpty(_currentAudioFile) && File.Exists(_currentAudioFile))
+            {
+                File.Delete(_currentAudioFile);
+                Logger.LogMessage($"Deleted file: {Path.GetFileName(_currentAudioFile)}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error deleting file: {ex.Message}");
+        }
     }
 }
