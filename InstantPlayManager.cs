@@ -1,5 +1,7 @@
+//Be Naame Khoda
+//FileName: InstantPlayManager.cs
+
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using System.Timers;
@@ -83,8 +85,8 @@ public class InstantPlayManager
         var tcs = new TaskCompletionSource<bool>();
 
         // Subscribe to the PlaylistFinished event
-        EventHandler playbackFinishedHandler = null;
-        playbackFinishedHandler = (sender, e) =>
+        Action playbackFinishedHandler = null;
+        playbackFinishedHandler = () =>
         {
             _audioPlayer.PlaylistFinished -= playbackFinishedHandler; // Unsubscribe
             tcs.SetResult(true); // Signal completion
@@ -94,7 +96,7 @@ public class InstantPlayManager
         return tcs.Task;
     }
 
-    private void OnPlaylistFinished(object sender, EventArgs e)
+    private void OnPlaylistFinished()
     {
         // No logging here, as we only log when a file is played or deleted
     }
