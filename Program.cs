@@ -13,6 +13,7 @@ namespace RadioSchedulerService
         private static PrayTimeScheduler _prayTimeScheduler;
         private static InstantPlayManager _instantPlayManager;
         private static WebServer _webServer;
+        private static Scheduler _scheduler; // Add Scheduler instance
         private static CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
         static async Task Main()
@@ -29,8 +30,11 @@ namespace RadioSchedulerService
                 // Initialize the PrayTimeScheduler
                 _prayTimeScheduler = new PrayTimeScheduler();
 
-                // Initialize the WebServer
-                _webServer = new WebServer(_prayTimeScheduler);
+                // Initialize the Scheduler
+                _scheduler = new Scheduler();
+
+                // Initialize the WebServer with the Scheduler
+                _webServer = new WebServer(_scheduler);
                 _webServer.Start();
 
                 // Display prayer times in the console
@@ -52,6 +56,7 @@ namespace RadioSchedulerService
                 // Clean up resources
                 _prayTimeScheduler = null;
                 _instantPlayManager = null;
+                _scheduler = null;
                 _webServer = null;
                 _cancellationTokenSource.Dispose();
             }
