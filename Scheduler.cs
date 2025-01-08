@@ -178,14 +178,20 @@ public class Scheduler
     {
         DateTime nextOccurrence = DateTime.MinValue;
 
+        // Convert the current date to the specified calendar type
         DateTime convertedDate = CalendarHelper.ConvertDate(now, scheduleItem.CalendarType);
 
+        // Check if the current date matches the DayOfMonth and Month fields
         if (!MatchesCronField(scheduleItem.DayOfMonth, convertedDate.Day.ToString())) return nextOccurrence;
         if (!MatchesCronField(scheduleItem.Month, convertedDate.Month.ToString())) return nextOccurrence;
-        if (!MatchesCronField(scheduleItem.DayOfWeek, ((int)convertedDate.DayOfWeek).ToString())) return nextOccurrence;
+
+        // Check if the current day of the week matches the DayOfWeek field
+        int currentDayOfWeek = CalendarHelper.GetDayOfWeek(convertedDate, scheduleItem.Region);
+        if (!MatchesCronField(scheduleItem.DayOfWeek, currentDayOfWeek.ToString())) return nextOccurrence;
 
         if (scheduleItem.Type == "Periodic")
         {
+            // For Periodic items, check the time fields (Second, Minute, Hour)
             if (!MatchesCronField(scheduleItem.Second, now.Second.ToString())) return nextOccurrence;
             if (!MatchesCronField(scheduleItem.Minute, now.Minute.ToString())) return nextOccurrence;
             if (!MatchesCronField(scheduleItem.Hour, now.Hour.ToString())) return nextOccurrence;
@@ -194,11 +200,13 @@ public class Scheduler
         }
         else if (scheduleItem.Type == "NonPeriodic")
         {
+            // For NonPeriodic items, check the trigger
             if (string.IsNullOrEmpty(scheduleItem.Trigger) || scheduleItem.Trigger != _currentTrigger.Event) return nextOccurrence;
 
             nextOccurrence = now;
         }
 
+        // If the next occurrence is within the valid range, return it
         if (nextOccurrence >= now && nextOccurrence <= endTime)
         {
             return nextOccurrence;
