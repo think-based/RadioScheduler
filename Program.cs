@@ -16,7 +16,7 @@ namespace RadioSchedulerService
             LoadSettingsFromConfig();
 
             // تنظیم خودکار زاویه‌های فجر و عشاء
-            Settings.Instance.AutoSetAngles();
+            Settings.AutoSetAngles();
 
             // ایجاد نمونه‌ای از Scheduler
             var scheduler = new Scheduler();
@@ -51,18 +51,18 @@ namespace RadioSchedulerService
                 var appSettings = config.Application;
 
                 // تنظیم موقعیت جغرافیایی و زمان‌زون از فایل کانفیگ
-                Settings.Instance.Latitude = appSettings.Latitude;
-                Settings.Instance.Longitude = appSettings.Longitude;
-                Settings.Instance.TimeZone = appSettings.TimeZone;
-                Settings.Instance.TimerIntervalInMinutes = appSettings.TimerIntervalInMinutes;
-                Settings.Instance.AmplifierEnabled = appSettings.AmplifierEnabled;
-                Settings.Instance.AmplifierApiUrl = appSettings.AmplifierApiUrl;
+                Settings.Latitude = appSettings.Latitude;
+                Settings.Longitude = appSettings.Longitude;
+                Settings.TimeZone = appSettings.TimeZone;
+                Settings.TimerIntervalInMinutes = appSettings.TimerIntervalInMinutes;
+                Settings.AmplifierEnabled = appSettings.AmplifierEnabled;
+                Settings.AmplifierApiUrl = appSettings.AmplifierApiUrl;
 
                 // تنظیم روش محاسبه و فرمت زمان از فایل کانفیگ
-                Settings.Instance.CalculationMethod = Enum.Parse<PrayTime.CalculationMethod>(appSettings.CalculationMethod);
-                Settings.Instance.AsrMethod = Enum.Parse<PrayTime.AsrMethods>(appSettings.AsrMethod);
-                Settings.Instance.TimeFormat = Enum.Parse<PrayTime.TimeFormat>(appSettings.TimeFormat);
-                Settings.Instance.AdjustHighLats = Enum.Parse<PrayTime.AdjustingMethod>(appSettings.AdjustHighLats);
+                Settings.CalculationMethod = Enum.Parse<PrayTime.CalculationMethod>(appSettings.CalculationMethod);
+                Settings.AsrMethod = Enum.Parse<PrayTime.AsrMethods>(appSettings.AsrMethod);
+                Settings.TimeFormat = Enum.Parse<PrayTime.TimeFormat>(appSettings.TimeFormat);
+                Settings.AdjustHighLats = Enum.Parse<PrayTime.AdjustingMethod>(appSettings.AdjustHighLats);
 
                 Logger.LogMessage("Settings loaded from configuration file.");
             }
@@ -82,7 +82,7 @@ namespace RadioSchedulerService
             int day = now.Day;
 
             // محاسبه زمان‌های شرعی برای امروز
-            string[] prayerTimes = new PrayTime().getPrayerTimes(year, month, day, Settings.Instance.Latitude, Settings.Instance.Longitude, (int)Settings.Instance.TimeZone);
+            string[] prayerTimes = new PrayTime().getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
 
             // نمایش زمان‌های شرعی
             Console.WriteLine("Prayer Times for Today:");
