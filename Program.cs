@@ -4,31 +4,32 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace RadioSchedulerService
 {
     static class Program
     {
-        private static ManualResetEvent _waitHandle = new ManualResetEvent(false);
-        private static PrayTimeScheduler _prayTimeScheduler; // Store PrayTimeScheduler in a static variable
-        private static InstantPlayManager _instantPlayManager; // Store InstantPlayManager in a static variable
+        private static PrayTimeScheduler _prayTimeScheduler;
+        private static InstantPlayManager _instantPlayManager;
+        private static CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
-        static void Main()
+        static async Task Main()
         {
             // Load settings from the configuration file
             LoadSettingsFromConfig();
 
             // Initialize the InstantPlayManager
             string instantPlayFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InstantPlay");
-            _instantPlayManager = new InstantPlayManager(instantPlayFolderPath); // Store in a static variable
+            _instantPlayManager = new InstantPlayManager(instantPlayFolderPath);
 
             // Create and store the PrayTimeScheduler instance
-            _prayTimeScheduler = new PrayTimeScheduler(); // Store in a static variable
+            _prayTimeScheduler = new PrayTimeScheduler();
 
             // Display prayer times in the console
             DisplayPrayerTimes();
 
-            // Wait for the application to exit
+            // Handle Ctrl+C to stop the application
             Console.CancelKeyPress += (sender, e) =>
             {
                 Console.WriteLine("Stopping Radio Scheduler Service...");
@@ -37,10 +38,24 @@ namespace RadioSchedulerService
                 _prayTimeScheduler = null;
                 _instantPlayManager = null;
 
-                _waitHandle.Set(); // Signal to stop the application
+                // Cancel the token to stop the application
+                _cancellationTokenSource.Cancel();
+
+                // Prevent the application from terminating immediately
+                e.Cancel = true;
             };
 
-            _waitHandle.WaitOne(); // Wait for the exit signal
+            // Keep the application running until cancellation is requested
+            try
+            {
+                await Task.Delay(Timeout.Infinite, _cancellationTokenSource.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                // Expected when the token is canceled
+            }
+
+            Console.WriteLine("Application stopped.");
         }
 
         private static void LoadSettingsFromConfig()
