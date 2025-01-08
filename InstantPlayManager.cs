@@ -2,7 +2,7 @@
 //FileName: InstantPlayManager.cs
 
 using System;
-using System.Collections.Generic; // Added for List<T>
+using System.Collections.Generic; // For List<T>
 using System.IO;
 using System.Timers;
 
@@ -43,6 +43,7 @@ public class InstantPlayManager
             // Check if the folder exists
             if (!Directory.Exists(_instantPlayFolderPath))
             {
+                Logger.LogMessage("InstantPlay folder not found.");
                 return; // Folder not found, skip processing
             }
 
@@ -51,6 +52,7 @@ public class InstantPlayManager
 
             if (audioFiles.Length == 0)
             {
+                Logger.LogMessage("No audio files to play.");
                 return; // No files to play
             }
 
@@ -64,10 +66,7 @@ public class InstantPlayManager
         catch (Exception ex)
         {
             Logger.LogMessage($"Error: {ex.Message}");
-        }
-        finally
-        {
-            // Restart the timer after processing is complete
+            // Restart the timer in case of an error
             _isProcessing = false;
             _instantPlayTimer.Start();
         }
@@ -87,6 +86,12 @@ public class InstantPlayManager
         catch (Exception ex)
         {
             Logger.LogMessage($"Error deleting file: {ex.Message}");
+        }
+        finally
+        {
+            // Restart the timer after playback and file deletion are complete
+            _isProcessing = false;
+            _instantPlayTimer.Start();
         }
     }
 }
