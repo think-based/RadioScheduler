@@ -25,18 +25,25 @@ public class InstantPlayManager
         // Initialize the timer
         _instantPlayTimer = new Timer(1000); // Check every second
         _instantPlayTimer.Elapsed += OnInstantPlayTimerElapsed;
-        _instantPlayTimer.AutoReset = true;
+        _instantPlayTimer.AutoReset = true; // Ensure the timer repeats
         _instantPlayTimer.Enabled = true;
+
+        Logger.LogMessage("InstantPlayManager initialized.");
     }
 
     private void OnInstantPlayTimerElapsed(object sender, ElapsedEventArgs e)
     {
         // Prevent re-entrancy
-        if (_isProcessing) return;
+        if (_isProcessing)
+        {
+            Logger.LogMessage("Timer elapsed while processing. Skipping.");
+            return;
+        }
         _isProcessing = true;
 
         // Stop the timer while processing the file
         _instantPlayTimer.Stop();
+        Logger.LogMessage("Timer stopped for processing.");
 
         try
         {
@@ -69,6 +76,7 @@ public class InstantPlayManager
             // Restart the timer in case of an error
             _isProcessing = false;
             _instantPlayTimer.Start();
+            Logger.LogMessage("Timer restarted after error.");
         }
     }
 
@@ -92,6 +100,7 @@ public class InstantPlayManager
             // Restart the timer after playback and file deletion are complete
             _isProcessing = false;
             _instantPlayTimer.Start();
+            Logger.LogMessage("Timer restarted after playback.");
         }
     }
 }
