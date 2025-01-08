@@ -1,5 +1,5 @@
-// Be Naame Khoda
-// FileName: Program.cs
+//Be Naame Khoda
+//FileName: Program.cs
 
 using System;
 using System.Threading;
