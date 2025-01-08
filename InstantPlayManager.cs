@@ -1,8 +1,7 @@
-// Be Naame Khoda
-// FileName: InstantPlayManager.cs
+//Be Naame Khoda
+//FileName: InstantPlayManager.cs
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Timers;
 
@@ -28,11 +27,9 @@ public class InstantPlayManager
 
     private void OnInstantPlayTimerElapsed(object sender, ElapsedEventArgs e)
     {
-        CheckAndPlayInstantPlayFiles();
-    }
+        // Stop the timer while processing the file
+        _instantPlayTimer.Stop();
 
-    private void CheckAndPlayInstantPlayFiles()
-    {
         try
         {
             // Check if the folder exists
@@ -57,10 +54,10 @@ public class InstantPlayManager
             // Play the file
             _audioPlayer.Play(new List<FilePathItem> { new FilePathItem { Path = audioFile } });
 
-            // Wait for playback to finish (optional, depending on your AudioPlayer implementation)
+            // Wait for playback to finish
             while (_audioPlayer.IsPlaying)
             {
-                System.Threading.Thread.Sleep(100);
+                System.Threading.Thread.Sleep(100); // Sleep for 100ms to avoid busy-waiting
             }
 
             // Delete the file after playback
@@ -70,6 +67,11 @@ public class InstantPlayManager
         catch (Exception ex)
         {
             Logger.LogMessage($"Error in InstantPlayManager: {ex.Message}");
+        }
+        finally
+        {
+            // Restart the timer after processing is complete
+            _instantPlayTimer.Start();
         }
     }
 }
