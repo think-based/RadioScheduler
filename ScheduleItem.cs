@@ -1,6 +1,9 @@
 //Be Naame Khoda
 //FileName: ScheduleItem.cs
 
+using System;
+using System.Collections.Generic;
+
 public class ScheduleItem
 {
     public int ItemId { get; set; } // شناسه منحصر به فرد
@@ -19,9 +22,13 @@ public class ScheduleItem
     public string Trigger { get; set; } // نام تریگر - فقط برای NonPeriodic
 
     public string CalendarType { get; set; } // نوع تقویم
+    public string Region { get; set; } // منطقه (کد کشور ISO 3166-1 alpha-2)
     public string TriggerType { get; set; } // نوع تریگر (Immediate یا Timed یا Delayed)
     public int? DelayMinutes { get; set; } // تعداد دقیقه‌های تاخیر برای TriggerType = Delayed
 
+    /// <summary>
+    /// اعتبارسنجی آیتم زمان‌بندی
+    /// </summary>
     public void Validate()
     {
         if (Type == "Periodic" && Trigger != null)
@@ -38,11 +45,42 @@ public class ScheduleItem
         {
             throw new ArgumentException("DelayMinutes should only be set when TriggerType is Delayed.");
         }
+
+        if (FilePaths == null || FilePaths.Count == 0)
+        {
+            throw new ArgumentException("FilePaths cannot be null or empty.");
+        }
+
+        foreach (var filePathItem in FilePaths)
+        {
+            filePathItem.Validate();
+        }
     }
 }
 
 public class FilePathItem
 {
     public string Path { get; set; } // مسیر فایل یا پوشه
-    public string FolderPlayMode { get; set; } // حالت پخش پوشه (All یا Single) - فقط برای پوشه‌ها
+    public string FolderPlayMode { get; set; } // حالت پخش پوشه (All یا Single)
+
+    /// <summary>
+    /// اعتبارسنجی آیتم مسیر فایل یا پوشه
+    /// </summary>
+    public void Validate()
+    {
+        if (string.IsNullOrEmpty(Path))
+        {
+            throw new ArgumentException("Path cannot be null or empty.");
+        }
+
+        if (Directory.Exists(Path) && string.IsNullOrEmpty(FolderPlayMode))
+        {
+            throw new ArgumentException("FolderPlayMode must be set for folders.");
+        }
+
+        if (!Directory.Exists(Path) && !File.Exists(Path))
+        {
+            throw new ArgumentException($"File or folder not found: {Path}");
+        }
+    }
 }
