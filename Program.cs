@@ -2,7 +2,6 @@
 //FileName: Program.cs
 
 using System;
-using System.IO;
 using System.Threading;
 
 namespace RadioSchedulerService
@@ -10,41 +9,37 @@ namespace RadioSchedulerService
     static class Program
     {
         private static ManualResetEvent _waitHandle = new ManualResetEvent(false);
+        private static PrayTimeScheduler _prayTimeScheduler; // Store PrayTimeScheduler in a static variable
+        private static InstantPlayManager _instantPlayManager; // Store InstantPlayManager in a static variable
 
         static void Main()
         {
             // Load settings from the configuration file
             LoadSettingsFromConfig();
 
-            // تنظیم خودکار زاویه‌های فجر و عشاء
-            Settings.AutoSetAngles();
-
             // Initialize the InstantPlayManager
             string instantPlayFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InstantPlay");
-            var instantPlayManager = new InstantPlayManager(instantPlayFolderPath);
+            _instantPlayManager = new InstantPlayManager(instantPlayFolderPath); // Store in a static variable
 
-            // ایجاد نمونه‌ای از Scheduler
-            var scheduler = new Scheduler();
+            // Create and store the PrayTimeScheduler instance
+            _prayTimeScheduler = new PrayTimeScheduler(); // Store in a static variable
 
-            // ایجاد نمونه‌ای از PrayTimeScheduler
-            var prayTimeScheduler = new PrayTimeScheduler();
-
-            // راه‌اندازی وب سرور
-            var webServer = new WebServer(scheduler);
-            webServer.Start();
-            Console.WriteLine("Web server started. Press Ctrl+C to stop...");
-
-            // نمایش زمان‌های شرعی در کنسول
+            // Display prayer times in the console
             DisplayPrayerTimes();
 
-            // منتظر سیگنال برای توقف برنامه
+            // Wait for the application to exit
             Console.CancelKeyPress += (sender, e) =>
             {
                 Console.WriteLine("Stopping Radio Scheduler Service...");
-                _waitHandle.Set(); // سیگنال برای توقف برنامه
+
+                // Dispose of resources explicitly
+                _prayTimeScheduler = null;
+                _instantPlayManager = null;
+
+                _waitHandle.Set(); // Signal to stop the application
             };
 
-            _waitHandle.WaitOne(); // منتظر بمان تا سیگنال دریافت شود
+            _waitHandle.WaitOne(); // Wait for the exit signal
         }
 
         private static void LoadSettingsFromConfig()
@@ -55,7 +50,7 @@ namespace RadioSchedulerService
                 var config = ConfigManager.LoadConfig();
                 var appSettings = config.Application;
 
-                // تنظیم موقعیت جغرافیایی و زمان‌زون از فایل کانفیگ
+                // Set application settings
                 Settings.Latitude = appSettings.Latitude;
                 Settings.Longitude = appSettings.Longitude;
                 Settings.TimeZone = appSettings.TimeZone;
@@ -63,7 +58,7 @@ namespace RadioSchedulerService
                 Settings.AmplifierEnabled = appSettings.AmplifierEnabled;
                 Settings.AmplifierApiUrl = appSettings.AmplifierApiUrl;
 
-                // تنظیم روش محاسبه و فرمت زمان از فایل کانفیگ
+                // Set calculation method and time format
                 Settings.CalculationMethod = (PrayTime.CalculationMethod)Enum.Parse(typeof(PrayTime.CalculationMethod), appSettings.CalculationMethod);
                 Settings.AsrMethod = (PrayTime.AsrMethods)Enum.Parse(typeof(PrayTime.AsrMethods), appSettings.AsrMethod);
                 Settings.TimeFormat = (PrayTime.TimeFormat)Enum.Parse(typeof(PrayTime.TimeFormat), appSettings.TimeFormat);
@@ -80,16 +75,16 @@ namespace RadioSchedulerService
 
         private static void DisplayPrayerTimes()
         {
-            // تاریخ و زمان فعلی
+            // Get current date and time
             DateTime now = DateTime.Now;
             int year = now.Year;
             int month = now.Month;
             int day = now.Day;
 
-            // محاسبه زمان‌های شرعی برای امروز
+            // Calculate prayer times for today
             string[] prayerTimes = new PrayTime().getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
 
-            // نمایش زمان‌های شرعی
+            // Display prayer times
             Console.WriteLine("Prayer Times for Today:");
             Console.WriteLine($"Fajr: {prayerTimes[0]}");
             Console.WriteLine($"Sunrise: {prayerTimes[1]}");
