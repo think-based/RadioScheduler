@@ -17,12 +17,12 @@ public class AudioPlayer
     public bool IsPlaying { get; private set; }
     public string CurrentFile { get; private set; }
 
-    public event Action PlaylistFinished;
+    public event Action PlaylistFinished; // Event to signal when playback is finished
 
     public AudioPlayer()
     {
         _audioPlayerWaveOut = new WaveOutEvent();
-        _audioPlayerWaveOut.PlaybackStopped += OnPlaybackStopped;
+        _audioPlayerWaveOut.PlaybackStopped += OnPlaybackStopped; // Subscribe to PlaybackStopped event
         IsPlaying = false;
         CurrentFile = null;
     }
@@ -51,7 +51,7 @@ public class AudioPlayer
         if (_currentIndex >= _currentPlaylist.Count)
         {
             Stop();
-            PlaylistFinished?.Invoke();
+            PlaylistFinished?.Invoke(); // Raise the PlaylistFinished event
             return;
         }
 
@@ -91,7 +91,7 @@ public class AudioPlayer
         CurrentFile = null;
 
         _currentIndex++;
-        PlayNextFile();
+        PlayNextFile(); // Play the next file in the playlist
     }
 
     public List<string> ExpandFilePaths(List<FilePathItem> filePathItems)
