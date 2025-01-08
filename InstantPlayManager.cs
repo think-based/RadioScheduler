@@ -2,8 +2,7 @@
 //FileName: InstantPlayManager.cs
 
 using System;
-using System.Collections.Generic;
-using System.IO; // Ensure this is included
+using System.IO;
 using System.Timers;
 
 public class InstantPlayManager
@@ -13,6 +12,7 @@ public class InstantPlayManager
     private string _instantPlayFolderPath;
     private bool _isProcessing = false; // Flag to prevent re-entrancy
     private string _currentAudioFile; // Track the current audio file being played
+    private bool _folderExists = true; // Track if the folder exists to avoid repetitive checks
 
     public InstantPlayManager(string instantPlayFolderPath)
     {
@@ -43,8 +43,14 @@ public class InstantPlayManager
             // Check if the folder exists
             if (!Directory.Exists(_instantPlayFolderPath))
             {
-                Logger.LogMessage("InstantPlay folder not found.");
+                _folderExists = false; // Update flag to avoid repetitive checks
+                _isProcessing = false;
+                _instantPlayTimer.Start(); // Restart the timer
                 return; // Folder not found, skip processing
+            }
+            else if (!_folderExists)
+            {
+                _folderExists = true; // Update flag to avoid repetitive checks
             }
 
             // Get all audio files in the folder
@@ -52,7 +58,9 @@ public class InstantPlayManager
 
             if (audioFiles.Length == 0)
             {
-                Logger.LogMessage("No audio files to play.");
+                _currentAudioFile = null; // Reset to avoid repetitive checks
+                _isProcessing = false;
+                _instantPlayTimer.Start(); // Restart the timer
                 return; // No files to play
             }
 
@@ -93,7 +101,6 @@ public class InstantPlayManager
             // Restart the timer after playback and file deletion are complete
             _isProcessing = false;
             _instantPlayTimer.Start();
-            Logger.LogMessage("Timer restarted after playback.");
         }
     }
 }
