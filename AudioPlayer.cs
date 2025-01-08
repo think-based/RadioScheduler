@@ -38,9 +38,19 @@ public class AudioPlayer
 
     public void Stop()
     {
-        _audioPlayerWaveOut?.Stop();
-        _audioPlayerWaveOut?.Dispose();
-        _currentAudioFile?.Dispose();
+        if (_audioPlayerWaveOut != null)
+        {
+            _audioPlayerWaveOut.Stop();
+            _audioPlayerWaveOut.Dispose();
+            _audioPlayerWaveOut = null;
+        }
+
+        if (_currentAudioFile != null)
+        {
+            _currentAudioFile.Dispose();
+            _currentAudioFile = null;
+        }
+
         _currentPlaylist = null;
         IsPlaying = false;
         CurrentFile = null;
@@ -64,13 +74,25 @@ public class AudioPlayer
             return;
         }
 
-        _audioPlayerWaveOut?.Stop();
-        _audioPlayerWaveOut?.Dispose();
-
         try
         {
+            // Dispose of the previous audio file and player
+            if (_currentAudioFile != null)
+            {
+                _currentAudioFile.Dispose();
+                _currentAudioFile = null;
+            }
+
+            if (_audioPlayerWaveOut != null)
+            {
+                _audioPlayerWaveOut.Dispose();
+                _audioPlayerWaveOut = null;
+            }
+
+            // Initialize new audio file and player
             _currentAudioFile = new AudioFileReader(currentFile);
             _audioPlayerWaveOut = new WaveOutEvent();
+            _audioPlayerWaveOut.PlaybackStopped += OnPlaybackStopped; // Re-subscribe to the event
             _audioPlayerWaveOut.Init(_currentAudioFile);
             _audioPlayerWaveOut.Play();
 
@@ -90,8 +112,22 @@ public class AudioPlayer
         IsPlaying = false;
         CurrentFile = null;
 
+        // Clean up resources
+        if (_currentAudioFile != null)
+        {
+            _currentAudioFile.Dispose();
+            _currentAudioFile = null;
+        }
+
+        if (_audioPlayerWaveOut != null)
+        {
+            _audioPlayerWaveOut.Dispose();
+            _audioPlayerWaveOut = null;
+        }
+
+        // Play the next file in the playlist
         _currentIndex++;
-        PlayNextFile(); // Play the next file in the playlist
+        PlayNextFile();
     }
 
     public List<string> ExpandFilePaths(List<FilePathItem> filePathItems)
