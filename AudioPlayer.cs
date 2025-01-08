@@ -58,8 +58,19 @@ public class AudioPlayer
 
     private void PlayNextFile()
     {
+        // Check if _currentPlaylist is null or empty
+        if (_currentPlaylist == null || _currentPlaylist.Count == 0)
+        {
+            Logger.LogMessage("Playlist is null or empty.");
+            Stop();
+            PlaylistFinished?.Invoke(); // Raise the PlaylistFinished event
+            return;
+        }
+
+        // Check if we've reached the end of the playlist
         if (_currentIndex >= _currentPlaylist.Count)
         {
+            Logger.LogMessage("End of playlist reached.");
             Stop();
             PlaylistFinished?.Invoke(); // Raise the PlaylistFinished event
             return;
@@ -70,7 +81,7 @@ public class AudioPlayer
         {
             Logger.LogMessage($"File not found: {currentFile}");
             _currentIndex++;
-            PlayNextFile();
+            PlayNextFile(); // Skip to the next file
             return;
         }
 
@@ -103,7 +114,7 @@ public class AudioPlayer
         {
             Logger.LogMessage($"Error playing file {currentFile}: {ex.Message}");
             _currentIndex++;
-            PlayNextFile();
+            PlayNextFile(); // Skip to the next file
         }
     }
 
@@ -133,6 +144,12 @@ public class AudioPlayer
     public List<string> ExpandFilePaths(List<FilePathItem> filePathItems)
     {
         var expandedPaths = new List<string>();
+
+        if (filePathItems == null || filePathItems.Count == 0)
+        {
+            Logger.LogMessage("No file paths provided.");
+            return expandedPaths;
+        }
 
         foreach (var item in filePathItems)
         {
