@@ -16,46 +16,63 @@ namespace RadioSchedulerService
 
         static async Task Main()
         {
-            // Load settings from the configuration file
-            LoadSettingsFromConfig();
-
-            // Initialize the InstantPlayManager
-            string instantPlayFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InstantPlay");
-            _instantPlayManager = new InstantPlayManager(instantPlayFolderPath);
-
-            // Create and store the PrayTimeScheduler instance
-            _prayTimeScheduler = new PrayTimeScheduler();
-
-            // Display prayer times in the console
-            DisplayPrayerTimes();
-
-            // Handle Ctrl+C to stop the application
-            Console.CancelKeyPress += (sender, e) =>
-            {
-                Console.WriteLine("Stopping Radio Scheduler Service...");
-
-                // Dispose of resources explicitly
-                _prayTimeScheduler = null;
-                _instantPlayManager = null;
-
-                // Cancel the token to stop the application
-                _cancellationTokenSource.Cancel();
-
-                // Prevent the application from terminating immediately
-                e.Cancel = true;
-            };
-
-            // Keep the application running until cancellation is requested
             try
             {
-                await Task.Delay(Timeout.Infinite, _cancellationTokenSource.Token);
+                // Load settings from the configuration file
+                LoadSettingsFromConfig();
+
+                // Initialize the InstantPlayManager
+                string instantPlayFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InstantPlay");
+                _instantPlayManager = new InstantPlayManager(instantPlayFolderPath);
+
+                // Initialize the PrayTimeScheduler
+                _prayTimeScheduler = new PrayTimeScheduler();
+
+                // Display prayer times in the console
+                DisplayPrayerTimes();
+
+                // Handle Ctrl+C to gracefully stop the application
+                Console.CancelKeyPress += OnConsoleCancelKeyPress;
+
+                // Keep the application running until cancellation is requested
+                await RunApplicationAsync();
             }
-            catch (TaskCanceledException)
+            catch (Exception ex)
             {
-                // Expected when the token is canceled
+                Logger.LogMessage($"Fatal error: {ex.Message}");
+                Console.WriteLine($"Fatal error: {ex.Message}");
+            }
+            finally
+            {
+                // Clean up resources
+                _prayTimeScheduler = null;
+                _instantPlayManager = null;
+                _cancellationTokenSource.Dispose();
             }
 
             Console.WriteLine("Application stopped.");
+        }
+
+        private static async Task RunApplicationAsync()
+        {
+            Console.WriteLine("Radio Scheduler Service started. Press Ctrl+C to exit.");
+
+            // Keep the application running until cancellation is requested
+            while (!_cancellationTokenSource.Token.IsCancellationRequested)
+            {
+                await Task.Delay(1000, _cancellationTokenSource.Token); // Check every second
+            }
+        }
+
+        private static void OnConsoleCancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            Console.WriteLine("Stopping Radio Scheduler Service...");
+
+            // Cancel the token to stop the application
+            _cancellationTokenSource.Cancel();
+
+            // Prevent the application from terminating immediately
+            e.Cancel = true;
         }
 
         private static void LoadSettingsFromConfig()
