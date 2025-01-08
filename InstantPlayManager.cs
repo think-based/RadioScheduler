@@ -66,10 +66,7 @@ public class InstantPlayManager
         catch (Exception ex)
         {
             Logger.LogMessage($"Error: {ex.Message}");
-        }
-        finally
-        {
-            // Restart the timer after processing is complete
+            // Restart the timer in case of an error
             _isProcessing = false;
             _instantPlayTimer.Start();
         }
@@ -89,6 +86,12 @@ public class InstantPlayManager
         catch (Exception ex)
         {
             Logger.LogMessage($"Error deleting file: {ex.Message}");
+        }
+        finally
+        {
+            // Restart the timer after playback and file deletion are complete
+            _isProcessing = false;
+            _instantPlayTimer.Start();
         }
     }
 }
