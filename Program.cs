@@ -2,7 +2,6 @@
 //FileName: Program.cs
 
 using System;
-using System.ServiceProcess;
 using System.Threading;
 
 namespace RadioSchedulerService
@@ -13,23 +12,11 @@ namespace RadioSchedulerService
 
         static void Main()
         {
-            // تنظیم زمان‌زون پیش‌فرض
-            Settings.TimeZone = 3.5; // منطقه زمانی پیش‌فرض (UTC+3.5)
-
-            // تنظیم موقعیت جغرافیایی (شیراز)
-            Settings.Latitude = 29.5916; // عرض جغرافیایی شیراز
-            Settings.Longitude = 52.5837; // طول جغرافیایی شیراز
+            // Load settings from the configuration file
+            LoadSettingsFromConfig();
 
             // تنظیم خودکار زاویه‌های فجر و عشاء
-            Settings.AutoSetAngles();
-
-            // تنظیم روش محاسبه
-            Settings.CalculationMethod = PrayTime.CalculationMethod.Tehran;
-            Settings.AsrMethod = PrayTime.AsrMethods.Shafii;
-            Settings.TimeFormat = PrayTime.TimeFormat.Time24;
-
-            // تنظیمات مناطق با عرض جغرافیایی بالا
-            Settings.AdjustHighLats = PrayTime.AdjustingMethod.MidNight;
+            Settings.Instance.AutoSetAngles();
 
             // ایجاد نمونه‌ای از Scheduler
             var scheduler = new Scheduler();
@@ -55,6 +42,37 @@ namespace RadioSchedulerService
             _waitHandle.WaitOne(); // منتظر بمان تا سیگنال دریافت شود
         }
 
+        private static void LoadSettingsFromConfig()
+        {
+            try
+            {
+                // Load settings from the configuration file
+                var config = ConfigManager.LoadConfig();
+                var appSettings = config.Application;
+
+                // تنظیم موقعیت جغرافیایی و زمان‌زون از فایل کانفیگ
+                Settings.Instance.Latitude = appSettings.Latitude;
+                Settings.Instance.Longitude = appSettings.Longitude;
+                Settings.Instance.TimeZone = appSettings.TimeZone;
+                Settings.Instance.TimerIntervalInMinutes = appSettings.TimerIntervalInMinutes;
+                Settings.Instance.AmplifierEnabled = appSettings.AmplifierEnabled;
+                Settings.Instance.AmplifierApiUrl = appSettings.AmplifierApiUrl;
+
+                // تنظیم روش محاسبه و فرمت زمان از فایل کانفیگ
+                Settings.Instance.CalculationMethod = Enum.Parse<PrayTime.CalculationMethod>(appSettings.CalculationMethod);
+                Settings.Instance.AsrMethod = Enum.Parse<PrayTime.AsrMethods>(appSettings.AsrMethod);
+                Settings.Instance.TimeFormat = Enum.Parse<PrayTime.TimeFormat>(appSettings.TimeFormat);
+                Settings.Instance.AdjustHighLats = Enum.Parse<PrayTime.AdjustingMethod>(appSettings.AdjustHighLats);
+
+                Logger.LogMessage("Settings loaded from configuration file.");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogMessage($"Error loading settings from config: {ex.Message}");
+                throw;
+            }
+        }
+
         private static void DisplayPrayerTimes()
         {
             // تاریخ و زمان فعلی
@@ -64,7 +82,7 @@ namespace RadioSchedulerService
             int day = now.Day;
 
             // محاسبه زمان‌های شرعی برای امروز
-            string[] prayerTimes = new PrayTime().getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
+            string[] prayerTimes = new PrayTime().getPrayerTimes(year, month, day, Settings.Instance.Latitude, Settings.Instance.Longitude, (int)Settings.Instance.TimeZone);
 
             // نمایش زمان‌های شرعی
             Console.WriteLine("Prayer Times for Today:");
