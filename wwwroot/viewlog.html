@@ -72,7 +72,7 @@
     <script src="/js/light-bootstrap-dashboard.js"></script>
     <script>
         // بارگذاری لاگ‌ها از سرور
-        fetch('/viewlog')
+        fetch('/viewlog')  // Ensure this is /viewlog, not /viewlog.html
             .then(response => response.text())
             .then(data => {
                 document.getElementById('log-content').textContent = data;
