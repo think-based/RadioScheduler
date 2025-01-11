@@ -1,3 +1,6 @@
+//Be Naame Khoda
+//FileName: WebServer.cs
+
 using System;
 using System.IO;
 using System.Net;
@@ -56,15 +59,38 @@ public class WebServer
                     response.StatusCode = (int)HttpStatusCode.NotFound;
                 }
             }
+            // Handle /viewlog (return log content as plain text)
+            else if (path == "/viewlog")
+            {
+                string logFilePath = Logger.LogFilePath;
+                if (File.Exists(logFilePath))
+                {
+                    string logContent = File.ReadAllText(logFilePath);
+                    byte[] buffer = Encoding.UTF8.GetBytes(logContent);
+                    response.ContentType = "text/plain; charset=UTF-8";
+                    response.ContentLength64 = buffer.Length;
+                    response.OutputStream.Write(buffer, 0, buffer.Length);
+                }
+                else
+                {
+                    response.StatusCode = (int)HttpStatusCode.NotFound;
+                    string notFoundMessage = "فایل لاگ پیدا نشد.";
+                    byte[] buffer = Encoding.UTF8.GetBytes(notFoundMessage);
+                    response.ContentType = "text/plain; charset=UTF-8";
+                    response.ContentLength64 = buffer.Length;
+                    response.OutputStream.Write(buffer, 0, buffer.Length);
+                }
+            }
+            // Handle /viewlog.html (return the HTML page)
+            else if (path == "/viewlog.html")
+            {
+                string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", "viewlog.html");
+                ServeHtmlFile(response, filePath);
+            }
             // Handle other routes
             else if (path == "/" || path == "/index.html")
             {
                 string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", "index.html");
-                ServeHtmlFile(response, filePath);
-            }
-            else if (path == "/viewlog" || path == "/viewlog.html")
-            {
-                string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", "viewlog.html");
                 ServeHtmlFile(response, filePath);
             }
             else if (path == "/clearlog")
