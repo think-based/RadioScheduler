@@ -1,55 +1,109 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>وضعیت زمان‌بندی رادیو</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>داشبورد اوقات شرعی</title>
+    <!-- Bootstrap CSS -->
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Light Bootstrap Dashboard CSS -->
+    <link href="/css/light-bootstrap-dashboard.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>وضعیت زمان‌بندی رادیو</h1>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <div class="sidebar" data-color="blue" data-image="/img/sidebar.jpg">
+            <div class="sidebar-wrapper">
+                <ul class="nav">
+                    <li class="active">
+                        <a href="/">
+                            <i class="pe-7s-graph"></i>
+                            <p>داشبورد</p>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/viewlog">
+                            <i class="pe-7s-note2"></i>
+                            <p>مشاهده لاگ‌ها</p>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
 
-        <!-- بخش زمان فعلی -->
-        <section class="current-time">
-            <h2>زمان فعلی</h2>
-            <ul>
-                <li><strong>میلادی:</strong> <span id="gregorian-time"></span></li>
-                <li><strong>شمسی:</strong> <span id="persian-time"></span></li>
-                <li><strong>قمری:</strong> <span id="hijri-time"></span></li>
-            </ul>
-        </section>
+        <!-- Main Panel -->
+        <div class="main-panel">
+            <!-- Navbar -->
+            <nav class="navbar navbar-default">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <a class="navbar-brand" href="#">داشبورد اوقات شرعی</a>
+                    </div>
+                </div>
+            </nav>
 
-        <!-- بخش اوقات شرعی -->
-        <section class="prayer-times">
-            <h2>اوقات شرعی امروز</h2>
-            <ul>
-                <li><strong>اذان صبح:</strong> <span id="fajr">{{Fajr}}</span></li>
-                <li><strong>طلوع آفتاب:</strong> <span id="sunrise">{{Sunrise}}</span></li>
-                <li><strong>اذان ظهر:</strong> <span id="dhuhr">{{Dhuhr}}</span></li>
-                <li><strong>اذان عصر:</strong> <span id="asr">{{Asr}}</span></li>
-                <li><strong>غروب آفتاب:</strong> <span id="sunset">{{Sunset}}</span></li>
-                <li><strong>اذان مغرب:</strong> <span id="maghrib">{{Maghrib}}</span></li>
-                <li><strong>اذان عشاء:</strong> <span id="isha">{{Isha}}</span></li>
-            </ul>
-        </section>
-
-        <!-- بخش وضعیت پخش -->
-        <section class="playlist-status">
-            <h2>وضعیت پخش</h2>
-            <ul id="playlist-items">
-                <!-- آیتم‌های پخش اینجا نمایش داده می‌شوند -->
-            </ul>
-        </section>
-
-        <!-- بخش مدیریت لاگ‌ها -->
-        <section class="log-management">
-            <h2>مدیریت لاگ‌ها</h2>
-            <button onclick="clearLog()">پاک کردن لاگ‌ها</button>
-            <a href="/viewlog" target="_blank">مشاهده لاگ‌ها</a>
-        </section>
+            <!-- Content -->
+            <div class="content">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="header">
+                                    <h4 class="title">اوقات شرعی امروز</h4>
+                                </div>
+                                <div class="content">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>نام نماز</th>
+                                                <th>زمان</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>اذان صبح</td>
+                                                <td id="fajr-time">05:15</td>
+                                            </tr>
+                                            <tr>
+                                                <td>طلوع آفتاب</td>
+                                                <td id="sunrise-time">06:45</td>
+                                            </tr>
+                                            <tr>
+                                                <td>اذان ظهر</td>
+                                                <td id="dhuhr-time">12:30</td>
+                                            </tr>
+                                            <tr>
+                                                <td>اذان عصر</td>
+                                                <td id="asr-time">16:00</td>
+                                            </tr>
+                                            <tr>
+                                                <td>غروب آفتاب</td>
+                                                <td id="sunset-time">18:15</td>
+                                            </tr>
+                                            <tr>
+                                                <td>اذان مغرب</td>
+                                                <td id="maghrib-time">18:30</td>
+                                            </tr>
+                                            <tr>
+                                                <td>اذان عشاء</td>
+                                                <td id="isha-time">19:45</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script src="scripts.js"></script>
+    <!-- jQuery -->
+    <script src="/js/jquery.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="/js/bootstrap.min.js"></script>
+    <!-- Light Bootstrap Dashboard JS -->
+    <script src="/js/light-bootstrap-dashboard.js"></script>
 </body>
 </html>
