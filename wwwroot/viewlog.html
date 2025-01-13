@@ -9,20 +9,3 @@
         <pre id="log-content">Loading log content...</pre>
     </div>
 </div>
-<script>
-    // Fetch log content dynamically from the /api/logs endpoint
-    fetch('/api/logs')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to fetch log content');
-            }
-            return response.text();
-        })
-        .then(data => {
-            document.getElementById('log-content').textContent = data;
-        })
-        .catch(error => {
-            console.error('Error fetching log content:', error);
-            document.getElementById('log-content').textContent = 'Error loading log content.';
-        });
-</script>
