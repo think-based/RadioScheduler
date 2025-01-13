@@ -6,7 +6,7 @@
  * @param {string} page - The page to load (e.g., 'home', 'viewlog').
  */
 function loadPage(page) {
-    let url = `/${page}.html`; // Load the corresponding HTML file
+    let url = `/${page}.html`; // Request /home.html or /viewlog.html
     fetch(url)
         .then(response => {
             if (!response.ok) {
@@ -75,5 +75,5 @@ function clearLog() {
 
 // Load the home page by default when the page loads
 window.onload = function () {
-    loadPage('home');
+    loadPage('home'); // Load /home.html by default
 };
