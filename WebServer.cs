@@ -54,12 +54,12 @@ public class WebServer
                 ServeHtmlFile(response, Path.Combine("wwwroot", "index.html"));
             }
             // Serve home.html for /home
-            else if (path == "/home")
+            else if (path == "/home.html")
             {
                 ServeHtmlFile(response, Path.Combine("wwwroot", "home.html"));
             }
             // Serve viewlog.html for /viewlog
-            else if (path == "/viewlog")
+            else if (path == "/viewlog.html")
             {
                 ServeHtmlFile(response, Path.Combine("wwwroot", "viewlog.html"));
             }
