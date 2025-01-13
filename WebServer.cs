@@ -1,5 +1,5 @@
-//Be Naame Khoda
-//FileName: WebServer.cs
+// Be Naame Khoda
+// FileName: WebServer.cs
 
 using System;
 using System.IO;
@@ -141,8 +141,8 @@ public class WebServer
                 Logger.LogMessage("Log file cleared.");
             }
 
-            response.StatusCode = (int)HttpStatusCode.Found;
-            response.RedirectLocation = "/";
+            // Return a simple success response
+            response.StatusCode = (int)HttpStatusCode.OK;
         }
         catch (Exception ex)
         {
