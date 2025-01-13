@@ -1,93 +1,23 @@
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مشاهده لاگ‌ها</title>
-    <!-- Bootstrap CSS -->
-    <link href="/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Light Bootstrap Dashboard CSS -->
-    <link href="/css/light-bootstrap-dashboard.css" rel="stylesheet">
-</head>
-<body>
-    <div class="wrapper">
-        <!-- Sidebar -->
-        <div class="sidebar" data-color="blue" data-image="/img/sidebar.jpg">
-            <div class="sidebar-wrapper">
-                <ul class="nav">
-                    <li>
-                        <a href="/">
-                            <i class="pe-7s-graph"></i>
-                            <p>داشبورد</p>
-                        </a>
-                    </li>
-                    <li class="active">
-                        <a href="/viewlog">
-                            <i class="pe-7s-note2"></i>
-                            <p>مشاهده لاگ‌ها</p>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
+<!-- Be Naame Khoda -->
+<!-- FileName: wwwroot/viewlog.html -->
 
-        <!-- Main Panel -->
-        <div class="main-panel">
-            <!-- Navbar -->
-            <nav class="navbar navbar-default">
-                <div class="container-fluid">
-                    <div class="navbar-header">
-                        <a class="navbar-brand" href="#">مشاهده لاگ‌ها</a>
-                    </div>
-                </div>
-            </nav>
-
-            <!-- Content -->
-            <div class="content">
-                <div class="container-fluid">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="card">
-                                <div class="header">
-                                    <h4 class="title">لاگ‌های سیستم</h4>
-                                </div>
-                                <div class="content">
-                                    <pre id="log-content">{{LogContent}}</pre>
-                                    <button id="clear-log-btn" class="btn btn-danger">پاک کردن لاگ‌ها</button>
-                                    <p id="clear-log-message"></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="card">
+    <div class="card-header">
+        <h2>View Log</h2>
     </div>
-
-    <!-- jQuery -->
-    <script src="/js/jquery.min.js"></script>
-    <!-- Bootstrap JS -->
-    <script src="/js/bootstrap.min.js"></script>
-    <!-- Light Bootstrap Dashboard JS -->
-    <script src="/js/light-bootstrap-dashboard.js"></script>
-    <script>
-        // ارسال درخواست پاک کردن لاگ‌ها به سرور
-        document.getElementById('clear-log-btn').addEventListener('click', () => {
-            fetch('/clearlog', { method: 'POST' })
-                .then(response => response.text())
-                .then(data => {
-                    document.getElementById('clear-log-message').textContent = data;
-                    // بارگذاری مجدد لاگ‌ها پس از پاک کردن
-                    fetch('/viewlog')
-                        .then(response => response.text())
-                        .then(data => {
-                            document.getElementById('log-content').textContent = data;
-                        });
-                })
-                .catch(error => {
-                    document.getElementById('clear-log-message').textContent = 'خطا در پاک کردن لاگ‌ها.';
-                });
+    <div class="card-body">
+        <pre id="log-content">Loading log content...</pre>
+    </div>
+</div>
+<script>
+    // Fetch log content dynamically from the /api/logs endpoint
+    fetch('/api/logs')
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('log-content').textContent = data;
+        })
+        .catch(error => {
+            console.error('Error fetching log content:', error);
+            document.getElementById('log-content').textContent = 'Error loading log content.';
         });
-    </script>
-</body>
-</html>
+</script>
