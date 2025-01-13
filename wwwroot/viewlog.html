@@ -52,7 +52,7 @@
                                     <h4 class="title">لاگ‌های سیستم</h4>
                                 </div>
                                 <div class="content">
-                                    <pre id="log-content">در حال بارگذاری لاگ‌ها...</pre>
+                                    <pre id="log-content">{{LogContent}}</pre>
                                     <button id="clear-log-btn" class="btn btn-danger">پاک کردن لاگ‌ها</button>
                                     <p id="clear-log-message"></p>
                                 </div>
@@ -71,16 +71,6 @@
     <!-- Light Bootstrap Dashboard JS -->
     <script src="/js/light-bootstrap-dashboard.js"></script>
     <script>
-        // بارگذاری لاگ‌ها از سرور
-        fetch('/viewlog')  // Ensure this is /viewlog, not /viewlog.html
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('log-content').textContent = data;
-            })
-            .catch(error => {
-                document.getElementById('log-content').textContent = 'خطا در بارگذاری لاگ‌ها.';
-            });
-
         // ارسال درخواست پاک کردن لاگ‌ها به سرور
         document.getElementById('clear-log-btn').addEventListener('click', () => {
             fetch('/clearlog', { method: 'POST' })
