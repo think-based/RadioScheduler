@@ -1,4 +1,4 @@
 {
   "include": ["*.js","*.css","*.json","*.html","*.MD","*.cs","audio.conf","Ai.conf"], 
-  "exclude": ["*.config","*.sln","*.csproj" ,"Properties/*"] 
+  "exclude": ["*.config","*.sln","*.csproj" ,"Properties/*" ,"wwwroot/fonts/*","bootstrap.min.css","light-bootstrap-dashboard.css","bootstrap.min.js","jquery.min.js","light-bootstrap-dashboard.js" ,"wwwroot/img/*"] 
 }
