@@ -22,9 +22,9 @@ function loadPage(page) {
             if (page === 'home') {
                 initializeHomePage();
             }
-            // If the loaded page is viewlog.html, fetch and display the log content
+            // If the loaded page is viewlog.html, initialize real-time log streaming
             else if (page === 'viewlog') {
-                fetchLogContent();
+                initializeLogStream();
             }
         })
         .catch(error => {
@@ -87,29 +87,30 @@ function fetchPrayerTimes() {
 }
 
 /**
- * Fetches and displays the log content.
+ * Initializes real-time log streaming for the viewlog page.
  */
-function fetchLogContent() {
+function initializeLogStream() {
     const logContentElement = document.getElementById('log-content');
     if (!logContentElement) {
         console.error('Log content element not found.');
         return;
     }
 
-    fetch('/api/logs')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to fetch log content');
-            }
-            return response.text();
-        })
-        .then(data => {
-            logContentElement.textContent = data;
-        })
-        .catch(error => {
-            console.error('Error fetching log content:', error);
-            logContentElement.textContent = 'Error loading log content.';
-        });
+    // Create an EventSource to listen for log updates
+    const eventSource = new EventSource('/api/logs/stream');
+
+    // Handle incoming log updates
+    eventSource.onmessage = function (event) {
+        logContentElement.textContent = event.data;
+        logContentElement.scrollTop = logContentElement.scrollHeight; // Auto-scroll to bottom
+    };
+
+    // Handle errors
+    eventSource.onerror = function (error) {
+        console.error('Error with log stream:', error);
+        logContentElement.textContent = 'Error connecting to log stream.';
+        eventSource.close(); // Close the connection on error
+    };
 }
 
 /**
@@ -120,7 +121,7 @@ function clearLog() {
         .then(response => {
             if (response.ok) {
                 // Reload the log content after clearing
-                fetchLogContent();
+                initializeLogStream();
             } else {
                 console.error('Error clearing log:', response.statusText);
             }
