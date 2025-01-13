@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 public class WebServer
 {
@@ -53,12 +54,12 @@ public class WebServer
             {
                 ServeHtmlFile(response, Path.Combine("wwwroot", "index.html"));
             }
-            // Serve home.html for /home
+            // Serve home.html for /home.html
             else if (path == "/home.html")
             {
                 ServeHtmlFile(response, Path.Combine("wwwroot", "home.html"));
             }
-            // Serve viewlog.html for /viewlog
+            // Serve viewlog.html for /viewlog.html
             else if (path == "/viewlog.html")
             {
                 ServeHtmlFile(response, Path.Combine("wwwroot", "viewlog.html"));
@@ -72,6 +73,11 @@ public class WebServer
             else if (path == "/api/logs")
             {
                 ServeLogContent(response);
+            }
+            // API endpoint to fetch prayer times
+            else if (path.StartsWith("/api/prayertimes"))
+            {
+                ServePrayerTimes(response, request);
             }
             else
             {
@@ -134,6 +140,46 @@ public class WebServer
         catch (Exception ex)
         {
             Logger.LogMessage($"Error serving log content: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        }
+    }
+
+    private void ServePrayerTimes(HttpListenerResponse response, HttpListenerRequest request)
+    {
+        try
+        {
+            // Parse query parameters for year, month, and day
+            var query = request.QueryString;
+            int year = int.Parse(query["year"]);
+            int month = int.Parse(query["month"]);
+            int day = int.Parse(query["day"]);
+
+            // Calculate prayer times using the PrayTime class
+            var prayTime = new PrayTime();
+            string[] prayerTimes = prayTime.getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
+
+            // Create a JSON response
+            var responseData = new
+            {
+                Fajr = prayerTimes[0],
+                Dhuhr = prayerTimes[2],
+                Asr = prayerTimes[3],
+                Maghrib = prayerTimes[5],
+                Isha = prayerTimes[6]
+            };
+
+            // Serialize the response to JSON
+            string jsonResponse = JsonConvert.SerializeObject(responseData);
+
+            // Send the response
+            byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
+            response.ContentType = "application/json";
+            response.ContentLength64 = buffer.Length;
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error serving prayer times: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }
     }
