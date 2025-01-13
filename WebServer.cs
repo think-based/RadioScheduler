@@ -49,19 +49,21 @@ public class WebServer
                 ServeStaticFile(response, path);
             }
             // Serve index.html for the root URL
-            else if (path == "/" || path == "/index.html")
+            else if (path == "/")
             {
                 ServeHtmlFile(response, Path.Combine("wwwroot", "index.html"));
             }
-            // Handle AJAX requests for dynamic content
+            // Serve home.html for /home
             else if (path == "/home")
             {
                 ServeHtmlFile(response, Path.Combine("wwwroot", "home.html"));
             }
+            // Serve viewlog.html for /viewlog
             else if (path == "/viewlog")
             {
                 ServeHtmlFile(response, Path.Combine("wwwroot", "viewlog.html"));
             }
+            // Handle AJAX requests for dynamic content
             else if (path == "/clearlog")
             {
                 ClearLog(response);
