@@ -8,7 +8,12 @@
 function loadPage(page) {
     let url = `/${page}.html`; // Load the corresponding HTML file
     fetch(url)
-        .then(response => response.text())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Failed to load ${page}.html`);
+            }
+            return response.text();
+        })
         .then(data => {
             // Inject the HTML content into the #content div
             document.getElementById('content').innerHTML = data;
@@ -19,8 +24,8 @@ function loadPage(page) {
             }
         })
         .catch(error => {
-            console.error('Error loading page:', error);
-            document.getElementById('content').innerHTML = '<p>Error loading content. Please try again.</p>';
+            console.error(`Error loading ${page}.html:`, error);
+            document.getElementById('content').innerHTML = `<p>Error loading ${page}. Please try again.</p>`;
         });
 }
 
@@ -28,6 +33,12 @@ function loadPage(page) {
  * Fetches and displays the log content.
  */
 function fetchLogContent() {
+    const logContentElement = document.getElementById('log-content');
+    if (!logContentElement) {
+        console.error('Log content element not found.');
+        return;
+    }
+
     fetch('/api/logs')
         .then(response => {
             if (!response.ok) {
@@ -36,11 +47,11 @@ function fetchLogContent() {
             return response.text();
         })
         .then(data => {
-            document.getElementById('log-content').textContent = data;
+            logContentElement.textContent = data;
         })
         .catch(error => {
             console.error('Error fetching log content:', error);
-            document.getElementById('log-content').textContent = 'Error loading log content.';
+            logContentElement.textContent = 'Error loading log content.';
         });
 }
 
@@ -61,3 +72,8 @@ function clearLog() {
             console.error('Error clearing log:', error);
         });
 }
+
+// Load the home page by default when the page loads
+window.onload = function () {
+    loadPage('home');
+};
