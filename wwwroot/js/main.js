@@ -6,11 +6,7 @@
  * @param {string} page - The page to load (e.g., 'home', 'viewlog').
  */
 function loadPage(page) {
-    let url = `/${page}`;
-    if (page === 'home') {
-        url = '/';
-    }
-
+    let url = `/${page}.html`; // Load the corresponding HTML file
     fetch(url)
         .then(response => response.text())
         .then(data => {
@@ -65,8 +61,3 @@ function clearLog() {
             console.error('Error clearing log:', error);
         });
 }
-
-// Load the home page by default when the page loads
-window.onload = function () {
-    loadPage('home');
-};
