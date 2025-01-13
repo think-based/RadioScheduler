@@ -43,37 +43,28 @@ public class WebServer
 
         try
         {
-            // Serve static files from wwwroot
+            // Serve static files (CSS, JS, images)
             if (path.StartsWith("/css/") || path.StartsWith("/js/") || path.StartsWith("/img/"))
             {
-                string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", path.TrimStart('/'));
-                if (File.Exists(filePath))
-                {
-                    byte[] fileBytes = File.ReadAllBytes(filePath);
-                    response.ContentType = GetMimeType(filePath); // Set MIME type
-                    response.ContentLength64 = fileBytes.Length;
-                    response.OutputStream.Write(fileBytes, 0, fileBytes.Length);
-                }
-                else
-                {
-                    response.StatusCode = (int)HttpStatusCode.NotFound;
-                }
+                ServeStaticFile(response, path);
             }
-            // Handle /viewlog and /viewlog.html (return the HTML page with log content)
-            else if (path == "/viewlog" || path == "/viewlog.html")
+            // Handle AJAX requests for dynamic content
+            else if (path == "/" || path == "/home")
             {
-                string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", "viewlog.html");
-                ServeHtmlFile(response, filePath);
+                ServeHtmlFile(response, Path.Combine("wwwroot", "home.html"));
             }
-            // Handle other routes
-            else if (path == "/" || path == "/index.html")
+            else if (path == "/viewlog")
             {
-                string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", "index.html");
-                ServeHtmlFile(response, filePath);
+                ServeHtmlFile(response, Path.Combine("wwwroot", "viewlog.html"));
             }
             else if (path == "/clearlog")
             {
                 ClearLog(response);
+            }
+            // API endpoint to fetch log content
+            else if (path == "/api/logs")
+            {
+                ServeLogContent(response);
             }
             else
             {
@@ -91,35 +82,27 @@ public class WebServer
         }
     }
 
+    private void ServeStaticFile(HttpListenerResponse response, string path)
+    {
+        string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot", path.TrimStart('/'));
+        if (File.Exists(filePath))
+        {
+            byte[] fileBytes = File.ReadAllBytes(filePath);
+            response.ContentType = GetMimeType(filePath);
+            response.ContentLength64 = fileBytes.Length;
+            response.OutputStream.Write(fileBytes, 0, fileBytes.Length);
+        }
+        else
+        {
+            response.StatusCode = (int)HttpStatusCode.NotFound;
+        }
+    }
+
     private void ServeHtmlFile(HttpListenerResponse response, string filePath)
     {
         if (File.Exists(filePath))
         {
             string htmlContent = File.ReadAllText(filePath);
-
-            // Replace placeholders with dynamic content
-            if (filePath.EndsWith("index.html"))
-            {
-                string[] prayerTimes = new PrayTime().getPrayerTimes(
-                    DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day,
-                    Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone
-                );
-
-                htmlContent = htmlContent
-                    .Replace("{{Fajr}}", prayerTimes[0])
-                    .Replace("{{Sunrise}}", prayerTimes[1])
-                    .Replace("{{Dhuhr}}", prayerTimes[2])
-                    .Replace("{{Asr}}", prayerTimes[3])
-                    .Replace("{{Sunset}}", prayerTimes[4])
-                    .Replace("{{Maghrib}}", prayerTimes[5])
-                    .Replace("{{Isha}}", prayerTimes[6]);
-            }
-            else if (filePath.EndsWith("viewlog.html"))
-            {
-                string logContent = File.Exists(Logger.LogFilePath) ? File.ReadAllText(Logger.LogFilePath) : "Log file not found.";
-                htmlContent = htmlContent.Replace("{{LogContent}}", logContent);
-            }
-
             byte[] buffer = Encoding.UTF8.GetBytes(htmlContent);
             response.ContentType = "text/html; charset=UTF-8";
             response.ContentLength64 = buffer.Length;
@@ -128,6 +111,23 @@ public class WebServer
         else
         {
             response.StatusCode = (int)HttpStatusCode.NotFound;
+        }
+    }
+
+    private void ServeLogContent(HttpListenerResponse response)
+    {
+        try
+        {
+            string logContent = File.Exists(Logger.LogFilePath) ? File.ReadAllText(Logger.LogFilePath) : "Log file not found.";
+            byte[] buffer = Encoding.UTF8.GetBytes(logContent);
+            response.ContentType = "text/plain";
+            response.ContentLength64 = buffer.Length;
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error serving log content: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }
     }
 
