@@ -48,8 +48,13 @@ public class WebServer
             {
                 ServeStaticFile(response, path);
             }
+            // Serve index.html for the root URL
+            else if (path == "/" || path == "/index.html")
+            {
+                ServeHtmlFile(response, Path.Combine("wwwroot", "index.html"));
+            }
             // Handle AJAX requests for dynamic content
-            else if (path == "/" || path == "/home")
+            else if (path == "/home")
             {
                 ServeHtmlFile(response, Path.Combine("wwwroot", "home.html"));
             }
