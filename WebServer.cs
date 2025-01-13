@@ -74,6 +74,11 @@ public class WebServer
             {
                 ServeLogContent(response);
             }
+            // API endpoint to stream log updates in real time
+            else if (path == "/api/logs/stream")
+            {
+                HandleLogStream(response).Wait(); // Handle the SSE stream
+            }
             // API endpoint to fetch prayer times
             else if (path.StartsWith("/api/prayertimes"))
             {
@@ -92,6 +97,47 @@ public class WebServer
         finally
         {
             response.OutputStream.Close();
+        }
+    }
+
+    private async Task HandleLogStream(HttpListenerResponse response)
+    {
+        response.ContentType = "text/event-stream";
+        response.AddHeader("Cache-Control", "no-cache");
+        response.AddHeader("Connection", "keep-alive");
+
+        using (var writer = new StreamWriter(response.OutputStream))
+        {
+            // Send initial log content
+            string initialLogContent = File.Exists(Logger.LogFilePath) ? File.ReadAllText(Logger.LogFilePath) : "Log file not found.";
+            await writer.WriteLineAsync($"data: {initialLogContent}\n\n");
+            await writer.FlushAsync();
+
+            // Watch the log file for changes
+            using (var watcher = new FileSystemWatcher(Path.GetDirectoryName(Logger.LogFilePath), Path.GetFileName(Logger.LogFilePath)))
+            {
+                watcher.NotifyFilter = NotifyFilters.LastWrite;
+                watcher.Changed += async (sender, e) =>
+                {
+                    try
+                    {
+                        string newLogContent = File.ReadAllText(Logger.LogFilePath);
+                        await writer.WriteLineAsync($"data: {newLogContent}\n\n");
+                        await writer.FlushAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogMessage($"Error streaming log updates: {ex.Message}");
+                    }
+                };
+                watcher.EnableRaisingEvents = true;
+
+                // Keep the connection open
+                while (!response.OutputStream.IsClosed)
+                {
+                    await Task.Delay(1000); // Keep the connection alive
+                }
+            }
         }
     }
 
