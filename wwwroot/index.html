@@ -1,109 +1,50 @@
+<!-- Be Naame Khoda -->
+<!-- FileName: wwwroot/index.html -->
+
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>داشبورد اوقات شرعی</title>
-    <!-- Bootstrap CSS -->
-    <link href="/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Light Bootstrap Dashboard CSS -->
+    <title>Radio Scheduler</title>
+    <!-- Light Bootstrap CSS -->
     <link href="/css/light-bootstrap-dashboard.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="/css/styles.css" rel="stylesheet">
 </head>
 <body>
     <div class="wrapper">
         <!-- Sidebar -->
-        <div class="sidebar" data-color="blue" data-image="/img/sidebar.jpg">
+        <div class="sidebar" data-color="purple" data-image="/img/sidebar.jpg">
             <div class="sidebar-wrapper">
                 <ul class="nav">
-                    <li class="active">
-                        <a href="/">
-                            <i class="pe-7s-graph"></i>
-                            <p>داشبورد</p>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/viewlog">
-                            <i class="pe-7s-note2"></i>
-                            <p>مشاهده لاگ‌ها</p>
-                        </a>
-                    </li>
+                    <li><a href="#" onclick="loadPage('home')">Home</a></li>
+                    <li><a href="#" onclick="loadPage('viewlog')">View Log</a></li>
+                    <li><a href="#" onclick="loadPage('clearlog')">Clear Log</a></li>
                 </ul>
             </div>
         </div>
-
         <!-- Main Panel -->
         <div class="main-panel">
-            <!-- Navbar -->
-            <nav class="navbar navbar-default">
-                <div class="container-fluid">
-                    <div class="navbar-header">
-                        <a class="navbar-brand" href="#">داشبورد اوقات شرعی</a>
-                    </div>
-                </div>
-            </nav>
-
             <!-- Content -->
             <div class="content">
-                <div class="container-fluid">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="card">
-                                <div class="header">
-                                    <h4 class="title">اوقات شرعی امروز</h4>
-                                </div>
-                                <div class="content">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>نام نماز</th>
-                                                <th>زمان</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>اذان صبح</td>
-                                                <td id="fajr-time">05:15</td>
-                                            </tr>
-                                            <tr>
-                                                <td>طلوع آفتاب</td>
-                                                <td id="sunrise-time">06:45</td>
-                                            </tr>
-                                            <tr>
-                                                <td>اذان ظهر</td>
-                                                <td id="dhuhr-time">12:30</td>
-                                            </tr>
-                                            <tr>
-                                                <td>اذان عصر</td>
-                                                <td id="asr-time">16:00</td>
-                                            </tr>
-                                            <tr>
-                                                <td>غروب آفتاب</td>
-                                                <td id="sunset-time">18:15</td>
-                                            </tr>
-                                            <tr>
-                                                <td>اذان مغرب</td>
-                                                <td id="maghrib-time">18:30</td>
-                                            </tr>
-                                            <tr>
-                                                <td>اذان عشاء</td>
-                                                <td id="isha-time">19:45</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="container-fluid" id="content">
+                    <!-- Dynamic content will be loaded here -->
                 </div>
             </div>
+            <!-- Footer -->
+            <footer class="footer">
+                <p>&copy; 2023 Radio Scheduler</p>
+            </footer>
         </div>
     </div>
-
     <!-- jQuery -->
     <script src="/js/jquery.min.js"></script>
     <!-- Bootstrap JS -->
     <script src="/js/bootstrap.min.js"></script>
-    <!-- Light Bootstrap Dashboard JS -->
+    <!-- Light Bootstrap JS -->
     <script src="/js/light-bootstrap-dashboard.js"></script>
+    <!-- Custom JS -->
+    <script src="/js/main.js"></script>
 </body>
 </html>
