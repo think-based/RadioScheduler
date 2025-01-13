@@ -22,6 +22,24 @@ function loadPage(page) {
         });
 }
 
+/**
+ * Clears the log file and reloads the log content.
+ */
+function clearLog() {
+    fetch('/clearlog', { method: 'POST' })
+        .then(response => {
+            if (response.ok) {
+                // Reload the log content after clearing
+                loadPage('viewlog');
+            } else {
+                console.error('Error clearing log:', response.statusText);
+            }
+        })
+        .catch(error => {
+            console.error('Error clearing log:', error);
+        });
+}
+
 // Load the home page by default when the page loads
 window.onload = function () {
     loadPage('home');
