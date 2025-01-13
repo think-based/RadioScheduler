@@ -18,14 +18,71 @@ function loadPage(page) {
             // Inject the HTML content into the #content div
             document.getElementById('content').innerHTML = data;
 
+            // If the loaded page is home.html, initialize its functionality
+            if (page === 'home') {
+                initializeHomePage();
+            }
             // If the loaded page is viewlog.html, fetch and display the log content
-            if (page === 'viewlog') {
+            else if (page === 'viewlog') {
                 fetchLogContent();
             }
         })
         .catch(error => {
             console.error(`Error loading ${page}.html:`, error);
             document.getElementById('content').innerHTML = `<p>Error loading ${page}. Please try again.</p>`;
+        });
+}
+
+/**
+ * Initializes functionality for the home page.
+ */
+function initializeHomePage() {
+    // Update the current date and time every second
+    setInterval(updateDateTime, 1000);
+
+    // Fetch and display prayer times
+    fetchPrayerTimes();
+}
+
+/**
+ * Updates the current date and time.
+ */
+function updateDateTime() {
+    const now = new Date();
+    const dateTimeElement = document.getElementById('date-time');
+    if (dateTimeElement) {
+        dateTimeElement.textContent = now.toLocaleString();
+    }
+}
+
+/**
+ * Fetches and displays prayer times.
+ */
+function fetchPrayerTimes() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1; // Months are 0-indexed
+    const day = today.getDate();
+
+    // Fetch prayer times from the server
+    fetch(`/api/prayertimes?year=${year}&month=${month}&day=${day}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch prayer times');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Update the prayer times in the DOM
+            document.getElementById('fajr-time').textContent = data.Fajr || 'N/A';
+            document.getElementById('dhuhr-time').textContent = data.Dhuhr || 'N/A';
+            document.getElementById('asr-time').textContent = data.Asr || 'N/A';
+            document.getElementById('maghrib-time').textContent = data.Maghrib || 'N/A';
+            document.getElementById('isha-time').textContent = data.Isha || 'N/A';
+        })
+        .catch(error => {
+            console.error('Error fetching prayer times:', error);
+            document.getElementById('prayer-times-list').innerHTML = '<li>Error loading prayer times.</li>';
         });
 }
 
