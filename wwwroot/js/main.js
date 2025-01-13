@@ -22,9 +22,9 @@ function loadPage(page) {
             if (page === 'home') {
                 initializeHomePage();
             }
-            // If the loaded page is viewlog.html, initialize real-time log streaming
+            // If the loaded page is viewlog.html, initialize log polling
             else if (page === 'viewlog') {
-                initializeLogStream();
+                initializeLogPolling();
             }
         })
         .catch(error => {
@@ -87,30 +87,39 @@ function fetchPrayerTimes() {
 }
 
 /**
- * Initializes real-time log streaming for the viewlog page.
+ * Initializes log polling for the viewlog page.
  */
-function initializeLogStream() {
+function initializeLogPolling() {
     const logContentElement = document.getElementById('log-content');
     if (!logContentElement) {
         console.error('Log content element not found.');
         return;
     }
 
-    // Create an EventSource to listen for log updates
-    const eventSource = new EventSource('/api/logs/stream');
-
-    // Handle incoming log updates
-    eventSource.onmessage = function (event) {
-        logContentElement.textContent = event.data;
-        logContentElement.scrollTop = logContentElement.scrollHeight; // Auto-scroll to bottom
+    // Function to fetch and update log content
+    const fetchLogContent = () => {
+        fetch('/api/logs')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch log content');
+                }
+                return response.text();
+            })
+            .then(data => {
+                logContentElement.textContent = data;
+                logContentElement.scrollTop = logContentElement.scrollHeight; // Auto-scroll to bottom
+            })
+            .catch(error => {
+                console.error('Error fetching log content:', error);
+                logContentElement.textContent = 'Error loading log content.';
+            });
     };
 
-    // Handle errors
-    eventSource.onerror = function (error) {
-        console.error('Error with log stream:', error);
-        logContentElement.textContent = 'Error connecting to log stream.';
-        eventSource.close(); // Close the connection on error
-    };
+    // Fetch log content immediately
+    fetchLogContent();
+
+    // Set up polling to fetch log content every second
+    setInterval(fetchLogContent, 1000);
 }
 
 /**
@@ -121,7 +130,9 @@ function clearLog() {
         .then(response => {
             if (response.ok) {
                 // Reload the log content after clearing
-                initializeLogStream();
+                if (window.location.hash === '#viewlog') {
+                    initializeLogPolling();
+                }
             } else {
                 console.error('Error clearing log:', response.statusText);
             }
