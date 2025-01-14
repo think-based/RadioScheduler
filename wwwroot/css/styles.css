@@ -1,24 +1,65 @@
 /* Be Naame Khoda */
 /* FileName: wwwroot/css/styles.css */
 
-/* Custom styles for the sidebar */
-.sidebar {
-    background-color: #4c4c4c;
+/* Ensure proper spacing for the content */
+#content {
+    padding: 20px; /* Add padding to prevent content from sticking to borders */
 }
 
-.sidebar .nav {
-    list-style-type: none; /* Remove dots from list items */
+/* Style for cards */
+.card {
+    margin: 20px 0; /* Add margin to cards for better spacing */
+    padding: 20px; /* Add padding inside cards */
+    border-radius: 10px; /* Rounded corners for cards */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add shadow for depth */
+}
+
+/* Style for log content */
+#log-content {
+    background-color: #f8f9fa; /* Light background for log content */
+    padding: 15px; /* Add padding to log content */
+    border-radius: 5px; /* Rounded corners for log content */
+    font-family: monospace; /* Use monospace font for log content */
+    overflow-x: auto; /* Enable horizontal scrolling if needed */
+}
+
+/* Style for prayer times list */
+#prayer-times-list {
+    list-style-type: none; /* Remove bullet points */
     padding-left: 0; /* Remove default padding */
 }
 
+#prayer-times-list li {
+    margin: 10px 0; /* Add margin between list items */
+    font-size: 16px; /* Increase font size for better readability */
+}
+
+/* Style for date-time display */
+#date-time {
+    font-size: 18px; /* Increase font size for date-time */
+    font-weight: bold; /* Make date-time bold */
+}
+
+/* Style for navbar */
+.navbar {
+    padding: 10px 0; /* Add padding to navbar */
+}
+
+.navbar-brand {
+    font-size: 20px; /* Increase font size for navbar brand */
+    font-weight: bold; /* Make navbar brand bold */
+}
+
+/* Style for sidebar */
+.sidebar {
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1); /* Add shadow to sidebar */
+}
+
 .sidebar .nav li a {
-    color: #fff;
-    font-size: 16px;
-    padding: 10px 15px;
-    display: block;
-    text-decoration: none;
+    padding: 10px 15px; /* Add padding to sidebar links */
+    font-size: 16px; /* Increase font size for sidebar links */
 }
 
 .sidebar .nav li a:hover {
-    background-color: #3a3a3a;
+    background-color: rgba(255, 255, 255, 0.1); /* Add hover effect to sidebar links */
 }
