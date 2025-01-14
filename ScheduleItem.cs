@@ -8,6 +8,7 @@ using System.Collections.Generic;
 public class ScheduleItem
 {
     public int ItemId { get; set; }
+    public string Name { get; set; } // New field
     public string Type { get; set; }
     public List<FilePathItem> FilePaths { get; set; }
     public string Second { get; set; }
