@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 public class ScheduleItem
 {
@@ -49,30 +48,6 @@ public class ScheduleItem
         foreach (var filePathItem in FilePaths)
         {
             filePathItem.Validate();
-        }
-    }
-}
-
-public class FilePathItem
-{
-    public string Path { get; set; }
-    public string FolderPlayMode { get; set; }
-
-    public void Validate()
-    {
-        if (string.IsNullOrEmpty(Path))
-        {
-            throw new ArgumentException("Path cannot be null or empty.");
-        }
-
-        if (Directory.Exists(Path) && string.IsNullOrEmpty(FolderPlayMode))
-        {
-            throw new ArgumentException("FolderPlayMode must be set for folders.");
-        }
-
-        if (!Directory.Exists(Path) && !File.Exists(Path))
-        {
-            throw new ArgumentException($"File or folder not found: {Path}");
         }
     }
 }
