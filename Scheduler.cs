@@ -101,6 +101,7 @@ public class Scheduler
                         foreach (var item in newItems)
                         {
                             item.Validate();
+                            item.NextOccurrence = GetNextOccurrence(item, DateTime.Now, DateTime.Now.AddHours(24)); // Initialize NextOccurrence
                         }
 
                         _scheduleItems = newItems;
@@ -191,79 +192,70 @@ public class Scheduler
     {
         DateTime nextOccurrence = DateTime.MinValue;
 
-        Logger.LogMessage($"Calculating next occurrence for Item {scheduleItem.ItemId}...");
-
         // Convert the current date to the specified calendar type
         DateTime convertedDate = CalendarHelper.ConvertDate(now, scheduleItem.CalendarType);
-        Logger.LogMessage($"Converted date: {convertedDate}");
 
         // Check if the current date matches the DayOfMonth and Month fields
-        if (!MatchesCronField(scheduleItem.DayOfMonth, convertedDate.Day.ToString()))
-        {
-            Logger.LogMessage($"DayOfMonth mismatch: {scheduleItem.DayOfMonth} != {convertedDate.Day}");
-            return nextOccurrence;
-        }
-        if (!MatchesCronField(scheduleItem.Month, convertedDate.Month.ToString()))
-        {
-            Logger.LogMessage($"Month mismatch: {scheduleItem.Month} != {convertedDate.Month}");
-            return nextOccurrence;
-        }
+        if (!MatchesCronField(scheduleItem.DayOfMonth, convertedDate.Day.ToString())) return nextOccurrence;
+        if (!MatchesCronField(scheduleItem.Month, convertedDate.Month.ToString())) return nextOccurrence;
 
         // Check if the current day of the week matches the DayOfWeek field
         int currentDayOfWeek = CalendarHelper.GetDayOfWeek(convertedDate, scheduleItem.Region);
-        if (!MatchesCronField(scheduleItem.DayOfWeek, currentDayOfWeek.ToString()))
-        {
-            Logger.LogMessage($"DayOfWeek mismatch: {scheduleItem.DayOfWeek} != {currentDayOfWeek}");
-            return nextOccurrence;
-        }
+        if (!MatchesCronField(scheduleItem.DayOfWeek, currentDayOfWeek.ToString())) return nextOccurrence;
 
         if (scheduleItem.Type == "Periodic")
         {
-            // For Periodic items, check the time fields (Second, Minute, Hour)
-            if (!MatchesCronField(scheduleItem.Second, now.Second.ToString()))
+            // Handle cron-like syntax for Minute field (e.g., "*/5")
+            if (scheduleItem.Minute.StartsWith("*/"))
             {
-                Logger.LogMessage($"Second mismatch: {scheduleItem.Second} != {now.Second}");
-                return nextOccurrence;
+                int interval = int.Parse(scheduleItem.Minute.Substring(2)); // Extract the interval (e.g., 5)
+                int currentMinute = now.Minute;
+                int nextMinute = (currentMinute / interval + 1) * interval; // Calculate the next minute
+
+                if (nextMinute >= 60)
+                {
+                    // If the next minute exceeds 59, move to the next hour
+                    nextMinute = 0;
+                    now = now.AddHours(1);
+                }
+
+                // Set the next occurrence
+                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, nextMinute, 0);
             }
-            if (!MatchesCronField(scheduleItem.Minute, now.Minute.ToString()))
+            else
             {
-                Logger.LogMessage($"Minute mismatch: {scheduleItem.Minute} != {now.Minute}");
-                return nextOccurrence;
-            }
-            if (!MatchesCronField(scheduleItem.Hour, now.Hour.ToString()))
-            {
-                Logger.LogMessage($"Hour mismatch: {scheduleItem.Hour} != {now.Hour}");
-                return nextOccurrence;
+                // Handle fixed minute values
+                if (!MatchesCronField(scheduleItem.Minute, now.Minute.ToString())) return nextOccurrence;
+                nextOccurrence = now;
             }
 
-            nextOccurrence = now;
+            // Ensure the next occurrence is within the valid range
+            if (nextOccurrence >= now && nextOccurrence <= endTime)
+            {
+                Logger.LogMessage($"Next occurrence for Item {scheduleItem.ItemId}: {nextOccurrence}");
+                return nextOccurrence;
+            }
         }
         else if (scheduleItem.Type == "NonPeriodic")
         {
             // For NonPeriodic items, check the trigger
-            if (string.IsNullOrEmpty(scheduleItem.Trigger) || scheduleItem.Trigger != _currentTrigger.Event)
-            {
-                Logger.LogMessage($"Trigger mismatch: {scheduleItem.Trigger} != {_currentTrigger.Event}");
-                return nextOccurrence;
-            }
+            if (string.IsNullOrEmpty(scheduleItem.Trigger) || scheduleItem.Trigger != _currentTrigger.Event) return nextOccurrence;
 
             nextOccurrence = now;
         }
 
-        // If the next occurrence is within the valid range, return it
-        if (nextOccurrence >= now && nextOccurrence <= endTime)
-        {
-            Logger.LogMessage($"Next occurrence for Item {scheduleItem.ItemId}: {nextOccurrence}");
-            return nextOccurrence;
-        }
-
-        Logger.LogMessage($"Next occurrence for Item {scheduleItem.ItemId} is out of range.");
         return DateTime.MinValue;
     }
 
     private bool MatchesCronField(string cronField, string value)
     {
         if (cronField == "*") return true;
+        if (cronField.StartsWith("*/"))
+        {
+            int interval = int.Parse(cronField.Substring(2)); // Extract the interval (e.g., 5)
+            int currentValue = int.Parse(value);
+            return currentValue % interval == 0; // Check if the current value is a multiple of the interval
+        }
         return cronField == value;
     }
 
