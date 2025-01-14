@@ -3,218 +3,72 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
 using System.Timers;
-using Newtonsoft.Json;
 
 public class Scheduler
 {
-    public event Action BeforePlayback;
-    public event Action AfterPlayback;
-
-    private AudioPlayer _audioPlayer;
-    private CurrentTrigger _currentTrigger;
-    private List<ScheduleItem> _scheduleItems;
-    private readonly object _configLock = new object();
-    private string _configFilePath;
-    private List<Timer> _timers;
-    private string _lastConfigHash;
-    private FileSystemWatcher _configWatcher;
-
-    public Scheduler()
-    {
-        _audioPlayer = new AudioPlayer();
-        _audioPlayer.PlaylistFinished += OnPlaylistFinished;
-        _currentTrigger = new CurrentTrigger();
-        _scheduleItems = new List<ScheduleItem>();
-        _timers = new List<Timer>();
-
-        _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf");
-        EnsureConfigFileExists();
-
-        // Set _lastConfigHash to null initially
-        _lastConfigHash = null;
-
-        Logger.LogMessage("Radio Scheduler Service started.");
-
-        _configWatcher = new FileSystemWatcher
-        {
-            Path = Path.GetDirectoryName(_configFilePath),
-            Filter = Path.GetFileName(_configFilePath),
-            NotifyFilter = NotifyFilters.LastWrite
-        };
-
-        _configWatcher.Changed += OnConfigFileChanged;
-        _configWatcher.EnableRaisingEvents = true;
-
-        // Force the initial load of the config file
-        ReloadScheduleConfig();
-    }
-
-    private void EnsureConfigFileExists()
-    {
-        if (!File.Exists(_configFilePath))
-        {
-            try
-            {
-                File.WriteAllText(_configFilePath, "[]");
-                Logger.LogMessage("Config file created: audio.conf");
-            }
-            catch (Exception ex)
-            {
-                Logger.LogMessage($"Error creating config file: {ex.Message}");
-            }
-        }
-    }
-
-    private void OnConfigFileChanged(object sender, FileSystemEventArgs e)
-    {
-        Logger.LogMessage("Config file changed. Reloading...");
-        ReloadScheduleConfig();
-    }
-
-    private bool HasConfigChanged()
-    {
-        if (_lastConfigHash == null)
-        {
-            return true; // Force reload if _lastConfigHash is null
-        }
-
-        string currentHash = FileHashHelper.CalculateFileHash(_configFilePath);
-        return currentHash != _lastConfigHash;
-    }
-
-    public void ReloadScheduleConfig()
-    {
-        lock (_configLock)
-        {
-            try
-            {
-                // If _lastConfigHash is null, force a reload
-                if (_lastConfigHash == null || HasConfigChanged())
-                {
-                    if (File.Exists(_configFilePath))
-                    {
-                        string json = File.ReadAllText(_configFilePath);
-                        var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
-
-                        foreach (var item in newItems)
-                        {
-                            item.Validate();
-                        }
-
-                        _scheduleItems = newItems;
-
-                        Logger.LogMessage($"Loaded {_scheduleItems.Count} schedule items.");
-
-                        foreach (var timer in _timers)
-                        {
-                            timer.Stop();
-                            timer.Dispose();
-                        }
-                        _timers.Clear();
-
-                        SetupTimers();
-
-                        // Calculate the hash after loading the config file
-                        _lastConfigHash = FileHashHelper.CalculateFileHash(_configFilePath);
-
-                        Logger.LogMessage("Config reloaded successfully.");
-                    }
-                    else
-                    {
-                        Logger.LogMessage("Config file not found!");
-                    }
-                }
-                else
-                {
-                    Logger.LogMessage("Config file has not changed. Skipping reload.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogMessage($"Error reloading config: {ex.Message}");
-            }
-        }
-    }
-
-    private void SetupTimers()
-    {
-        DateTime now = DateTime.Now;
-        DateTime endTime = now.AddHours(24);
-
-        foreach (var scheduleItem in _scheduleItems)
-        {
-            DateTime nextOccurrence = GetNextOccurrence(scheduleItem, now, endTime);
-            if (nextOccurrence != DateTime.MinValue)
-            {
-                TimeSpan totalDuration = _audioPlayer.CalculateTotalDuration(scheduleItem.FilePaths);
-
-                DateTime startTime;
-                if (scheduleItem.TriggerType == "Immediate")
-                {
-                    startTime = nextOccurrence;
-                }
-                else if (scheduleItem.TriggerType == "Timed")
-                {
-                    startTime = nextOccurrence - totalDuration;
-                }
-                else if (scheduleItem.TriggerType == "Delayed")
-                {
-                    startTime = nextOccurrence.AddMinutes(scheduleItem.DelayMinutes ?? 0);
-                }
-                else
-                {
-                    Logger.LogMessage($"Invalid TriggerType for ItemID: {scheduleItem.ItemId}");
-                    continue;
-                }
-
-                if (startTime < now)
-                {
-                    continue;
-                }
-
-                double delay = (startTime - now).TotalMilliseconds;
-
-                Timer timer = new Timer(delay);
-                timer.AutoReset = false;
-                timer.Elapsed += (sender, e) => OnPlaylistStart(scheduleItem);
-                timer.Start();
-                _timers.Add(timer);
-
-                Logger.LogMessage($"Timer set for Item {scheduleItem.ItemId} at {startTime}");
-            }
-        }
-    }
+    // Other properties and methods...
 
     private DateTime GetNextOccurrence(ScheduleItem scheduleItem, DateTime now, DateTime endTime)
     {
         DateTime nextOccurrence = DateTime.MinValue;
 
+        Logger.LogMessage($"Calculating next occurrence for Item {scheduleItem.ItemId}...");
+
         // Convert the current date to the specified calendar type
         DateTime convertedDate = CalendarHelper.ConvertDate(now, scheduleItem.CalendarType);
+        Logger.LogMessage($"Converted date: {convertedDate}");
 
         // Check if the current date matches the DayOfMonth and Month fields
-        if (!MatchesCronField(scheduleItem.DayOfMonth, convertedDate.Day.ToString())) return nextOccurrence;
-        if (!MatchesCronField(scheduleItem.Month, convertedDate.Month.ToString())) return nextOccurrence;
+        if (!MatchesCronField(scheduleItem.DayOfMonth, convertedDate.Day.ToString()))
+        {
+            Logger.LogMessage($"DayOfMonth mismatch: {scheduleItem.DayOfMonth} != {convertedDate.Day}");
+            return nextOccurrence;
+        }
+        if (!MatchesCronField(scheduleItem.Month, convertedDate.Month.ToString()))
+        {
+            Logger.LogMessage($"Month mismatch: {scheduleItem.Month} != {convertedDate.Month}");
+            return nextOccurrence;
+        }
 
         // Check if the current day of the week matches the DayOfWeek field
         int currentDayOfWeek = CalendarHelper.GetDayOfWeek(convertedDate, scheduleItem.Region);
-        if (!MatchesCronField(scheduleItem.DayOfWeek, currentDayOfWeek.ToString())) return nextOccurrence;
+        if (!MatchesCronField(scheduleItem.DayOfWeek, currentDayOfWeek.ToString()))
+        {
+            Logger.LogMessage($"DayOfWeek mismatch: {scheduleItem.DayOfWeek} != {currentDayOfWeek}");
+            return nextOccurrence;
+        }
 
         if (scheduleItem.Type == "Periodic")
         {
             // For Periodic items, check the time fields (Second, Minute, Hour)
-            if (!MatchesCronField(scheduleItem.Second, now.Second.ToString())) return nextOccurrence;
-            if (!MatchesCronField(scheduleItem.Minute, now.Minute.ToString())) return nextOccurrence;
-            if (!MatchesCronField(scheduleItem.Hour, now.Hour.ToString())) return nextOccurrence;
+            if (!MatchesCronField(scheduleItem.Second, now.Second.ToString()))
+            {
+                Logger.LogMessage($"Second mismatch: {scheduleItem.Second} != {now.Second}");
+                return nextOccurrence;
+            }
+            if (!MatchesCronField(scheduleItem.Minute, now.Minute.ToString()))
+            {
+                Logger.LogMessage($"Minute mismatch: {scheduleItem.Minute} != {now.Minute}");
+                return nextOccurrence;
+            }
+            if (!MatchesCronField(scheduleItem.Hour, now.Hour.ToString()))
+            {
+                Logger.LogMessage($"Hour mismatch: {scheduleItem.Hour} != {now.Hour}");
+                return nextOccurrence;
+            }
 
             nextOccurrence = now;
         }
         else if (scheduleItem.Type == "NonPeriodic")
         {
             // For NonPeriodic items, check the trigger
-            if (string.IsNullOrEmpty(scheduleItem.Trigger) || scheduleItem.Trigger != _currentTrigger.Event) return nextOccurrence;
+            if (string.IsNullOrEmpty(scheduleItem.Trigger) || scheduleItem.Trigger != _currentTrigger.Event)
+            {
+                Logger.LogMessage($"Trigger mismatch: {scheduleItem.Trigger} != {_currentTrigger.Event}");
+                return nextOccurrence;
+            }
 
             nextOccurrence = now;
         }
@@ -226,6 +80,7 @@ public class Scheduler
             return nextOccurrence;
         }
 
+        Logger.LogMessage($"Next occurrence for Item {scheduleItem.ItemId} is out of range.");
         return DateTime.MinValue;
     }
 
@@ -235,29 +90,5 @@ public class Scheduler
         return cronField == value;
     }
 
-    private void OnPlaylistStart(ScheduleItem scheduleItem)
-    {
-        BeforePlayback?.Invoke();
-        _audioPlayer.Play(scheduleItem.FilePaths);
-        AfterPlayback?.Invoke();
-    }
-
-    private void OnPlaylistFinished()
-    {
-        AfterPlayback?.Invoke();
-    }
-
-    public List<ScheduleItem> GetScheduledItems()
-    {
-        return _scheduleItems;
-    }
-
-    public string GetCurrentPlaybackStatus()
-    {
-        if (_audioPlayer.IsPlaying)
-        {
-            return $"Currently playing: {_audioPlayer.CurrentFile}";
-        }
-        return "No playback in progress.";
-    }
+    // Other methods...
 }
