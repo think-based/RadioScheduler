@@ -151,7 +151,7 @@ function initializeScheduleListPage() {
             data.forEach(item => {
                 const row = `
                     <tr>
-                        <td>${item.Playlist}</td>
+                        <td>${item.Name}</td> <!-- Display the Name field -->
                         <td>${item.StartTime}</td>
                         <td>${item.EndTime}</td>
                         <td>${item.TriggerEvent}</td>
