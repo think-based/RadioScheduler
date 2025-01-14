@@ -205,6 +205,29 @@ public class Scheduler
 
         if (scheduleItem.Type == "Periodic")
         {
+            // Handle cron-like syntax for Second field (e.g., "*/10")
+            if (scheduleItem.Second.StartsWith("*/"))
+            {
+                int interval = int.Parse(scheduleItem.Second.Substring(2)); // Extract the interval (e.g., 10)
+                int currentSecond = now.Second;
+                int nextSecond = (currentSecond / interval + 1) * interval; // Calculate the next second
+
+                if (nextSecond >= 60)
+                {
+                    // If the next second exceeds 59, move to the next minute
+                    nextSecond = 0;
+                    now = now.AddMinutes(1);
+                }
+
+                // Set the next occurrence
+                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, nextSecond);
+            }
+            else
+            {
+                // Handle fixed second values
+                if (!MatchesCronField(scheduleItem.Second, now.Second.ToString())) return nextOccurrence;
+            }
+
             // Handle cron-like syntax for Minute field (e.g., "*/5")
             if (scheduleItem.Minute.StartsWith("*/"))
             {
@@ -220,13 +243,35 @@ public class Scheduler
                 }
 
                 // Set the next occurrence
-                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, nextMinute, 0);
+                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, nextMinute, nextOccurrence.Second);
             }
             else
             {
                 // Handle fixed minute values
                 if (!MatchesCronField(scheduleItem.Minute, now.Minute.ToString())) return nextOccurrence;
-                nextOccurrence = now;
+            }
+
+            // Handle cron-like syntax for Hour field (e.g., "*/2")
+            if (scheduleItem.Hour.StartsWith("*/"))
+            {
+                int interval = int.Parse(scheduleItem.Hour.Substring(2)); // Extract the interval (e.g., 2)
+                int currentHour = now.Hour;
+                int nextHour = (currentHour / interval + 1) * interval; // Calculate the next hour
+
+                if (nextHour >= 24)
+                {
+                    // If the next hour exceeds 23, move to the next day
+                    nextHour = 0;
+                    now = now.AddDays(1);
+                }
+
+                // Set the next occurrence
+                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, nextHour, nextOccurrence.Minute, nextOccurrence.Second);
+            }
+            else
+            {
+                // Handle fixed hour values
+                if (!MatchesCronField(scheduleItem.Hour, now.Hour.ToString())) return nextOccurrence;
             }
 
             // Ensure the next occurrence is within the valid range
