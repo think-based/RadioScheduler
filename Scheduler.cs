@@ -298,6 +298,15 @@ public class Scheduler
 
     public List<ScheduleItem> GetScheduledItems()
     {
+        // Recalculate NextOccurrence for each item before returning the list
+        DateTime now = DateTime.Now;
+        DateTime endTime = now.AddHours(24);
+
+        foreach (var item in _scheduleItems)
+        {
+            item.NextOccurrence = GetNextOccurrence(item, now, endTime);
+        }
+
         return _scheduleItems;
     }
 
