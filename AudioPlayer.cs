@@ -1,5 +1,5 @@
-//Be Naame Khoda
-//FileName: AudioPlayer.cs
+// Be Naame Khoda
+// FileName: AudioPlayer.cs
 
 using NAudio.Wave;
 using RadioScheduler.Entities;
