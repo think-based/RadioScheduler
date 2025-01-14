@@ -4,29 +4,32 @@
 using System;
 using System.IO;
 
-public class FilePathItem
+namespace RadioScheduler.Entities
 {
-    public string Path { get; set; } // Path to the file or folder
-    public string FolderPlayMode { get; set; } // Play mode for folders (e.g., "All" or "Single")
-
-    /// <summary>
-    /// Validates the FilePathItem.
-    /// </summary>
-    public void Validate()
+    public class FilePathItem
     {
-        if (string.IsNullOrEmpty(Path))
-        {
-            throw new ArgumentException("Path cannot be null or empty.");
-        }
+        public string Path { get; set; } // Path to the file or folder
+        public string FolderPlayMode { get; set; } // Play mode for folders (e.g., "All" or "Single")
 
-        if (Directory.Exists(Path) && string.IsNullOrEmpty(FolderPlayMode))
+        /// <summary>
+        /// Validates the FilePathItem.
+        /// </summary>
+        public void Validate()
         {
-            throw new ArgumentException("FolderPlayMode must be set for folders.");
-        }
+            if (string.IsNullOrEmpty(Path))
+            {
+                throw new ArgumentException("Path cannot be null or empty.");
+            }
 
-        if (!Directory.Exists(Path) && !File.Exists(Path))
-        {
-            throw new ArgumentException($"File or folder not found: {Path}");
+            if (Directory.Exists(Path) && string.IsNullOrEmpty(FolderPlayMode))
+            {
+                throw new ArgumentException("FolderPlayMode must be set for folders.");
+            }
+
+            if (!Directory.Exists(Path) && !File.Exists(Path))
+            {
+                throw new ArgumentException($"File or folder not found: {Path}");
+            }
         }
     }
 }
