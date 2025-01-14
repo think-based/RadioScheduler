@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Speech.Synthesis;
+using RadioScheduler.Entities;
 
 public class AudioPlayer
 {
@@ -39,8 +40,8 @@ public class AudioPlayer
     {
         lock (_lock) // Ensure thread safety
         {
-            // Stop any ongoing playback
-            Stop();
+            Logger.LogMessage("Stopping current playlist.");
+            Stop(); // Stop any ongoing playback
 
             // Expand file paths (including TTS items)
             var expandedFilePaths = ExpandFilePaths(filePathItems);
@@ -51,6 +52,8 @@ public class AudioPlayer
                 Logger.LogMessage("Playlist is null or empty.");
                 return;
             }
+
+            Logger.LogMessage($"Starting new playlist: {string.Join(", ", expandedFilePaths)}");
 
             // Initialize the new playlist
             _currentPlaylist = expandedFilePaths;
