@@ -194,7 +194,7 @@ public class Scheduler
         {
             if (scheduleItem.Second.StartsWith("*/"))
             {
-                int interval = int.Parse(scheduleItem.Second.Substring(2)); // Extract "90" from "*/90"
+                int interval = int.Parse(scheduleItem.Second.Substring(2)); // Extract "70" from "*/70"
                 int currentSecond = now.Second;
 
                 // Calculate the total seconds since the last full interval
@@ -206,6 +206,26 @@ public class Scheduler
                     .AddHours(now.Hour) // Add current hour
                     .AddMinutes(nextTotalSeconds / 60) // Add minutes
                     .AddSeconds(nextTotalSeconds % 60); // Add seconds
+
+                // Ensure the next occurrence is within the valid range
+                if (nextOccurrence < now || nextOccurrence > endTime)
+                {
+                    return DateTime.MinValue; // Out of range
+                }
+
+                return nextOccurrence;
+            }
+            else if (scheduleItem.Second == "0" && scheduleItem.Minute.StartsWith("*/"))
+            {
+                // Handle TTS items with a minute-based interval (e.g., every 2 minutes)
+                int interval = int.Parse(scheduleItem.Minute.Substring(2)); // Extract "2" from "*/2"
+                int currentMinute = now.Minute;
+
+                // Calculate the next occurrence
+                DateTime nextOccurrence = now.Date // Start from the beginning of the day
+                    .AddHours(now.Hour) // Add current hour
+                    .AddMinutes((currentMinute / interval + 1) * interval) // Add minutes
+                    .AddSeconds(0); // Start at the beginning of the minute
 
                 // Ensure the next occurrence is within the valid range
                 if (nextOccurrence < now || nextOccurrence > endTime)
