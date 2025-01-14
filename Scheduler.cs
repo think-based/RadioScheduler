@@ -188,13 +188,43 @@ public class Scheduler
         }
     }
 
+    private DateTime GetNextOccurrence(ScheduleItem scheduleItem, DateTime now, DateTime endTime)
+    {
+        if (scheduleItem.Type == "Periodic")
+        {
+            if (scheduleItem.Second.StartsWith("*/"))
+            {
+                int interval = int.Parse(scheduleItem.Second.Substring(2)); // Extract "90" from "*/90"
+                int currentSecond = now.Second;
+
+                // Calculate the total seconds since the last full interval
+                int totalSeconds = now.Minute * 60 + currentSecond;
+                int nextTotalSeconds = (totalSeconds / interval + 1) * interval;
+
+                // Calculate the next occurrence
+                DateTime nextOccurrence = now.Date // Start from the beginning of the day
+                    .AddHours(now.Hour) // Add current hour
+                    .AddMinutes(nextTotalSeconds / 60) // Add minutes
+                    .AddSeconds(nextTotalSeconds % 60); // Add seconds
+
+                // Ensure the next occurrence is within the valid range
+                if (nextOccurrence < now || nextOccurrence > endTime)
+                {
+                    return DateTime.MinValue; // Out of range
+                }
+
+                return nextOccurrence;
+            }
+        }
+        return DateTime.MinValue;
+    }
+
     private void OnPlaylistStart(ScheduleItem scheduleItem)
     {
         BeforePlayback?.Invoke();
-        _audioPlayer.Play(scheduleItem.FilePaths);
+        _audioPlayer.Play(scheduleItem.FilePaths); // Plays TTS text
         AfterPlayback?.Invoke();
 
-        // If the schedule is periodic, set up the next timer
         if (scheduleItem.Type == "Periodic")
         {
             DateTime now = DateTime.Now;
@@ -203,7 +233,6 @@ public class Scheduler
             if (nextOccurrence != DateTime.MinValue)
             {
                 double delay = (nextOccurrence - now).TotalMilliseconds;
-
                 Timer timer = new Timer(delay);
                 timer.AutoReset = false;
                 timer.Elapsed += (sender, e) => OnPlaylistStart(scheduleItem);
@@ -213,82 +242,6 @@ public class Scheduler
                 Logger.LogMessage($"Next timer set for Item {scheduleItem.ItemId} at {nextOccurrence}");
             }
         }
-    }
-
-    private DateTime GetNextOccurrence(ScheduleItem scheduleItem, DateTime now, DateTime endTime)
-    {
-        DateTime nextOccurrence = DateTime.MinValue;
-
-        if (scheduleItem.Type == "Periodic")
-        {
-            // Handle periodic schedules
-            if (scheduleItem.Second.StartsWith("*/"))
-            {
-                int interval = int.Parse(scheduleItem.Second.Substring(2)); // Extract the interval (e.g., 10)
-                int currentSecond = now.Second;
-                int nextSecond = (currentSecond / interval + 1) * interval; // Calculate the next second
-
-                if (nextSecond >= 60)
-                {
-                    nextSecond = 0;
-                    now = now.AddMinutes(1);
-                }
-
-                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, nextSecond);
-
-                // Ensure the next occurrence is within the valid range
-                if (nextOccurrence < now)
-                {
-                    nextOccurrence = nextOccurrence.AddSeconds(interval); // Adjust if the next occurrence is in the past
-                }
-            }
-            else
-            {
-                // Handle fixed second values
-                if (!MatchesCronField(scheduleItem.Second, now.Second.ToString()))
-                {
-                    now = now.AddSeconds(1);
-                    nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, int.Parse(scheduleItem.Second));
-                }
-                else
-                {
-                    nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second);
-                }
-            }
-        }
-        else if (scheduleItem.Type == "NonPeriodic")
-        {
-            // For NonPeriodic items, check the trigger
-            if (string.IsNullOrEmpty(scheduleItem.Trigger) || scheduleItem.Trigger != _currentTrigger.Event)
-            {
-                Logger.LogMessage($"Trigger mismatch: {scheduleItem.Trigger} != {_currentTrigger.Event}");
-                return nextOccurrence;
-            }
-
-            nextOccurrence = now;
-        }
-
-        // Ensure the next occurrence is within the valid range
-        if (nextOccurrence < now || nextOccurrence > endTime)
-        {
-            Logger.LogMessage($"Next occurrence is out of range: {nextOccurrence}");
-            return DateTime.MinValue;
-        }
-
-        Logger.LogMessage($"Next occurrence for Item {scheduleItem.ItemId}: {nextOccurrence}");
-        return nextOccurrence;
-    }
-
-    private bool MatchesCronField(string cronField, string value)
-    {
-        if (cronField == "*") return true;
-        if (cronField.StartsWith("*/"))
-        {
-            int interval = int.Parse(cronField.Substring(2)); // Extract the interval (e.g., 10)
-            int currentValue = int.Parse(value);
-            return currentValue % interval == 0; // Check if the current value is a multiple of the interval
-        }
-        return cronField == value;
     }
 
     private void OnPlaylistFinished()
