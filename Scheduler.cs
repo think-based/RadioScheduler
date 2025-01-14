@@ -302,12 +302,19 @@ public class Scheduler
         DateTime now = DateTime.Now;
         DateTime endTime = now.AddHours(24);
 
+        List<ScheduleItem> upcomingItems = new List<ScheduleItem>();
+
         foreach (var item in _scheduleItems)
         {
-            item.NextOccurrence = GetNextOccurrence(item, now, endTime);
+            DateTime nextOccurrence = GetNextOccurrence(item, now, endTime);
+            if (nextOccurrence != DateTime.MinValue)
+            {
+                item.NextOccurrence = nextOccurrence;
+                upcomingItems.Add(item);
+            }
         }
 
-        return _scheduleItems;
+        return upcomingItems;
     }
 
     public string GetCurrentPlaybackStatus()
