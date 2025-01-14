@@ -2,7 +2,6 @@
 // FileName: FilePathItem.cs
 
 using System;
-using System.IO;
 
 namespace RadioScheduler.Entities
 {
@@ -10,15 +9,16 @@ namespace RadioScheduler.Entities
     {
         public string Path { get; set; } // Path to the file or folder
         public string FolderPlayMode { get; set; } // Play mode for folders (e.g., "All" or "Single")
+        public string Text { get; set; } // Text for TTS (optional)
 
         /// <summary>
         /// Validates the FilePathItem.
         /// </summary>
         public void Validate()
         {
-            if (string.IsNullOrEmpty(Path))
+            if (string.IsNullOrEmpty(Path) && string.IsNullOrEmpty(Text))
             {
-                throw new ArgumentException("Path cannot be null or empty.");
+                throw new ArgumentException("Either Path or Text must be provided.");
             }
 
             if (Directory.Exists(Path) && string.IsNullOrEmpty(FolderPlayMode))
@@ -26,7 +26,7 @@ namespace RadioScheduler.Entities
                 throw new ArgumentException("FolderPlayMode must be set for folders.");
             }
 
-            if (!Directory.Exists(Path) && !File.Exists(Path))
+            if (!string.IsNullOrEmpty(Path) && !Directory.Exists(Path) && !File.Exists(Path))
             {
                 throw new ArgumentException($"File or folder not found: {Path}");
             }
