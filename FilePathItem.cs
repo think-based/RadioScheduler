@@ -2,6 +2,7 @@
 // FileName: FilePathItem.cs
 
 using System;
+using System.IO;
 
 namespace RadioScheduler.Entities
 {
@@ -21,7 +22,7 @@ namespace RadioScheduler.Entities
                 throw new ArgumentException("Either Path or Text must be provided.");
             }
 
-            if (Directory.Exists(Path) && string.IsNullOrEmpty(FolderPlayMode))
+            if (!string.IsNullOrEmpty(Path) && Directory.Exists(Path) && string.IsNullOrEmpty(FolderPlayMode))
             {
                 throw new ArgumentException("FolderPlayMode must be set for folders.");
             }
