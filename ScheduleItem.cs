@@ -1,9 +1,8 @@
-//Be Naame Khoda
-//FileName: ScheduleItem.cs
+// Be Naame Khoda
+// FileName: ScheduleItem.cs
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 public class ScheduleItem
 {
@@ -26,6 +25,10 @@ public class ScheduleItem
     public string Region { get; set; } // منطقه (کد کشور ISO 3166-1 alpha-2)
     public string TriggerType { get; set; } // نوع تریگر (Immediate یا Timed یا Delayed)
     public int? DelayMinutes { get; set; } // تعداد دقیقه‌های تاخیر برای TriggerType = Delayed
+
+    // New properties for schedule list
+    public DateTime NextOccurrence { get; set; } // زمان وقوع بعدی
+    public TimeSpan Duration { get; set; } // مدت زمان پخش
 
     /// <summary>
     /// اعتبارسنجی آیتم زمان‌بندی
@@ -55,33 +58,6 @@ public class ScheduleItem
         foreach (var filePathItem in FilePaths)
         {
             filePathItem.Validate();
-        }
-    }
-}
-
-public class FilePathItem
-{
-    public string Path { get; set; } // مسیر فایل یا پوشه
-    public string FolderPlayMode { get; set; } // حالت پخش پوشه (All یا Single)
-
-    /// <summary>
-    /// اعتبارسنجی آیتم مسیر فایل یا پوشه
-    /// </summary>
-    public void Validate()
-    {
-        if (string.IsNullOrEmpty(Path))
-        {
-            throw new ArgumentException("Path cannot be null or empty.");
-        }
-
-        if (Directory.Exists(Path) && string.IsNullOrEmpty(FolderPlayMode))
-        {
-            throw new ArgumentException("FolderPlayMode must be set for folders.");
-        }
-
-        if (!Directory.Exists(Path) && !File.Exists(Path))
-        {
-            throw new ArgumentException($"File or folder not found: {Path}");
         }
     }
 }
