@@ -178,7 +178,7 @@ public class Scheduler
                 double delay = (startTime - now).TotalMilliseconds;
 
                 Timer timer = new Timer(delay);
-                timer.AutoReset = false; // Ensure this is set to false for one-time triggers
+                timer.AutoReset = false;
                 timer.Elapsed += (sender, e) => OnPlaylistStart(scheduleItem);
                 timer.Start();
                 _timers.Add(timer);
@@ -222,37 +222,37 @@ public class Scheduler
         if (scheduleItem.Type == "Periodic")
         {
             // Handle periodic schedules
-            if (scheduleItem.Minute.StartsWith("*/"))
+            if (scheduleItem.Second.StartsWith("*/"))
             {
-                int interval = int.Parse(scheduleItem.Minute.Substring(2)); // Extract the interval (e.g., 1)
-                int currentMinute = now.Minute;
-                int nextMinute = (currentMinute / interval + 1) * interval; // Calculate the next minute
+                int interval = int.Parse(scheduleItem.Second.Substring(2)); // Extract the interval (e.g., 10)
+                int currentSecond = now.Second;
+                int nextSecond = (currentSecond / interval + 1) * interval; // Calculate the next second
 
-                if (nextMinute >= 60)
+                if (nextSecond >= 60)
                 {
-                    nextMinute = 0;
-                    now = now.AddHours(1);
+                    nextSecond = 0;
+                    now = now.AddMinutes(1);
                 }
 
-                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, nextMinute, 0);
+                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, nextSecond);
 
                 // Ensure the next occurrence is within the valid range
                 if (nextOccurrence < now)
                 {
-                    nextOccurrence = nextOccurrence.AddMinutes(interval); // Adjust if the next occurrence is in the past
+                    nextOccurrence = nextOccurrence.AddSeconds(interval); // Adjust if the next occurrence is in the past
                 }
             }
             else
             {
-                // Handle fixed minute values
-                if (!MatchesCronField(scheduleItem.Minute, now.Minute.ToString()))
+                // Handle fixed second values
+                if (!MatchesCronField(scheduleItem.Second, now.Second.ToString()))
                 {
-                    now = now.AddMinutes(1);
-                    nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, int.Parse(scheduleItem.Minute), 0);
+                    now = now.AddSeconds(1);
+                    nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, int.Parse(scheduleItem.Second));
                 }
                 else
                 {
-                    nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0);
+                    nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second);
                 }
             }
         }
@@ -284,7 +284,7 @@ public class Scheduler
         if (cronField == "*") return true;
         if (cronField.StartsWith("*/"))
         {
-            int interval = int.Parse(cronField.Substring(2)); // Extract the interval (e.g., 1)
+            int interval = int.Parse(cronField.Substring(2)); // Extract the interval (e.g., 10)
             int currentValue = int.Parse(value);
             return currentValue % interval == 0; // Check if the current value is a multiple of the interval
         }
