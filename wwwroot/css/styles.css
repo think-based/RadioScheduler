@@ -9,9 +9,18 @@
 /* Style for cards */
 .card {
     margin: 20px 0; /* Add margin to cards for better spacing */
-    padding: 20px; /* Add padding inside cards */
     border-radius: 10px; /* Rounded corners for cards */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Add shadow for depth */
+}
+
+.card-header {
+    padding: 15px 20px; /* Add padding to card header */
+    background-color: #ffffff; /* White background for card header */
+    border-bottom: 1px solid #e3e3e3; /* Add border to card header */
+}
+
+.card-body {
+    padding: 20px; /* Add padding to card body */
 }
 
 /* Style for log content */
@@ -21,6 +30,7 @@
     border-radius: 5px; /* Rounded corners for log content */
     font-family: monospace; /* Use monospace font for log content */
     overflow-x: auto; /* Enable horizontal scrolling if needed */
+    margin: 0; /* Remove default margin */
 }
 
 /* Style for prayer times list */
