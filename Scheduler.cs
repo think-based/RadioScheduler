@@ -228,10 +228,10 @@ public class Scheduler
                 if (!MatchesCronField(scheduleItem.Second, now.Second.ToString())) return nextOccurrence;
             }
 
-            // Handle cron-like syntax for Minute field (e.g., "*/5")
+            // Handle cron-like syntax for Minute field (e.g., "*/1")
             if (scheduleItem.Minute.StartsWith("*/"))
             {
-                int interval = int.Parse(scheduleItem.Minute.Substring(2)); // Extract the interval (e.g., 5)
+                int interval = int.Parse(scheduleItem.Minute.Substring(2)); // Extract the interval (e.g., 1)
                 int currentMinute = now.Minute;
                 int nextMinute = (currentMinute / interval + 1) * interval; // Calculate the next minute
 
@@ -297,7 +297,7 @@ public class Scheduler
         if (cronField == "*") return true;
         if (cronField.StartsWith("*/"))
         {
-            int interval = int.Parse(cronField.Substring(2)); // Extract the interval (e.g., 5)
+            int interval = int.Parse(cronField.Substring(2)); // Extract the interval (e.g., 1)
             int currentValue = int.Parse(value);
             return currentValue % interval == 0; // Check if the current value is a multiple of the interval
         }
