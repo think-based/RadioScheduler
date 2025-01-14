@@ -1,6 +1,7 @@
 // Be Naame Khoda
 // FileName: ScheduleItem.cs
 
+using RadioScheduler.Entities;
 using System;
 using System.Collections.Generic;
 
