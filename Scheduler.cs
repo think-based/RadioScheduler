@@ -101,6 +101,7 @@ public class Scheduler
                         foreach (var item in newItems)
                         {
                             item.Validate();
+                            item.NextOccurrence = GetNextOccurrence(item, DateTime.Now, DateTime.Now.AddHours(24)); // Initialize NextOccurrence
                         }
 
                         _scheduleItems = newItems;
@@ -204,12 +205,36 @@ public class Scheduler
 
         if (scheduleItem.Type == "Periodic")
         {
-            // For Periodic items, check the time fields (Second, Minute, Hour)
-            if (!MatchesCronField(scheduleItem.Second, now.Second.ToString())) return nextOccurrence;
-            if (!MatchesCronField(scheduleItem.Minute, now.Minute.ToString())) return nextOccurrence;
-            if (!MatchesCronField(scheduleItem.Hour, now.Hour.ToString())) return nextOccurrence;
+            // Handle cron-like syntax for Minute field (e.g., "*/5")
+            if (scheduleItem.Minute.StartsWith("*/"))
+            {
+                int interval = int.Parse(scheduleItem.Minute.Substring(2)); // Extract the interval (e.g., 5)
+                int currentMinute = now.Minute;
+                int nextMinute = (currentMinute / interval + 1) * interval; // Calculate the next minute
 
-            nextOccurrence = now;
+                if (nextMinute >= 60)
+                {
+                    // If the next minute exceeds 59, move to the next hour
+                    nextMinute = 0;
+                    now = now.AddHours(1);
+                }
+
+                // Set the next occurrence
+                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, nextMinute, 0);
+            }
+            else
+            {
+                // Handle fixed minute values
+                if (!MatchesCronField(scheduleItem.Minute, now.Minute.ToString())) return nextOccurrence;
+                nextOccurrence = now;
+            }
+
+            // Ensure the next occurrence is within the valid range
+            if (nextOccurrence >= now && nextOccurrence <= endTime)
+            {
+                Logger.LogMessage($"Next occurrence for Item {scheduleItem.ItemId}: {nextOccurrence}");
+                return nextOccurrence;
+            }
         }
         else if (scheduleItem.Type == "NonPeriodic")
         {
@@ -219,19 +244,18 @@ public class Scheduler
             nextOccurrence = now;
         }
 
-        // If the next occurrence is within the valid range, return it
-        if (nextOccurrence >= now && nextOccurrence <= endTime)
-        {
-            Logger.LogMessage($"Next occurrence for Item {scheduleItem.ItemId}: {nextOccurrence}");
-            return nextOccurrence;
-        }
-
         return DateTime.MinValue;
     }
 
     private bool MatchesCronField(string cronField, string value)
     {
         if (cronField == "*") return true;
+        if (cronField.StartsWith("*/"))
+        {
+            int interval = int.Parse(cronField.Substring(2)); // Extract the interval (e.g., 5)
+            int currentValue = int.Parse(value);
+            return currentValue % interval == 0; // Check if the current value is a multiple of the interval
+        }
         return cronField == value;
     }
 
