@@ -104,7 +104,6 @@
     font-size: 16px; /* Increase font size for sidebar links */
     display: flex; /* Align icon and text horizontally */
     align-items: center; /* Center icon and text vertically */
-    color: #333; /* Set sidebar item text color */
     text-decoration: none; /* Remove underline from links */
 }
 
