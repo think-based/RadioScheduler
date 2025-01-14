@@ -2,7 +2,6 @@
 // FileName: AudioPlayer.cs
 
 using NAudio.Wave;
-using RadioScheduler.Entities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -36,15 +35,28 @@ public class AudioPlayer
     /// <summary>
     /// Plays the provided list of file paths or TTS text.
     /// </summary>
-    /// <param name="filePathItems">The list of file paths or TTS text to play.</param>
     public void Play(List<FilePathItem> filePathItems)
     {
         lock (_lock) // Ensure thread safety
         {
-            Stop(); // Stop any ongoing playback
+            // Stop any ongoing playback
+            Stop();
+
+            // Expand file paths (including TTS items)
             var expandedFilePaths = ExpandFilePaths(filePathItems);
+
+            // Check if the playlist is empty
+            if (expandedFilePaths == null || expandedFilePaths.Count == 0)
+            {
+                Logger.LogMessage("Playlist is null or empty.");
+                return;
+            }
+
+            // Initialize the new playlist
             _currentPlaylist = expandedFilePaths;
             _currentIndex = 0;
+
+            // Start playing the first file in the playlist
             PlayNextFile();
         }
     }
@@ -74,6 +86,7 @@ public class AudioPlayer
                 _ttsPlayer.SpeakAsyncCancelAll();
             }
 
+            // Clear the current playlist and reset state
             _currentPlaylist = null;
             IsPlaying = false;
             CurrentFile = null;
@@ -107,8 +120,13 @@ public class AudioPlayer
 
             if (currentItem.StartsWith("TTS:")) // Handle TTS
             {
-                string text = currentItem.Substring(4);
+                string text = currentItem.Substring(4); // Extract text after "TTS:"
                 Logger.LogMessage($"Playing TTS: {text}");
+
+                // Stop any ongoing TTS playback
+                _ttsPlayer.SpeakAsyncCancelAll();
+
+                // Play the TTS
                 _ttsPlayer.SpeakAsync(text);
                 IsPlaying = true;
                 CurrentFile = "TTS";
@@ -204,8 +222,6 @@ public class AudioPlayer
     /// <summary>
     /// Expands file paths and folders into a flat list of playable items.
     /// </summary>
-    /// <param name="filePathItems">The list of file paths or folders.</param>
-    /// <returns>A list of playable file paths or TTS text.</returns>
     public List<string> ExpandFilePaths(List<FilePathItem> filePathItems)
     {
         var expandedPaths = new List<string>();
@@ -254,8 +270,6 @@ public class AudioPlayer
     /// <summary>
     /// Calculates the total duration of the playlist.
     /// </summary>
-    /// <param name="filePathItems">The list of file paths or folders.</param>
-    /// <returns>The total duration as a TimeSpan.</returns>
     public TimeSpan CalculateTotalDuration(List<FilePathItem> filePathItems)
     {
         var expandedFilePaths = ExpandFilePaths(filePathItems);
