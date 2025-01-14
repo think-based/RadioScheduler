@@ -183,7 +183,7 @@ public class Scheduler
                 timer.Start();
                 _timers.Add(timer);
 
-                Logger.LogMessage($"Timer set for Item {scheduleItem.ItemId} at {startTime}");
+                Logger.LogMessage($"Timer set for schedule '{scheduleItem.Name}' at {startTime}");
             }
         }
     }
@@ -221,8 +221,9 @@ public class Scheduler
 
     private void OnPlaylistStart(ScheduleItem scheduleItem)
     {
+        Logger.LogMessage($"Starting playback for schedule: {scheduleItem.Name}");
         BeforePlayback?.Invoke();
-        _audioPlayer.Play(scheduleItem.FilePaths); // Plays TTS text
+        _audioPlayer.Play(scheduleItem.FilePaths);
         AfterPlayback?.Invoke();
 
         if (scheduleItem.Type == "Periodic")
@@ -239,7 +240,7 @@ public class Scheduler
                 timer.Start();
                 _timers.Add(timer);
 
-                Logger.LogMessage($"Next timer set for Item {scheduleItem.ItemId} at {nextOccurrence}");
+                Logger.LogMessage($"Next timer set for schedule '{scheduleItem.Name}' at {nextOccurrence}");
             }
         }
     }
