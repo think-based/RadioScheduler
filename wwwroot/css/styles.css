@@ -65,11 +65,41 @@
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1); /* Add shadow to sidebar */
 }
 
+.sidebar .nav {
+    list-style-type: none; /* Remove bullet points from sidebar */
+    padding-left: 0; /* Remove default padding */
+}
+
 .sidebar .nav li a {
     padding: 10px 15px; /* Add padding to sidebar links */
     font-size: 16px; /* Increase font size for sidebar links */
+    display: flex; /* Align icon and text horizontally */
+    align-items: center; /* Center icon and text vertically */
+}
+
+.sidebar .nav li a i {
+    margin-right: 10px; /* Add spacing between icon and text */
 }
 
 .sidebar .nav li a:hover {
     background-color: rgba(255, 255, 255, 0.1); /* Add hover effect to sidebar links */
+}
+
+/* Style for navbar items */
+.navbar-nav {
+    list-style-type: none; /* Remove bullet points from navbar */
+    padding-left: 0; /* Remove default padding */
+}
+
+.navbar-nav .nav-item {
+    margin-left: 10px; /* Add spacing between navbar items */
+}
+
+.navbar-nav .nav-item a {
+    display: flex; /* Align icon and text horizontally */
+    align-items: center; /* Center icon and text vertically */
+}
+
+.navbar-nav .nav-item a i {
+    margin-right: 5px; /* Add spacing between icon and text */
 }
