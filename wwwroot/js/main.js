@@ -16,6 +16,11 @@ $(document).ready(function () {
         loadPage('viewlog');
     });
 
+    $('#schedule-list-link').on('click', function (e) {
+        e.preventDefault(); // Prevent default link behavior
+        loadPage('schedule-list');
+    });
+
     // Handle Clear Log button click
     $('#clear-log-link').on('click', function (e) {
         e.preventDefault(); // Prevent default link behavior
@@ -25,7 +30,7 @@ $(document).ready(function () {
 
 /**
  * Loads a page dynamically into the #content div using AJAX.
- * @param {string} page - The page to load (e.g., 'home', 'viewlog').
+ * @param {string} page - The page to load (e.g., 'home', 'viewlog', 'schedule-list').
  */
 function loadPage(page) {
     $.get(`/${page}.html`)
@@ -38,6 +43,8 @@ function loadPage(page) {
                 initializeHomePage();
             } else if (page === 'viewlog') {
                 initializeLogPolling();
+            } else if (page === 'schedule-list') {
+                initializeScheduleListPage();
             }
         })
         .fail(function (error) {
@@ -118,6 +125,51 @@ function initializeLogPolling() {
 
     // Set up polling to fetch log content every second
     setInterval(fetchLogContent, 1000);
+}
+
+/**
+ * Initializes the schedule list page.
+ */
+function initializeScheduleListPage() {
+    const scheduleListBody = $('#schedule-list-body');
+    const loadingSpinner = $('#loading-spinner');
+    const scheduleListContent = $('#schedule-list-content');
+    const errorMessage = $('#error-message');
+
+    // Show loading spinner
+    loadingSpinner.show();
+    scheduleListContent.hide();
+    errorMessage.hide();
+
+    // Fetch schedule data
+    $.get('/api/schedule-list')
+        .done(function (data) {
+            // Clear existing rows
+            scheduleListBody.empty();
+
+            // Add new rows
+            data.forEach(item => {
+                const row = `
+                    <tr>
+                        <td>${item.Playlist}</td>
+                        <td>${item.StartTime}</td>
+                        <td>${item.EndTime}</td>
+                        <td>${item.TriggerEvent}</td>
+                        <td>${item.Status}</td>
+                    </tr>
+                `;
+                scheduleListBody.append(row);
+            });
+
+            // Show the table
+            loadingSpinner.hide();
+            scheduleListContent.show();
+        })
+        .fail(function (error) {
+            console.error('Error fetching schedule list:', error);
+            loadingSpinner.hide();
+            errorMessage.show();
+        });
 }
 
 /**
