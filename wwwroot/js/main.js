@@ -1,35 +1,44 @@
 // Be Naame Khoda
 // FileName: wwwroot/js/main.js
 
+$(document).ready(function () {
+    // Load the home page by default when the page loads
+    loadPage('home');
+
+    // Handle sidebar navigation clicks
+    $('.nav a').on('click', function (e) {
+        e.preventDefault(); // Prevent default link behavior
+        const page = $(this).attr('href').replace('#', ''); // Get the page name from the href
+        loadPage(page);
+    });
+
+    // Handle Clear Log button click
+    $('.nav a[onclick="clearLog(); return false;"]').on('click', function (e) {
+        e.preventDefault(); // Prevent default link behavior
+        clearLog();
+    });
+});
+
 /**
  * Loads a page dynamically into the #content div using AJAX.
  * @param {string} page - The page to load (e.g., 'home', 'viewlog').
  */
 function loadPage(page) {
-    let url = `/${page}.html`; // Request /home.html or /viewlog.html
-    fetch(url)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Failed to load ${page}.html`);
-            }
-            return response.text();
-        })
-        .then(data => {
+    $.get(`/${page}.html`)
+        .done(function (data) {
             // Inject the HTML content into the #content div
-            document.getElementById('content').innerHTML = data;
+            $('#content').html(data);
 
-            // If the loaded page is home.html, initialize its functionality
+            // Initialize page-specific functionality
             if (page === 'home') {
                 initializeHomePage();
-            }
-            // If the loaded page is viewlog.html, initialize log polling
-            else if (page === 'viewlog') {
+            } else if (page === 'viewlog') {
                 initializeLogPolling();
             }
         })
-        .catch(error => {
+        .fail(function (error) {
             console.error(`Error loading ${page}.html:`, error);
-            document.getElementById('content').innerHTML = `<p>Error loading ${page}. Please try again.</p>`;
+            $('#content').html(`<p>Error loading ${page}. Please try again.</p>`);
         });
 }
 
@@ -49,10 +58,7 @@ function initializeHomePage() {
  */
 function updateDateTime() {
     const now = new Date();
-    const dateTimeElement = document.getElementById('date-time');
-    if (dateTimeElement) {
-        dateTimeElement.textContent = now.toLocaleString();
-    }
+    $('#date-time').text(now.toLocaleString());
 }
 
 /**
@@ -65,24 +71,18 @@ function fetchPrayerTimes() {
     const day = today.getDate();
 
     // Fetch prayer times from the server
-    fetch(`/api/prayertimes?year=${year}&month=${month}&day=${day}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to fetch prayer times');
-            }
-            return response.json();
-        })
-        .then(data => {
+    $.get(`/api/prayertimes?year=${year}&month=${month}&day=${day}`)
+        .done(function (data) {
             // Update the prayer times in the DOM
-            document.getElementById('fajr-time').textContent = data.Fajr || 'N/A';
-            document.getElementById('dhuhr-time').textContent = data.Dhuhr || 'N/A';
-            document.getElementById('asr-time').textContent = data.Asr || 'N/A';
-            document.getElementById('maghrib-time').textContent = data.Maghrib || 'N/A';
-            document.getElementById('isha-time').textContent = data.Isha || 'N/A';
+            $('#fajr-time').text(data.Fajr || 'N/A');
+            $('#dhuhr-time').text(data.Dhuhr || 'N/A');
+            $('#asr-time').text(data.Asr || 'N/A');
+            $('#maghrib-time').text(data.Maghrib || 'N/A');
+            $('#isha-time').text(data.Isha || 'N/A');
         })
-        .catch(error => {
+        .fail(function (error) {
             console.error('Error fetching prayer times:', error);
-            document.getElementById('prayer-times-list').innerHTML = '<li>Error loading prayer times.</li>';
+            $('#prayer-times-list').html('<li>Error loading prayer times.</li>');
         });
 }
 
@@ -90,28 +90,22 @@ function fetchPrayerTimes() {
  * Initializes log polling for the viewlog page.
  */
 function initializeLogPolling() {
-    const logContentElement = document.getElementById('log-content');
-    if (!logContentElement) {
+    const logContentElement = $('#log-content');
+    if (!logContentElement.length) {
         console.error('Log content element not found.');
         return;
     }
 
     // Function to fetch and update log content
     const fetchLogContent = () => {
-        fetch('/api/logs')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to fetch log content');
-                }
-                return response.text();
+        $.get('/api/logs')
+            .done(function (data) {
+                logContentElement.text(data);
+                logContentElement.scrollTop(logContentElement[0].scrollHeight); // Auto-scroll to bottom
             })
-            .then(data => {
-                logContentElement.textContent = data;
-                logContentElement.scrollTop = logContentElement.scrollHeight; // Auto-scroll to bottom
-            })
-            .catch(error => {
+            .fail(function (error) {
                 console.error('Error fetching log content:', error);
-                logContentElement.textContent = 'Error loading log content.';
+                logContentElement.text('Error loading log content.');
             });
     };
 
@@ -126,23 +120,14 @@ function initializeLogPolling() {
  * Clears the log file and reloads the log content.
  */
 function clearLog() {
-    fetch('/clearlog', { method: 'POST' })
-        .then(response => {
-            if (response.ok) {
-                // Reload the log content after clearing
-                if (window.location.hash === '#viewlog') {
-                    initializeLogPolling();
-                }
-            } else {
-                console.error('Error clearing log:', response.statusText);
+    $.post('/clearlog')
+        .done(function () {
+            // Reload the log content after clearing
+            if (window.location.hash === '#viewlog') {
+                initializeLogPolling();
             }
         })
-        .catch(error => {
+        .fail(function (error) {
             console.error('Error clearing log:', error);
         });
 }
-
-// Load the home page by default when the page loads
-window.onload = function () {
-    loadPage('home'); // Load /home.html by default
-};
