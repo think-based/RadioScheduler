@@ -235,6 +235,12 @@ public class Scheduler
                 }
 
                 nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, nextMinute, 0);
+
+                // Ensure the next occurrence is within the valid range
+                if (nextOccurrence < now)
+                {
+                    nextOccurrence = nextOccurrence.AddMinutes(interval); // Adjust if the next occurrence is in the past
+                }
             }
             else
             {
@@ -250,7 +256,26 @@ public class Scheduler
                 }
             }
         }
+        else if (scheduleItem.Type == "NonPeriodic")
+        {
+            // For NonPeriodic items, check the trigger
+            if (string.IsNullOrEmpty(scheduleItem.Trigger) || scheduleItem.Trigger != _currentTrigger.Event)
+            {
+                Logger.LogMessage($"Trigger mismatch: {scheduleItem.Trigger} != {_currentTrigger.Event}");
+                return nextOccurrence;
+            }
 
+            nextOccurrence = now;
+        }
+
+        // Ensure the next occurrence is within the valid range
+        if (nextOccurrence < now || nextOccurrence > endTime)
+        {
+            Logger.LogMessage($"Next occurrence is out of range: {nextOccurrence}");
+            return DateTime.MinValue;
+        }
+
+        Logger.LogMessage($"Next occurrence for Item {scheduleItem.ItemId}: {nextOccurrence}");
         return nextOccurrence;
     }
 
