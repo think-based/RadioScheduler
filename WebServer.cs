@@ -7,17 +7,13 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using System.Linq; // Added for LINQ support
+using System.Linq;
 
 public class WebServer
 {
     private HttpListener _listener;
     private Scheduler _scheduler;
 
-    /// <summary>
-    /// Initializes a new instance of the WebServer class.
-    /// </summary>
-    /// <param name="scheduler">The scheduler instance to manage audio playback schedules.</param>
     public WebServer(Scheduler scheduler)
     {
         _scheduler = scheduler;
@@ -25,18 +21,12 @@ public class WebServer
         _listener.Prefixes.Add("http://localhost:8080/");
     }
 
-    /// <summary>
-    /// Starts the web server and begins listening for incoming requests.
-    /// </summary>
     public void Start()
     {
         _listener.Start();
         Task.Run(() => Listen());
     }
 
-    /// <summary>
-    /// Listens for incoming HTTP requests and processes them.
-    /// </summary>
     private async void Listen()
     {
         while (_listener.IsListening)
@@ -46,10 +36,6 @@ public class WebServer
         }
     }
 
-    /// <summary>
-    /// Processes an incoming HTTP request.
-    /// </summary>
-    /// <param name="context">The HTTP listener context containing request and response objects.</param>
     private void ProcessRequest(HttpListenerContext context)
     {
         var request = context.Request;
@@ -148,7 +134,8 @@ public class WebServer
             // Create a JSON response
             var responseData = upcomingItems.Select(item => new
             {
-                Playlist = string.Join(", ", item.FilePaths.Select(fp => Path.GetFileName(fp.Path))),
+                Name = item.Name, // Include the Name field
+                Playlist = item.FilePaths.Count > 0 ? item.FilePaths[0].Path : "No files", // Use the first file path or a placeholder
                 StartTime = item.NextOccurrence.ToString("yyyy-MM-dd HH:mm:ss"),
                 EndTime = item.NextOccurrence.Add(item.Duration).ToString("yyyy-MM-dd HH:mm:ss"),
                 TriggerEvent = item.Trigger,
