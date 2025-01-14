@@ -2,12 +2,11 @@
 // FileName: AudioPlayer.cs
 
 using NAudio.Wave;
-using RadioScheduler.Entities;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Speech.Synthesis; // Add this for TTS
+using System.Speech.Synthesis;
 
 public class AudioPlayer
 {
@@ -15,162 +14,197 @@ public class AudioPlayer
     private AudioFileReader _currentAudioFile;
     private List<string> _currentPlaylist;
     private int _currentIndex;
-    private SpeechSynthesizer _ttsPlayer; // TTS player
+    private SpeechSynthesizer _ttsPlayer;
+    private readonly object _lock = new object(); // Lock for thread safety
 
     public bool IsPlaying { get; private set; }
     public string CurrentFile { get; private set; }
 
-    public event Action PlaylistFinished; // Event to signal when playback is finished
+    public event Action PlaylistFinished;
 
     public AudioPlayer()
     {
         _audioPlayerWaveOut = new WaveOutEvent();
-        _audioPlayerWaveOut.PlaybackStopped += OnPlaybackStopped; // Subscribe to PlaybackStopped event
-        _ttsPlayer = new SpeechSynthesizer(); // Initialize TTS player
-        _ttsPlayer.SpeakCompleted += OnTtsCompleted; // Subscribe to TTS completion event
+        _audioPlayerWaveOut.PlaybackStopped += OnPlaybackStopped;
+        _ttsPlayer = new SpeechSynthesizer();
+        _ttsPlayer.SpeakCompleted += OnTtsCompleted;
         IsPlaying = false;
         CurrentFile = null;
     }
 
+    /// <summary>
+    /// Plays the provided list of file paths or TTS text.
+    /// </summary>
+    /// <param name="filePathItems">The list of file paths or TTS text to play.</param>
     public void Play(List<FilePathItem> filePathItems)
     {
-        Stop();
-        var expandedFilePaths = ExpandFilePaths(filePathItems);
-        _currentPlaylist = expandedFilePaths;
-        _currentIndex = 0;
-        PlayNextFile();
+        lock (_lock) // Ensure thread safety
+        {
+            Stop(); // Stop any ongoing playback
+            var expandedFilePaths = ExpandFilePaths(filePathItems);
+            _currentPlaylist = expandedFilePaths;
+            _currentIndex = 0;
+            PlayNextFile();
+        }
     }
 
+    /// <summary>
+    /// Stops the current playback and cleans up resources.
+    /// </summary>
     public void Stop()
     {
-        if (_audioPlayerWaveOut != null)
+        lock (_lock) // Ensure thread safety
         {
-            _audioPlayerWaveOut.Stop();
-            _audioPlayerWaveOut.Dispose();
-            _audioPlayerWaveOut = null;
-        }
+            if (_audioPlayerWaveOut != null)
+            {
+                _audioPlayerWaveOut.Stop();
+                _audioPlayerWaveOut.Dispose();
+                _audioPlayerWaveOut = null;
+            }
 
-        if (_currentAudioFile != null)
-        {
-            _currentAudioFile.Dispose();
-            _currentAudioFile = null;
-        }
+            if (_currentAudioFile != null)
+            {
+                _currentAudioFile.Dispose();
+                _currentAudioFile = null;
+            }
 
-        if (_ttsPlayer != null)
-        {
-            _ttsPlayer.SpeakAsyncCancelAll(); // Stop any ongoing TTS
-        }
+            if (_ttsPlayer != null)
+            {
+                _ttsPlayer.SpeakAsyncCancelAll();
+            }
 
-        _currentPlaylist = null;
-        IsPlaying = false;
-        CurrentFile = null;
+            _currentPlaylist = null;
+            IsPlaying = false;
+            CurrentFile = null;
+        }
     }
 
+    /// <summary>
+    /// Plays the next file in the playlist.
+    /// </summary>
     private void PlayNextFile()
     {
-        // Check if _currentPlaylist is null or empty
-        if (_currentPlaylist == null || _currentPlaylist.Count == 0)
+        lock (_lock) // Ensure thread safety
         {
-            Logger.LogMessage("Playlist is null or empty.");
-            Stop();
-            PlaylistFinished?.Invoke(); // Raise the PlaylistFinished event
-            return;
-        }
-
-        // Check if we've reached the end of the playlist
-        if (_currentIndex >= _currentPlaylist.Count)
-        {
-            Logger.LogMessage("End of playlist reached.");
-            Stop();
-            PlaylistFinished?.Invoke(); // Raise the PlaylistFinished event
-            return;
-        }
-
-        string currentItem = _currentPlaylist[_currentIndex];
-
-        if (currentItem.StartsWith("TTS:")) // Handle TTS
-        {
-            string text = currentItem.Substring(4); // Extract the text
-            Logger.LogMessage($"Playing TTS: {text}");
-            _ttsPlayer.SpeakAsync(text); // Play the text as speech
-            IsPlaying = true;
-            CurrentFile = "TTS";
-        }
-        else if (File.Exists(currentItem)) // Handle MP3 file
-        {
-            try
+            if (_currentPlaylist == null || _currentPlaylist.Count == 0)
             {
-                // Dispose of the previous audio file and player
-                if (_currentAudioFile != null)
-                {
-                    _currentAudioFile.Dispose();
-                    _currentAudioFile = null;
-                }
-
-                if (_audioPlayerWaveOut != null)
-                {
-                    _audioPlayerWaveOut.Dispose();
-                    _audioPlayerWaveOut = null;
-                }
-
-                // Initialize new audio file and player
-                _currentAudioFile = new AudioFileReader(currentItem);
-                _audioPlayerWaveOut = new WaveOutEvent();
-                _audioPlayerWaveOut.PlaybackStopped += OnPlaybackStopped; // Re-subscribe to the event
-                _audioPlayerWaveOut.Init(_currentAudioFile);
-                _audioPlayerWaveOut.Play();
-
-                IsPlaying = true;
-                CurrentFile = currentItem;
+                Logger.LogMessage("Playlist is null or empty.");
+                Stop();
+                PlaylistFinished?.Invoke();
+                return;
             }
-            catch (Exception ex)
+
+            if (_currentIndex >= _currentPlaylist.Count)
             {
-                Logger.LogMessage($"Error playing file {currentItem}: {ex.Message}");
+                Logger.LogMessage("End of playlist reached.");
+                Stop();
+                PlaylistFinished?.Invoke();
+                return;
+            }
+
+            string currentItem = _currentPlaylist[_currentIndex];
+
+            if (currentItem.StartsWith("TTS:")) // Handle TTS
+            {
+                string text = currentItem.Substring(4);
+                Logger.LogMessage($"Playing TTS: {text}");
+                _ttsPlayer.SpeakAsync(text);
+                IsPlaying = true;
+                CurrentFile = "TTS";
+            }
+            else if (File.Exists(currentItem)) // Handle MP3 file
+            {
+                try
+                {
+                    // Dispose of the previous audio file and player
+                    if (_currentAudioFile != null)
+                    {
+                        _currentAudioFile.Dispose();
+                        _currentAudioFile = null;
+                    }
+
+                    if (_audioPlayerWaveOut != null)
+                    {
+                        _audioPlayerWaveOut.Dispose();
+                        _audioPlayerWaveOut = null;
+                    }
+
+                    // Initialize new audio file and player
+                    _currentAudioFile = new AudioFileReader(currentItem);
+                    _audioPlayerWaveOut = new WaveOutEvent();
+                    _audioPlayerWaveOut.PlaybackStopped += OnPlaybackStopped;
+                    _audioPlayerWaveOut.Init(_currentAudioFile);
+                    _audioPlayerWaveOut.Play();
+
+                    IsPlaying = true;
+                    CurrentFile = currentItem;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogMessage($"Error playing file {currentItem}: {ex.Message}");
+                    _currentIndex++;
+                    PlayNextFile(); // Skip to the next file
+                }
+            }
+            else
+            {
+                Logger.LogMessage($"File not found: {currentItem}");
                 _currentIndex++;
                 PlayNextFile(); // Skip to the next file
             }
         }
-        else
-        {
-            Logger.LogMessage($"File not found: {currentItem}");
-            _currentIndex++;
-            PlayNextFile(); // Skip to the next file
-        }
     }
 
+    /// <summary>
+    /// Handles the PlaybackStopped event for audio files.
+    /// </summary>
     private void OnPlaybackStopped(object sender, StoppedEventArgs e)
     {
-        IsPlaying = false;
-        CurrentFile = null;
-
-        // Clean up resources
-        if (_currentAudioFile != null)
+        lock (_lock) // Ensure thread safety
         {
-            _currentAudioFile.Dispose();
-            _currentAudioFile = null;
-        }
+            IsPlaying = false;
+            CurrentFile = null;
 
-        if (_audioPlayerWaveOut != null)
-        {
-            _audioPlayerWaveOut.Dispose();
-            _audioPlayerWaveOut = null;
-        }
+            // Clean up resources
+            if (_currentAudioFile != null)
+            {
+                _currentAudioFile.Dispose();
+                _currentAudioFile = null;
+            }
 
-        // Play the next file in the playlist
-        _currentIndex++;
-        PlayNextFile();
+            if (_audioPlayerWaveOut != null)
+            {
+                _audioPlayerWaveOut.Dispose();
+                _audioPlayerWaveOut = null;
+            }
+
+            // Play the next file in the playlist
+            _currentIndex++;
+            PlayNextFile();
+        }
     }
 
+    /// <summary>
+    /// Handles the SpeakCompleted event for TTS.
+    /// </summary>
     private void OnTtsCompleted(object sender, SpeakCompletedEventArgs e)
     {
-        IsPlaying = false;
-        CurrentFile = null;
+        lock (_lock) // Ensure thread safety
+        {
+            IsPlaying = false;
+            CurrentFile = null;
 
-        // Play the next file in the playlist
-        _currentIndex++;
-        PlayNextFile();
+            // Play the next file in the playlist
+            _currentIndex++;
+            PlayNextFile();
+        }
     }
 
+    /// <summary>
+    /// Expands file paths and folders into a flat list of playable items.
+    /// </summary>
+    /// <param name="filePathItems">The list of file paths or folders.</param>
+    /// <returns>A list of playable file paths or TTS text.</returns>
     public List<string> ExpandFilePaths(List<FilePathItem> filePathItems)
     {
         var expandedPaths = new List<string>();
@@ -216,18 +250,24 @@ public class AudioPlayer
         return expandedPaths;
     }
 
+    /// <summary>
+    /// Calculates the total duration of the playlist.
+    /// </summary>
+    /// <param name="filePathItems">The list of file paths or folders.</param>
+    /// <returns>The total duration as a TimeSpan.</returns>
     public TimeSpan CalculateTotalDuration(List<FilePathItem> filePathItems)
     {
         var expandedFilePaths = ExpandFilePaths(filePathItems);
         TimeSpan totalDuration = TimeSpan.Zero;
+
         foreach (var file in expandedFilePaths)
         {
-            if (file.StartsWith("TTS:")) // Estimate TTS duration (e.g., 1 second per 10 characters)
+            if (file.StartsWith("TTS:")) // Estimate TTS duration
             {
                 string text = file.Substring(4);
                 totalDuration += TimeSpan.FromSeconds(text.Length / 10.0);
             }
-            else if (File.Exists(file))
+            else if (File.Exists(file)) // Calculate audio file duration
             {
                 try
                 {
@@ -242,6 +282,7 @@ public class AudioPlayer
                 }
             }
         }
+
         return totalDuration;
     }
 }
