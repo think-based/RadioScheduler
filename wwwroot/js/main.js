@@ -6,14 +6,18 @@ $(document).ready(function () {
     loadPage('home');
 
     // Handle sidebar navigation clicks
-    $('.nav a').on('click', function (e) {
+    $('#home-link').on('click', function (e) {
         e.preventDefault(); // Prevent default link behavior
-        const page = $(this).attr('href').replace('#', ''); // Get the page name from the href
-        loadPage(page);
+        loadPage('home');
+    });
+
+    $('#viewlog-link').on('click', function (e) {
+        e.preventDefault(); // Prevent default link behavior
+        loadPage('viewlog');
     });
 
     // Handle Clear Log button click
-    $('.nav a[onclick="clearLog(); return false;"]').on('click', function (e) {
+    $('#clear-log-link').on('click', function (e) {
         e.preventDefault(); // Prevent default link behavior
         clearLog();
     });
@@ -123,11 +127,12 @@ function clearLog() {
     $.post('/clearlog')
         .done(function () {
             // Reload the log content after clearing
-            if (window.location.hash === '#viewlog') {
+            if ($('#log-content').length) {
                 initializeLogPolling();
             }
         })
         .fail(function (error) {
             console.error('Error clearing log:', error);
+            $('#content').html('<p>Error clearing log. Please try again.</p>');
         });
 }
