@@ -20,25 +20,25 @@
         <div class="sidebar" data-color="purple" data-image="/img/sidebar.jpg">
             <div class="sidebar-wrapper">
                 <div class="logo">
-                    <a href="#" class="simple-text">
+                    <a href="#" class="simple-text" aria-label="Radio Scheduler Home">
                         Radio Scheduler
                     </a>
                 </div>
                 <ul class="nav">
                     <li class="nav-item">
-                        <a class="nav-link" href="#" id="home-link">
+                        <a class="nav-link" href="#" id="home-link" aria-label="Home">
                             <i class="fas fa-home"></i>
                             <p>Home</p>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#" id="viewlog-link">
+                        <a class="nav-link" href="#" id="viewlog-link" aria-label="View Log">
                             <i class="fas fa-list-alt"></i>
                             <p>View Log</p>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#" id="clear-log-link">
+                        <a class="nav-link" href="#" id="clear-log-link" aria-label="Clear Log">
                             <i class="fas fa-trash"></i>
                             <p>Clear Log</p>
                         </a>
@@ -46,13 +46,14 @@
                 </ul>
             </div>
         </div>
+
         <!-- Main Panel -->
         <div class="main-panel">
             <!-- Navbar -->
             <nav class="navbar navbar-expand-lg navbar-transparent navbar-absolute fixed-top">
                 <div class="container-fluid">
                     <div class="navbar-wrapper">
-                        <a class="navbar-brand" href="#">Dashboard</a>
+                        <a class="navbar-brand" href="#" aria-label="Dashboard">Dashboard</a>
                     </div>
                     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
@@ -60,19 +61,19 @@
                     <div class="collapse navbar-collapse" id="navbarSupportedContent">
                         <ul class="navbar-nav ml-auto">
                             <li class="nav-item">
-                                <a class="nav-link" href="#" id="home-link">
+                                <a class="nav-link" href="#" id="home-link" aria-label="Home">
                                     <i class="fas fa-home"></i>
                                     <p>Home</p>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="#" id="viewlog-link">
+                                <a class="nav-link" href="#" id="viewlog-link" aria-label="View Log">
                                     <i class="fas fa-list-alt"></i>
                                     <p>View Log</p>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="#" id="clear-log-link">
+                                <a class="nav-link" href="#" id="clear-log-link" aria-label="Clear Log">
                                     <i class="fas fa-trash"></i>
                                     <p>Clear Log</p>
                                 </a>
@@ -81,21 +82,28 @@
                     </div>
                 </div>
             </nav>
+
             <!-- Content -->
             <div class="content">
                 <div class="container-fluid" id="content">
                     <!-- Dynamic content will be loaded here -->
+                    <div id="loading-spinner" class="text-center" style="display: none;">
+                        <i class="fas fa-spinner fa-spin fa-3x"></i>
+                        <p>Loading...</p>
+                    </div>
+                    <div id="error-message" class="alert alert-danger" style="display: none;">
+                        Error loading content. Please try again.
+                    </div>
                 </div>
             </div>
+
             <!-- Footer -->
             <footer class="footer">
                 <div class="container-fluid">
                     <nav class="float-left">
                         <ul>
                             <li>
-                                <a href="#">
-                                    Radio Scheduler
-                                </a>
+                                <a href="#" aria-label="Radio Scheduler">Radio Scheduler</a>
                             </li>
                         </ul>
                     </nav>
@@ -106,13 +114,14 @@
             </footer>
         </div>
     </div>
+
     <!-- jQuery -->
-    <script src="/js/jquery.min.js"></script>
+    <script src="/js/jquery.min.js" defer></script>
     <!-- Bootstrap JS -->
-    <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/bootstrap.min.js" defer></script>
     <!-- Light Bootstrap Dashboard JS -->
-    <script src="/js/light-bootstrap-dashboard.js"></script>
+    <script src="/js/light-bootstrap-dashboard.js" defer></script>
     <!-- Custom JS -->
-    <script src="/js/main.js"></script>
+    <script src="/js/main.js" defer></script>
 </body>
 </html>
