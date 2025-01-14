@@ -345,6 +345,17 @@ public class Scheduler
         BeforePlayback?.Invoke();
         _audioPlayer.Play(scheduleItem.FilePaths);
         AfterPlayback?.Invoke();
+
+        // Recalculate the next occurrence for periodic tasks
+        if (scheduleItem.Type == "Periodic")
+        {
+            DateTime now = DateTime.Now;
+            DateTime endTime = now.AddHours(24);
+            scheduleItem.NextOccurrence = GetNextOccurrence(scheduleItem, now, endTime);
+
+            // Log the next occurrence
+            Logger.LogMessage($"Next occurrence for Item {scheduleItem.ItemId}: {scheduleItem.NextOccurrence}");
+        }
     }
 
     private void OnPlaylistFinished()
