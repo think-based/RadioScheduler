@@ -2,12 +2,13 @@
 // FileName: AudioPlayer.cs
 
 using NAudio.Wave;
-using RadioScheduler.Entities;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Speech.Synthesis;
+using System.Threading;
+using System.Threading.Tasks;
 using RadioScheduler.Entities;
 
 public class AudioPlayer
@@ -18,6 +19,10 @@ public class AudioPlayer
     private int _currentIndex;
     private SpeechSynthesizer _ttsPlayer;
     private readonly object _lock = new object(); // Lock for thread safety
+
+    private Queue<List<FilePathItem>> _playlistQueue = new Queue<List<FilePathItem>>();
+    private Task _playbackTask;
+    private CancellationTokenSource _playbackCancellationTokenSource;
 
     public bool IsPlaying { get; private set; }
     public string CurrentFile { get; private set; }
@@ -32,6 +37,9 @@ public class AudioPlayer
         _ttsPlayer.SpeakCompleted += OnTtsCompleted;
         IsPlaying = false;
         CurrentFile = null;
+
+        _playbackCancellationTokenSource = new CancellationTokenSource();
+        _playbackTask = Task.Run(() => PlaybackLoop(_playbackCancellationTokenSource.Token));
     }
 
     /// <summary>
@@ -39,29 +47,9 @@ public class AudioPlayer
     /// </summary>
     public void Play(List<FilePathItem> filePathItems)
     {
-        lock (_lock) // Ensure thread safety
+        lock (_lock)
         {
-            Logger.LogMessage("Stopping current playlist.");
-            Stop(); // Stop any ongoing playback
-
-            // Expand file paths (including TTS items)
-            var expandedFilePaths = ExpandFilePaths(filePathItems);
-
-            // Check if the playlist is empty
-            if (expandedFilePaths == null || expandedFilePaths.Count == 0)
-            {
-                Logger.LogMessage("Playlist is null or empty.");
-                return;
-            }
-
-            Logger.LogMessage($"Starting new playlist: {string.Join(", ", expandedFilePaths)}");
-
-            // Initialize the new playlist
-            _currentPlaylist = expandedFilePaths;
-            _currentIndex = 0;
-
-            // Start playing the first file in the playlist
-            PlayNextFile();
+            _playlistQueue.Enqueue(filePathItems); // Add the new playlist to the queue
         }
     }
 
@@ -70,8 +58,10 @@ public class AudioPlayer
     /// </summary>
     public void Stop()
     {
-        lock (_lock) // Ensure thread safety
+        lock (_lock)
         {
+            _playlistQueue.Clear(); // Clear the playlist queue
+
             if (_audioPlayerWaveOut != null)
             {
                 _audioPlayerWaveOut.Stop();
@@ -98,28 +88,59 @@ public class AudioPlayer
     }
 
     /// <summary>
-    /// Plays the next file in the playlist.
+    /// Main playback loop to process the playlist queue.
     /// </summary>
-    private void PlayNextFile()
+    private async Task PlaybackLoop(CancellationToken cancellationToken)
     {
-        lock (_lock) // Ensure thread safety
+        while (!cancellationToken.IsCancellationRequested)
         {
-            if (_currentPlaylist == null || _currentPlaylist.Count == 0)
+            List<FilePathItem> nextPlaylist = null;
+
+            lock (_lock)
+            {
+                if (_playlistQueue.Count > 0)
+                {
+                    nextPlaylist = _playlistQueue.Dequeue(); // Get the next playlist from the queue
+                }
+            }
+
+            if (nextPlaylist != null)
+            {
+                await PlayPlaylist(nextPlaylist, cancellationToken);
+            }
+
+            await Task.Delay(100, cancellationToken); // Small delay to avoid busy-waiting
+        }
+    }
+
+    /// <summary>
+    /// Plays a single playlist.
+    /// </summary>
+    private async Task PlayPlaylist(List<FilePathItem> filePathItems, CancellationToken cancellationToken)
+    {
+        lock (_lock)
+        {
+            Stop(); // Stop any ongoing playback
+
+            // Expand file paths (including TTS items)
+            var expandedFilePaths = ExpandFilePaths(filePathItems);
+
+            // Check if the playlist is empty
+            if (expandedFilePaths == null || expandedFilePaths.Count == 0)
             {
                 Logger.LogMessage("Playlist is null or empty.");
-                Stop();
-                PlaylistFinished?.Invoke();
                 return;
             }
 
-            if (_currentIndex >= _currentPlaylist.Count)
-            {
-                Logger.LogMessage("End of playlist reached.");
-                Stop();
-                PlaylistFinished?.Invoke();
-                return;
-            }
+            Logger.LogMessage($"Starting new playlist: {string.Join(", ", expandedFilePaths)}");
 
+            // Initialize the new playlist
+            _currentPlaylist = expandedFilePaths;
+            _currentIndex = 0;
+        }
+
+        while (_currentIndex < _currentPlaylist.Count && !cancellationToken.IsCancellationRequested)
+        {
             string currentItem = _currentPlaylist[_currentIndex];
 
             if (currentItem.StartsWith("TTS:")) // Handle TTS
@@ -134,13 +155,15 @@ public class AudioPlayer
                 _ttsPlayer.SpeakAsync(text);
                 IsPlaying = true;
                 CurrentFile = "TTS";
+
+                await Task.Delay(TimeSpan.FromSeconds(text.Length / 10.0), cancellationToken); // Estimate TTS duration
             }
             else if (File.Exists(currentItem)) // Handle MP3 file
             {
                 try
                 {
-                    // Dispose of the previous audio file and player
-                    if (_currentAudioFile != null)
+                    // Dispose of the previous audio file and player if the file has changed
+                    if (_currentAudioFile != null && _currentAudioFile.FileName != currentItem)
                     {
                         _currentAudioFile.Dispose();
                         _currentAudioFile = null;
@@ -152,8 +175,12 @@ public class AudioPlayer
                         _audioPlayerWaveOut = null;
                     }
 
-                    // Initialize new audio file and player
-                    _currentAudioFile = new AudioFileReader(currentItem);
+                    // Initialize new audio file (if necessary) and player
+                    if (_currentAudioFile == null)
+                    {
+                        _currentAudioFile = new AudioFileReader(currentItem);
+                    }
+
                     _audioPlayerWaveOut = new WaveOutEvent();
                     _audioPlayerWaveOut.PlaybackStopped += OnPlaybackStopped;
                     _audioPlayerWaveOut.Init(_currentAudioFile);
@@ -161,20 +188,26 @@ public class AudioPlayer
 
                     IsPlaying = true;
                     CurrentFile = currentItem;
+
+                    await Task.Delay((int)_currentAudioFile.TotalTime.TotalMilliseconds, cancellationToken); // Wait for the file to finish playing
                 }
                 catch (Exception ex)
                 {
                     Logger.LogMessage($"Error playing file {currentItem}: {ex.Message}");
-                    _currentIndex++;
-                    PlayNextFile(); // Skip to the next file
                 }
             }
             else
             {
                 Logger.LogMessage($"File not found: {currentItem}");
-                _currentIndex++;
-                PlayNextFile(); // Skip to the next file
             }
+
+            _currentIndex++;
+        }
+
+        lock (_lock)
+        {
+            Stop(); // Stop playback after the playlist is finished
+            PlaylistFinished?.Invoke();
         }
     }
 
@@ -183,7 +216,7 @@ public class AudioPlayer
     /// </summary>
     private void OnPlaybackStopped(object sender, StoppedEventArgs e)
     {
-        lock (_lock) // Ensure thread safety
+        lock (_lock)
         {
             IsPlaying = false;
             CurrentFile = null;
@@ -203,7 +236,14 @@ public class AudioPlayer
 
             // Play the next file in the playlist
             _currentIndex++;
-            PlayNextFile();
+            if (_currentIndex < _currentPlaylist.Count)
+            {
+                PlayNextFile();
+            }
+            else
+            {
+                PlaylistFinished?.Invoke();
+            }
         }
     }
 
@@ -212,14 +252,21 @@ public class AudioPlayer
     /// </summary>
     private void OnTtsCompleted(object sender, SpeakCompletedEventArgs e)
     {
-        lock (_lock) // Ensure thread safety
+        lock (_lock)
         {
             IsPlaying = false;
             CurrentFile = null;
 
             // Play the next file in the playlist
             _currentIndex++;
-            PlayNextFile();
+            if (_currentIndex < _currentPlaylist.Count)
+            {
+                PlayNextFile();
+            }
+            else
+            {
+                PlaylistFinished?.Invoke();
+            }
         }
     }
 
