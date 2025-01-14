@@ -178,7 +178,7 @@ public class Scheduler
                 double delay = (startTime - now).TotalMilliseconds;
 
                 Timer timer = new Timer(delay);
-                timer.AutoReset = false;
+                timer.AutoReset = false; // Ensure this is set to false for one-time triggers
                 timer.Elapsed += (sender, e) => OnPlaylistStart(scheduleItem);
                 timer.Start();
                 _timers.Add(timer);
@@ -188,64 +188,40 @@ public class Scheduler
         }
     }
 
+    private void OnPlaylistStart(ScheduleItem scheduleItem)
+    {
+        BeforePlayback?.Invoke();
+        _audioPlayer.Play(scheduleItem.FilePaths);
+        AfterPlayback?.Invoke();
+
+        // If the schedule is periodic, set up the next timer
+        if (scheduleItem.Type == "Periodic")
+        {
+            DateTime now = DateTime.Now;
+            DateTime nextOccurrence = GetNextOccurrence(scheduleItem, now, now.AddHours(24));
+
+            if (nextOccurrence != DateTime.MinValue)
+            {
+                double delay = (nextOccurrence - now).TotalMilliseconds;
+
+                Timer timer = new Timer(delay);
+                timer.AutoReset = false;
+                timer.Elapsed += (sender, e) => OnPlaylistStart(scheduleItem);
+                timer.Start();
+                _timers.Add(timer);
+
+                Logger.LogMessage($"Next timer set for Item {scheduleItem.ItemId} at {nextOccurrence}");
+            }
+        }
+    }
+
     private DateTime GetNextOccurrence(ScheduleItem scheduleItem, DateTime now, DateTime endTime)
     {
         DateTime nextOccurrence = DateTime.MinValue;
 
-        // Convert the current date to the specified calendar type
-        DateTime convertedDate = CalendarHelper.ConvertDate(now, scheduleItem.CalendarType);
-
-        // Check if the current date matches the DayOfMonth and Month fields
-        bool isDayOfMonthMatch = MatchesCronField(scheduleItem.DayOfMonth, convertedDate.Day.ToString());
-        bool isMonthMatch = MatchesCronField(scheduleItem.Month, convertedDate.Month.ToString());
-
-        // Check if the current day of the week matches the DayOfWeek field
-        int currentDayOfWeek = CalendarHelper.GetDayOfWeek(convertedDate, scheduleItem.Region);
-        bool isDayOfWeekMatch = MatchesCronField(scheduleItem.DayOfWeek, currentDayOfWeek.ToString());
-
-        // If any of the date fields don't match, return DateTime.MinValue
-        if (!isDayOfMonthMatch || !isMonthMatch || !isDayOfWeekMatch)
-        {
-            Logger.LogMessage($"Date fields do not match for Item {scheduleItem.ItemId}.");
-            return nextOccurrence;
-        }
-
         if (scheduleItem.Type == "Periodic")
         {
-            // Handle Second field
-            if (scheduleItem.Second.StartsWith("*/"))
-            {
-                int interval = int.Parse(scheduleItem.Second.Substring(2)); // Extract the interval (e.g., 10)
-                int currentSecond = now.Second;
-                int nextSecond = (currentSecond / interval + 1) * interval; // Calculate the next second
-
-                if (nextSecond >= 60)
-                {
-                    // If the next second exceeds 59, move to the next minute
-                    nextSecond = 0;
-                    now = now.AddMinutes(1);
-                }
-
-                // Set the next occurrence
-                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, nextSecond);
-            }
-            else
-            {
-                // Handle fixed second values
-                if (!MatchesCronField(scheduleItem.Second, now.Second.ToString()))
-                {
-                    // If the current second doesn't match, adjust the time to the next valid second
-                    now = now.AddSeconds(1);
-                    nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, int.Parse(scheduleItem.Second));
-                }
-                else
-                {
-                    // If the current second matches, set the next occurrence to the current time
-                    nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second);
-                }
-            }
-
-            // Handle Minute field
+            // Handle periodic schedules
             if (scheduleItem.Minute.StartsWith("*/"))
             {
                 int interval = int.Parse(scheduleItem.Minute.Substring(2)); // Extract the interval (e.g., 1)
@@ -254,78 +230,28 @@ public class Scheduler
 
                 if (nextMinute >= 60)
                 {
-                    // If the next minute exceeds 59, move to the next hour
                     nextMinute = 0;
                     now = now.AddHours(1);
                 }
 
-                // Set the next occurrence
-                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, nextMinute, nextOccurrence.Second);
+                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, nextMinute, 0);
             }
             else
             {
                 // Handle fixed minute values
                 if (!MatchesCronField(scheduleItem.Minute, now.Minute.ToString()))
                 {
-                    // If the current minute doesn't match, adjust the time to the next valid minute
                     now = now.AddMinutes(1);
-                    nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, int.Parse(scheduleItem.Minute), nextOccurrence.Second);
+                    nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, int.Parse(scheduleItem.Minute), 0);
                 }
-            }
-
-            // Handle Hour field
-            if (scheduleItem.Hour.StartsWith("*/"))
-            {
-                int interval = int.Parse(scheduleItem.Hour.Substring(2)); // Extract the interval (e.g., 2)
-                int currentHour = now.Hour;
-                int nextHour = (currentHour / interval + 1) * interval; // Calculate the next hour
-
-                if (nextHour >= 24)
+                else
                 {
-                    // If the next hour exceeds 23, move to the next day
-                    nextHour = 0;
-                    now = now.AddDays(1);
+                    nextOccurrence = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0);
                 }
-
-                // Set the next occurrence
-                nextOccurrence = new DateTime(now.Year, now.Month, now.Day, nextHour, nextOccurrence.Minute, nextOccurrence.Second);
-            }
-            else
-            {
-                // Handle fixed hour values
-                if (!MatchesCronField(scheduleItem.Hour, now.Hour.ToString()))
-                {
-                    // If the current hour doesn't match, adjust the time to the next valid hour
-                    now = now.AddHours(1);
-                    nextOccurrence = new DateTime(now.Year, now.Month, now.Day, int.Parse(scheduleItem.Hour), nextOccurrence.Minute, nextOccurrence.Second);
-                }
-            }
-
-            // Ensure the next occurrence is within the valid range
-            if (nextOccurrence >= now && nextOccurrence <= endTime)
-            {
-                Logger.LogMessage($"Next occurrence for Item {scheduleItem.ItemId}: {nextOccurrence}");
-                return nextOccurrence;
-            }
-            else
-            {
-                Logger.LogMessage($"Next occurrence is out of range: {nextOccurrence}");
             }
         }
-        else if (scheduleItem.Type == "NonPeriodic")
-        {
-            // For NonPeriodic items, check the trigger
-            if (string.IsNullOrEmpty(scheduleItem.Trigger) || scheduleItem.Trigger != _currentTrigger.Event)
-            {
-                Logger.LogMessage($"Trigger mismatch: {scheduleItem.Trigger} != {_currentTrigger.Event}");
-                return nextOccurrence;
-            }
 
-            nextOccurrence = now;
-        }
-
-        Logger.LogMessage($"No valid next occurrence found. Returning DateTime.MinValue.");
-        return DateTime.MinValue;
+        return nextOccurrence;
     }
 
     private bool MatchesCronField(string cronField, string value)
@@ -338,13 +264,6 @@ public class Scheduler
             return currentValue % interval == 0; // Check if the current value is a multiple of the interval
         }
         return cronField == value;
-    }
-
-    private void OnPlaylistStart(ScheduleItem scheduleItem)
-    {
-        BeforePlayback?.Invoke();
-        _audioPlayer.Play(scheduleItem.FilePaths);
-        AfterPlayback?.Invoke();
     }
 
     private void OnPlaylistFinished()
