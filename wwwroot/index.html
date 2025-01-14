@@ -7,25 +7,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radio Scheduler</title>
-    <!-- Light Bootstrap CSS -->
+    <!-- Light Bootstrap Dashboard CSS -->
     <link href="/css/light-bootstrap-dashboard.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link href="/css/styles.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="wrapper">
         <!-- Sidebar -->
         <div class="sidebar" data-color="purple" data-image="/img/sidebar.jpg">
             <div class="sidebar-wrapper">
+                <div class="logo">
+                    <a href="#" class="simple-text">
+                        Radio Scheduler
+                    </a>
+                </div>
                 <ul class="nav">
-                    <li><a href="#" onclick="loadPage('home')">Home</a></li>
-                    <li><a href="#" onclick="loadPage('viewlog')">View Log</a></li>
-                    <li><a href="#" onclick="clearLog(); return false;">Clear Log</a></li>
+                    <li>
+                        <a href="#" onclick="loadPage('home')">
+                            <i class="fas fa-home"></i>
+                            <p>Home</p>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="loadPage('viewlog')">
+                            <i class="fas fa-list-alt"></i>
+                            <p>View Log</p>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="clearLog(); return false;">
+                            <i class="fas fa-trash"></i>
+                            <p>Clear Log</p>
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>
         <!-- Main Panel -->
         <div class="main-panel">
+            <!-- Navbar -->
+            <nav class="navbar navbar-expand-lg navbar-transparent navbar-absolute fixed-top">
+                <div class="container-fluid">
+                    <div class="navbar-wrapper">
+                        <a class="navbar-brand" href="#">Dashboard</a>
+                    </div>
+                    <button class="navbar-toggler" type="button" data-toggle="collapse" aria-controls="navigation-index" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="navbar-toggler-icon icon-bar"></span>
+                        <span class="navbar-toggler-icon icon-bar"></span>
+                        <span class="navbar-toggler-icon icon-bar"></span>
+                    </button>
+                </div>
+            </nav>
             <!-- Content -->
             <div class="content">
                 <div class="container-fluid" id="content">
@@ -34,7 +70,20 @@
             </div>
             <!-- Footer -->
             <footer class="footer">
-                <p>&copy; 2023 Radio Scheduler</p>
+                <div class="container-fluid">
+                    <nav class="float-left">
+                        <ul>
+                            <li>
+                                <a href="#">
+                                    Radio Scheduler
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <div class="copyright float-right">
+                        &copy; <script>document.write(new Date().getFullYear())</script>, made with <i class="fas fa-heart"></i> by Your Team.
+                    </div>
+                </div>
             </footer>
         </div>
     </div>
@@ -42,7 +91,7 @@
     <script src="/js/jquery.min.js"></script>
     <!-- Bootstrap JS -->
     <script src="/js/bootstrap.min.js"></script>
-    <!-- Light Bootstrap JS -->
+    <!-- Light Bootstrap Dashboard JS -->
     <script src="/js/light-bootstrap-dashboard.js"></script>
     <!-- Custom JS -->
     <script src="/js/main.js"></script>
