@@ -7,6 +7,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using System.Linq; // Added for LINQ support
 
 public class WebServer
 {
@@ -167,6 +168,112 @@ public class WebServer
         {
             Logger.LogMessage($"Error serving schedule list: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        }
+    }
+
+    /// <summary>
+    /// Serves prayer times as a JSON response.
+    /// </summary>
+    /// <param name="response">The HTTP listener response object.</param>
+    /// <param name="request">The HTTP listener request object.</param>
+    private void ServePrayerTimes(HttpListenerResponse response, HttpListenerRequest request)
+    {
+        try
+        {
+            // Parse query parameters for year, month, and day
+            var query = request.QueryString;
+            int year = int.Parse(query["year"]);
+            int month = int.Parse(query["month"]);
+            int day = int.Parse(query["day"]);
+
+            // Calculate prayer times using the PrayTime class
+            var prayTime = new PrayTime();
+            string[] prayerTimes = prayTime.getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
+
+            // Create a JSON response
+            var responseData = new
+            {
+                Fajr = prayerTimes[0],
+                Dhuhr = prayerTimes[2],
+                Asr = prayerTimes[3],
+                Maghrib = prayerTimes[5],
+                Isha = prayerTimes[6]
+            };
+
+            // Serialize the response to JSON
+            string jsonResponse = JsonConvert.SerializeObject(responseData);
+
+            // Send the response
+            byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
+            response.ContentType = "application/json";
+            response.ContentLength64 = buffer.Length;
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error serving prayer times: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        }
+    }
+
+    /// <summary>
+    /// Handles real-time log streaming using Server-Sent Events (SSE).
+    /// </summary>
+    /// <param name="response">The HTTP listener response object.</param>
+    private async Task HandleLogStream(HttpListenerResponse response)
+    {
+        response.ContentType = "text/event-stream";
+        response.AddHeader("Cache-Control", "no-cache");
+        response.AddHeader("Connection", "keep-alive");
+
+        using (var writer = new StreamWriter(response.OutputStream))
+        {
+            // Send initial log content
+            string initialLogContent = File.Exists(Logger.LogFilePath) ? File.ReadAllText(Logger.LogFilePath) : "Log file not found.";
+            await writer.WriteLineAsync($"data: {initialLogContent}\n\n");
+            await writer.FlushAsync();
+
+            // Watch the log file for changes
+            using (var watcher = new FileSystemWatcher(Path.GetDirectoryName(Logger.LogFilePath), Path.GetFileName(Logger.LogFilePath)))
+            {
+                watcher.NotifyFilter = NotifyFilters.LastWrite;
+                watcher.Changed += async (sender, e) =>
+                {
+                    try
+                    {
+                        string newLogContent = File.ReadAllText(Logger.LogFilePath);
+                        await writer.WriteLineAsync($"data: {newLogContent}\n\n");
+                        await writer.FlushAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogMessage($"Error streaming log updates: {ex.Message}");
+                    }
+                };
+                watcher.EnableRaisingEvents = true;
+
+                // Keep the connection open
+                while (true)
+                {
+                    try
+                    {
+                        // Check if the stream is still open by attempting to write a heartbeat
+                        await writer.WriteLineAsync(": heartbeat\n\n");
+                        await writer.FlushAsync();
+                        await Task.Delay(1000); // Wait for 1 second
+                    }
+                    catch (IOException)
+                    {
+                        // Stream is closed, exit the loop
+                        break;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Stream is disposed, exit the loop
+                        break;
+                    }
+                }
+            }
         }
     }
 
