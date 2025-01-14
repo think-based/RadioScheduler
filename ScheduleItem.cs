@@ -3,36 +3,27 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 public class ScheduleItem
 {
-    public int ItemId { get; set; } // شناسه منحصر به فرد
-    public string Type { get; set; } // نوع زمان‌بندی (Periodic یا NonPeriodic)
-    public List<FilePathItem> FilePaths { get; set; } // لیست فایل‌ها یا پوشه‌ها
+    public int ItemId { get; set; }
+    public string Type { get; set; }
+    public List<FilePathItem> FilePaths { get; set; }
+    public string Second { get; set; }
+    public string Minute { get; set; }
+    public string Hour { get; set; }
+    public string DayOfMonth { get; set; }
+    public string Month { get; set; }
+    public string DayOfWeek { get; set; }
+    public string Trigger { get; set; }
+    public string CalendarType { get; set; }
+    public string Region { get; set; }
+    public string TriggerType { get; set; }
+    public int? DelayMinutes { get; set; }
+    public DateTime NextOccurrence { get; set; }
+    public TimeSpan Duration { get; set; }
 
-    // Fields for Periodic items
-    public string Second { get; set; } // ثانیه (0-59) - فقط برای Periodic
-    public string Minute { get; set; } // دقیقه (0-59) - فقط برای Periodic
-    public string Hour { get; set; } // ساعت (0-23) - فقط برای Periodic
-    public string DayOfMonth { get; set; } // روز ماه (1-31) - فقط برای Periodic
-    public string Month { get; set; } // ماه (1-12) - فقط برای Periodic
-    public string DayOfWeek { get; set; } // روز هفته (0-6) - فقط برای Periodic
-
-    // Fields for NonPeriodic items
-    public string Trigger { get; set; } // نام تریگر - فقط برای NonPeriodic
-
-    public string CalendarType { get; set; } // نوع تقویم
-    public string Region { get; set; } // منطقه (کد کشور ISO 3166-1 alpha-2)
-    public string TriggerType { get; set; } // نوع تریگر (Immediate یا Timed یا Delayed)
-    public int? DelayMinutes { get; set; } // تعداد دقیقه‌های تاخیر برای TriggerType = Delayed
-
-    // New properties for schedule list
-    public DateTime NextOccurrence { get; set; } // زمان وقوع بعدی
-    public TimeSpan Duration { get; set; } // مدت زمان پخش
-
-    /// <summary>
-    /// اعتبارسنجی آیتم زمان‌بندی
-    /// </summary>
     public void Validate()
     {
         if (Type == "Periodic" && Trigger != null)
@@ -58,6 +49,30 @@ public class ScheduleItem
         foreach (var filePathItem in FilePaths)
         {
             filePathItem.Validate();
+        }
+    }
+}
+
+public class FilePathItem
+{
+    public string Path { get; set; }
+    public string FolderPlayMode { get; set; }
+
+    public void Validate()
+    {
+        if (string.IsNullOrEmpty(Path))
+        {
+            throw new ArgumentException("Path cannot be null or empty.");
+        }
+
+        if (Directory.Exists(Path) && string.IsNullOrEmpty(FolderPlayMode))
+        {
+            throw new ArgumentException("FolderPlayMode must be set for folders.");
+        }
+
+        if (!Directory.Exists(Path) && !File.Exists(Path))
+        {
+            throw new ArgumentException($"File or folder not found: {Path}");
         }
     }
 }
