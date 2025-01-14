@@ -1,5 +1,5 @@
-//Be Naame Khoda
-//FileName: InstantPlayManager.cs
+// Be Naame Khoda
+// FileName: InstantPlayManager.cs
 
 using System;
 using System.Collections.Generic;
