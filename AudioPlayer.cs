@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Speech.Synthesis; // Add this for TTS
 
 public class AudioPlayer
 {
@@ -14,6 +15,7 @@ public class AudioPlayer
     private AudioFileReader _currentAudioFile;
     private List<string> _currentPlaylist;
     private int _currentIndex;
+    private SpeechSynthesizer _ttsPlayer; // TTS player
 
     public bool IsPlaying { get; private set; }
     public string CurrentFile { get; private set; }
@@ -24,6 +26,8 @@ public class AudioPlayer
     {
         _audioPlayerWaveOut = new WaveOutEvent();
         _audioPlayerWaveOut.PlaybackStopped += OnPlaybackStopped; // Subscribe to PlaybackStopped event
+        _ttsPlayer = new SpeechSynthesizer(); // Initialize TTS player
+        _ttsPlayer.SpeakCompleted += OnTtsCompleted; // Subscribe to TTS completion event
         IsPlaying = false;
         CurrentFile = null;
     }
@@ -52,6 +56,11 @@ public class AudioPlayer
             _currentAudioFile = null;
         }
 
+        if (_ttsPlayer != null)
+        {
+            _ttsPlayer.SpeakAsyncCancelAll(); // Stop any ongoing TTS
+        }
+
         _currentPlaylist = null;
         IsPlaying = false;
         CurrentFile = null;
@@ -77,43 +86,53 @@ public class AudioPlayer
             return;
         }
 
-        string currentFile = _currentPlaylist[_currentIndex];
-        if (!File.Exists(currentFile))
+        string currentItem = _currentPlaylist[_currentIndex];
+
+        if (currentItem.StartsWith("TTS:")) // Handle TTS
         {
-            Logger.LogMessage($"File not found: {currentFile}");
-            _currentIndex++;
-            PlayNextFile(); // Skip to the next file
-            return;
-        }
-
-        try
-        {
-            // Dispose of the previous audio file and player
-            if (_currentAudioFile != null)
-            {
-                _currentAudioFile.Dispose();
-                _currentAudioFile = null;
-            }
-
-            if (_audioPlayerWaveOut != null)
-            {
-                _audioPlayerWaveOut.Dispose();
-                _audioPlayerWaveOut = null;
-            }
-
-            // Initialize new audio file and player
-            _currentAudioFile = new AudioFileReader(currentFile);
-            _audioPlayerWaveOut = new WaveOutEvent();
-            _audioPlayerWaveOut.PlaybackStopped += OnPlaybackStopped; // Re-subscribe to the event
-            _audioPlayerWaveOut.Init(_currentAudioFile);
-            _audioPlayerWaveOut.Play();
-
+            string text = currentItem.Substring(4); // Extract the text
+            Logger.LogMessage($"Playing TTS: {text}");
+            _ttsPlayer.SpeakAsync(text); // Play the text as speech
             IsPlaying = true;
-            CurrentFile = currentFile;
+            CurrentFile = "TTS";
         }
-        catch (Exception ex)
+        else if (File.Exists(currentItem)) // Handle MP3 file
         {
-            Logger.LogMessage($"Error playing file {currentFile}: {ex.Message}");
+            try
+            {
+                // Dispose of the previous audio file and player
+                if (_currentAudioFile != null)
+                {
+                    _currentAudioFile.Dispose();
+                    _currentAudioFile = null;
+                }
+
+                if (_audioPlayerWaveOut != null)
+                {
+                    _audioPlayerWaveOut.Dispose();
+                    _audioPlayerWaveOut = null;
+                }
+
+                // Initialize new audio file and player
+                _currentAudioFile = new AudioFileReader(currentItem);
+                _audioPlayerWaveOut = new WaveOutEvent();
+                _audioPlayerWaveOut.PlaybackStopped += OnPlaybackStopped; // Re-subscribe to the event
+                _audioPlayerWaveOut.Init(_currentAudioFile);
+                _audioPlayerWaveOut.Play();
+
+                IsPlaying = true;
+                CurrentFile = currentItem;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogMessage($"Error playing file {currentItem}: {ex.Message}");
+                _currentIndex++;
+                PlayNextFile(); // Skip to the next file
+            }
+        }
+        else
+        {
+            Logger.LogMessage($"File not found: {currentItem}");
             _currentIndex++;
             PlayNextFile(); // Skip to the next file
         }
@@ -142,6 +161,16 @@ public class AudioPlayer
         PlayNextFile();
     }
 
+    private void OnTtsCompleted(object sender, SpeakCompletedEventArgs e)
+    {
+        IsPlaying = false;
+        CurrentFile = null;
+
+        // Play the next file in the playlist
+        _currentIndex++;
+        PlayNextFile();
+    }
+
     public List<string> ExpandFilePaths(List<FilePathItem> filePathItems)
     {
         var expandedPaths = new List<string>();
@@ -154,7 +183,11 @@ public class AudioPlayer
 
         foreach (var item in filePathItems)
         {
-            if (Directory.Exists(item.Path))
+            if (!string.IsNullOrEmpty(item.Text)) // Handle TTS
+            {
+                expandedPaths.Add($"TTS:{item.Text}");
+            }
+            else if (Directory.Exists(item.Path)) // Handle folder
             {
                 var audioFiles = Directory.GetFiles(item.Path, "*.mp3")
                                           .OrderBy(f => f)
@@ -170,7 +203,7 @@ public class AudioPlayer
                     expandedPaths.AddRange(audioFiles);
                 }
             }
-            else if (File.Exists(item.Path))
+            else if (File.Exists(item.Path)) // Handle single file
             {
                 expandedPaths.Add(item.Path);
             }
@@ -189,7 +222,12 @@ public class AudioPlayer
         TimeSpan totalDuration = TimeSpan.Zero;
         foreach (var file in expandedFilePaths)
         {
-            if (File.Exists(file))
+            if (file.StartsWith("TTS:")) // Estimate TTS duration (e.g., 1 second per 10 characters)
+            {
+                string text = file.Substring(4);
+                totalDuration += TimeSpan.FromSeconds(text.Length / 10.0);
+            }
+            else if (File.Exists(file))
             {
                 try
                 {
