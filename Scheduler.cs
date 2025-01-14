@@ -1,5 +1,5 @@
-//Be Naame Khoda
-//FileName: Scheduler.cs
+// Be Naame Khoda
+// FileName: Scheduler.cs
 
 using System;
 using System.Collections.Generic;
@@ -32,7 +32,8 @@ public class Scheduler
         _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf");
         EnsureConfigFileExists();
 
-        _lastConfigHash = FileHashHelper.CalculateFileHash(_configFilePath);
+        // Set _lastConfigHash to null initially
+        _lastConfigHash = null;
 
         Logger.LogMessage("Radio Scheduler Service started.");
 
@@ -46,6 +47,7 @@ public class Scheduler
         _configWatcher.Changed += OnConfigFileChanged;
         _configWatcher.EnableRaisingEvents = true;
 
+        // Force the initial load of the config file
         ReloadScheduleConfig();
     }
 
@@ -73,13 +75,13 @@ public class Scheduler
 
     private bool HasConfigChanged()
     {
-        string currentHash = FileHashHelper.CalculateFileHash(_configFilePath);
-        if (currentHash != _lastConfigHash)
+        if (_lastConfigHash == null)
         {
-            _lastConfigHash = currentHash;
-            return true;
+            return true; // Force reload if _lastConfigHash is null
         }
-        return false;
+
+        string currentHash = FileHashHelper.CalculateFileHash(_configFilePath);
+        return currentHash != _lastConfigHash;
     }
 
     public void ReloadScheduleConfig()
@@ -88,36 +90,45 @@ public class Scheduler
         {
             try
             {
-                if (!HasConfigChanged())
+                // If _lastConfigHash is null, force a reload
+                if (_lastConfigHash == null || HasConfigChanged())
                 {
-                    return;
-                }
-
-                if (File.Exists(_configFilePath))
-                {
-                    string json = File.ReadAllText(_configFilePath);
-                    var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
-
-                    foreach (var item in newItems)
+                    if (File.Exists(_configFilePath))
                     {
-                        item.Validate();
+                        string json = File.ReadAllText(_configFilePath);
+                        var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
+
+                        foreach (var item in newItems)
+                        {
+                            item.Validate();
+                        }
+
+                        _scheduleItems = newItems;
+
+                        Logger.LogMessage($"Loaded {_scheduleItems.Count} schedule items.");
+
+                        foreach (var timer in _timers)
+                        {
+                            timer.Stop();
+                            timer.Dispose();
+                        }
+                        _timers.Clear();
+
+                        SetupTimers();
+
+                        // Calculate the hash after loading the config file
+                        _lastConfigHash = FileHashHelper.CalculateFileHash(_configFilePath);
+
+                        Logger.LogMessage("Config reloaded successfully.");
                     }
-
-                    _scheduleItems = newItems;
-
-                    foreach (var timer in _timers)
+                    else
                     {
-                        timer.Stop();
-                        timer.Dispose();
+                        Logger.LogMessage("Config file not found!");
                     }
-                    _timers.Clear();
-
-                    SetupTimers();
-                    Logger.LogMessage("Config reloaded successfully.");
                 }
                 else
                 {
-                    Logger.LogMessage("Config file not found!");
+                    Logger.LogMessage("Config file has not changed. Skipping reload.");
                 }
             }
             catch (Exception ex)
@@ -170,6 +181,8 @@ public class Scheduler
                 timer.Elapsed += (sender, e) => OnPlaylistStart(scheduleItem);
                 timer.Start();
                 _timers.Add(timer);
+
+                Logger.LogMessage($"Timer set for Item {scheduleItem.ItemId} at {startTime}");
             }
         }
     }
@@ -209,6 +222,7 @@ public class Scheduler
         // If the next occurrence is within the valid range, return it
         if (nextOccurrence >= now && nextOccurrence <= endTime)
         {
+            Logger.LogMessage($"Next occurrence for Item {scheduleItem.ItemId}: {nextOccurrence}");
             return nextOccurrence;
         }
 
