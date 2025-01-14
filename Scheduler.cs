@@ -243,9 +243,16 @@ public class Scheduler
     {
         Logger.LogMessage($"Starting playback for schedule: {scheduleItem.Name}");
         BeforePlayback?.Invoke();
+
+        // Stop the current playlist (if any)
+        _audioPlayer.Stop();
+
+        // Start the new playlist
         _audioPlayer.Play(scheduleItem.FilePaths);
+
         AfterPlayback?.Invoke();
 
+        // If the schedule is periodic, set up the next occurrence
         if (scheduleItem.Type == "Periodic")
         {
             DateTime now = DateTime.Now;
