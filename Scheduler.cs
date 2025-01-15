@@ -89,6 +89,19 @@ public class Scheduler
     }
 
     /// <summary>
+    /// Gets the list of scheduled items.
+    /// </summary>
+    /// <returns>A list of scheduled items.</returns>
+    public List<ScheduleItem> GetScheduledItems()
+    {
+        lock (_lock)
+        {
+            // Return a copy of the list to avoid modifying the original
+            return new List<ScheduleItem>(_scheduleItems);
+        }
+    }
+
+    /// <summary>
     /// Calculates the total duration of a playlist.
     /// </summary>
     /// <param name="filePaths">The list of file paths in the playlist.</param>
