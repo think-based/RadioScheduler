@@ -1,5 +1,5 @@
-//Be Naame Khoda
-//FileName: Program.cs
+// Be Naame Khoda
+// FileName: Program.cs
 
 using System;
 using System.IO;
@@ -13,8 +13,10 @@ namespace RadioSchedulerService
         private static PrayTimeScheduler _prayTimeScheduler;
         private static InstantPlayManager _instantPlayManager;
         private static WebServer _webServer;
-        private static Scheduler _scheduler; // Add Scheduler instance
         private static CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+
+        // Static instance of Scheduler
+        private static Scheduler _scheduler;
 
         static async Task Main()
         {
@@ -23,6 +25,9 @@ namespace RadioSchedulerService
                 // Load settings from the configuration file
                 LoadSettingsFromConfig();
 
+                // Initialize the Scheduler (static instance)
+                _scheduler = new Scheduler();
+
                 // Initialize the InstantPlayManager
                 string instantPlayFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InstantPlay");
                 _instantPlayManager = new InstantPlayManager(instantPlayFolderPath);
@@ -30,10 +35,7 @@ namespace RadioSchedulerService
                 // Initialize the PrayTimeScheduler
                 _prayTimeScheduler = new PrayTimeScheduler();
 
-                // Initialize the Scheduler
-                _scheduler = new Scheduler();
-
-                // Initialize the WebServer with the Scheduler
+                // Initialize the WebServer with the static Scheduler instance
                 _webServer = new WebServer(_scheduler);
                 _webServer.Start();
 
