@@ -1,7 +1,6 @@
 // Be Naame Khoda
 // FileName: ScheduleItem.cs
 
-using RadioScheduler.Entities;
 using System;
 using System.Collections.Generic;
 
@@ -23,7 +22,7 @@ public class ScheduleItem
     public string TriggerType { get; set; }
     public int? DelayMinutes { get; set; }
     public DateTime NextOccurrence { get; set; }
-    public TimeSpan Duration { get; set; }
+    public TimeSpan TotalDuration { get; set; } // Total duration of the playlist (renamed from Duration)
 
     public void Validate()
     {

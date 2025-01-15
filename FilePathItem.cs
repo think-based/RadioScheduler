@@ -11,6 +11,7 @@ namespace RadioScheduler.Entities
         public string Path { get; set; } // Path to the file or folder
         public string FolderPlayMode { get; set; } // Play mode for folders (e.g., "All" or "Single")
         public string Text { get; set; } // Text for TTS (optional)
+        public TimeSpan Duration { get; set; } // Duration of the file or TTS
 
         /// <summary>
         /// Validates the FilePathItem.
