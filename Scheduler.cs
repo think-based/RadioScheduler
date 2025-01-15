@@ -117,7 +117,10 @@ public class Scheduler
                         // Set up timers for each schedule item
                         foreach (var scheduleItem in _scheduleItems)
                         {
-                            SetupTimerForScheduleItem(scheduleItem);
+                            if (scheduleItem.Type == "Periodic")
+                            {
+                                SetupTimerForScheduleItem(scheduleItem);
+                            }
                         }
 
                         // Calculate the hash after loading the config file
@@ -165,30 +168,164 @@ public class Scheduler
     {
         if (scheduleItem.Type == "Periodic")
         {
+            // Calculate the next occurrence for periodic items
+            DateTime nextOccurrence = now;
+
+            // Handle Second field
             if (scheduleItem.Second.StartsWith("*/"))
             {
                 int interval = int.Parse(scheduleItem.Second.Substring(2)); // Extract "30" from "*/30"
                 int currentSecond = now.Second;
 
-                // Calculate the next occurrence
+                // Calculate the next second
                 int nextSecond = (currentSecond / interval + 1) * interval;
-                DateTime nextOccurrence = now.Date // Start from the beginning of the day
-                    .AddHours(now.Hour) // Add current hour
-                    .AddMinutes(now.Minute) // Add current minute
-                    .AddSeconds(nextSecond); // Add next second
+                if (nextSecond >= 60)
+                {
+                    nextSecond = 0; // Wrap around to the next minute
+                    nextOccurrence = nextOccurrence.AddMinutes(1);
+                }
 
-                // Ensure the next occurrence is in the future
-                if (nextOccurrence <= now)
+                nextOccurrence = nextOccurrence.AddSeconds(nextSecond - currentSecond);
+            }
+            else if (scheduleItem.Second != "*")
+            {
+                // Specific second (e.g., "30" for the 30th second)
+                int targetSecond = int.Parse(scheduleItem.Second);
+                if (targetSecond < now.Second)
                 {
                     nextOccurrence = nextOccurrence.AddMinutes(1); // Move to the next minute
                 }
-
-                return nextOccurrence;
+                nextOccurrence = nextOccurrence.AddSeconds(targetSecond - now.Second);
             }
+
+            // Handle Minute field
+            if (scheduleItem.Minute.StartsWith("*/"))
+            {
+                int interval = int.Parse(scheduleItem.Minute.Substring(2)); // Extract "5" from "*/5"
+                int currentMinute = now.Minute;
+
+                // Calculate the next minute
+                int nextMinute = (currentMinute / interval + 1) * interval;
+                if (nextMinute >= 60)
+                {
+                    nextMinute = 0; // Wrap around to the next hour
+                    nextOccurrence = nextOccurrence.AddHours(1);
+                }
+
+                nextOccurrence = nextOccurrence.AddMinutes(nextMinute - currentMinute);
+            }
+            else if (scheduleItem.Minute != "*")
+            {
+                // Specific minute (e.g., "15" for the 15th minute)
+                int targetMinute = int.Parse(scheduleItem.Minute);
+                if (targetMinute < now.Minute)
+                {
+                    nextOccurrence = nextOccurrence.AddHours(1); // Move to the next hour
+                }
+                nextOccurrence = nextOccurrence.AddMinutes(targetMinute - now.Minute);
+            }
+
+            // Handle Hour field
+            if (scheduleItem.Hour.StartsWith("*/"))
+            {
+                int interval = int.Parse(scheduleItem.Hour.Substring(2)); // Extract "2" from "*/2"
+                int currentHour = now.Hour;
+
+                // Calculate the next hour
+                int nextHour = (currentHour / interval + 1) * interval;
+                if (nextHour >= 24)
+                {
+                    nextHour = 0; // Wrap around to the next day
+                    nextOccurrence = nextOccurrence.AddDays(1);
+                }
+
+                nextOccurrence = nextOccurrence.AddHours(nextHour - currentHour);
+            }
+            else if (scheduleItem.Hour != "*")
+            {
+                // Specific hour (e.g., "14" for 2 PM)
+                int targetHour = int.Parse(scheduleItem.Hour);
+                if (targetHour < now.Hour)
+                {
+                    nextOccurrence = nextOccurrence.AddDays(1); // Move to the next day
+                }
+                nextOccurrence = nextOccurrence.AddHours(targetHour - now.Hour);
+            }
+
+            // Handle DayOfMonth field
+            if (scheduleItem.DayOfMonth != "*")
+            {
+                int targetDay = int.Parse(scheduleItem.DayOfMonth);
+                if (targetDay < now.Day)
+                {
+                    nextOccurrence = nextOccurrence.AddMonths(1); // Move to the next month
+                }
+                nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, targetDay, nextOccurrence.Hour, nextOccurrence.Minute, nextOccurrence.Second);
+            }
+
+            // Handle Month field
+            if (scheduleItem.Month != "*")
+            {
+                int targetMonth = int.Parse(scheduleItem.Month);
+                if (targetMonth < now.Month)
+                {
+                    nextOccurrence = nextOccurrence.AddYears(1); // Move to the next year
+                }
+                nextOccurrence = new DateTime(nextOccurrence.Year, targetMonth, nextOccurrence.Day, nextOccurrence.Hour, nextOccurrence.Minute, nextOccurrence.Second);
+            }
+
+            // Handle DayOfWeek field
+            if (scheduleItem.DayOfWeek != "*")
+            {
+                int targetDayOfWeek = int.Parse(scheduleItem.DayOfWeek);
+                int currentDayOfWeek = (int)now.DayOfWeek;
+
+                // Calculate the next occurrence of the target day of the week
+                int daysToAdd = (targetDayOfWeek - currentDayOfWeek + 7) % 7;
+                if (daysToAdd == 0 && nextOccurrence <= now)
+                {
+                    daysToAdd = 7; // Move to the next week
+                }
+                nextOccurrence = nextOccurrence.AddDays(daysToAdd);
+            }
+
+            // Ensure the next occurrence is in the future
+            if (nextOccurrence <= now)
+            {
+                return DateTime.MaxValue; // No valid occurrence found
+            }
+
+            return nextOccurrence;
+        }
+        else if (scheduleItem.Type == "NonPeriodic")
+        {
+            // Non-periodic items are not automatically scheduled
+            return DateTime.MaxValue;
         }
 
-        // Default: Return a far future date if no valid schedule is found
+        // Default: No valid occurrence
         return DateTime.MaxValue;
+    }
+
+    /// <summary>
+    /// Manually triggers a non-periodic schedule item by its ItemId.
+    /// </summary>
+    /// <param name="itemId">The ID of the schedule item to trigger.</param>
+    public void TriggerNonPeriodicItem(int itemId)
+    {
+        lock (_configLock)
+        {
+            var scheduleItem = _scheduleItems.Find(item => item.ItemId == itemId);
+            if (scheduleItem != null && scheduleItem.Type == "NonPeriodic")
+            {
+                Logger.LogMessage($"Manually triggering non-periodic item: {scheduleItem.Name}");
+                OnPlaylistStart(scheduleItem);
+            }
+            else
+            {
+                Logger.LogMessage($"Non-periodic item with ID {itemId} not found.");
+            }
+        }
     }
 
     private void OnPlaylistStart(ScheduleItem scheduleItem)
