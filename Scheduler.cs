@@ -189,7 +189,7 @@ public class Scheduler
                     nextOccurrence = nextOccurrence.AddMinutes(1);
                 }
 
-                nextOccurrence = nextOccurrence.AddSeconds(nextSecond - currentSecond);
+                nextOccurrence = nextOccurrence.AddSeconds(nextSecond);
             }
             else if (scheduleItem.Second != "*")
             {
@@ -216,7 +216,7 @@ public class Scheduler
                     nextOccurrence = nextOccurrence.AddHours(1);
                 }
 
-                nextOccurrence = nextOccurrence.AddMinutes(nextMinute - currentMinute);
+                nextOccurrence = nextOccurrence.AddMinutes(nextMinute);
             }
             else if (scheduleItem.Minute != "*")
             {
@@ -243,7 +243,7 @@ public class Scheduler
                     nextOccurrence = nextOccurrence.AddDays(1);
                 }
 
-                nextOccurrence = nextOccurrence.AddHours(nextHour - currentHour);
+                nextOccurrence = nextOccurrence.AddHours(nextHour);
             }
             else if (scheduleItem.Hour != "*")
             {
