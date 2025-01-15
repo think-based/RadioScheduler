@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Timers;
+using NAudio.Wave;
 using Newtonsoft.Json;
+using RadioScheduler.Entities;
 
 public class Scheduler
 {
@@ -47,10 +49,14 @@ public class Scheduler
                     {
                         item.Validate();
                         item.NextOccurrence = GetNextOccurrence(item, DateTime.Now);
+
+                        // Calculate the total duration of the playlist
+                        item.TotalDuration = CalculateTotalDuration(item.FilePaths);
+
                         _scheduleItems.Add(item);
 
                         // Log each item
-                        Logger.LogMessage($"Added item: {item.Name}, NextOccurrence: {item.NextOccurrence}");
+                        Logger.LogMessage($"Added item: {item.Name}, NextOccurrence: {item.NextOccurrence}, TotalDuration: {item.TotalDuration}");
                     }
 
                     // Set up timers for periodic schedules
@@ -79,6 +85,62 @@ public class Scheduler
                 Logger.LogMessage($"Error reloading schedule config: {ex.Message}");
             }
         }
+    }
+
+    /// <summary>
+    /// Calculates the total duration of a playlist.
+    /// </summary>
+    /// <param name="filePaths">The list of file paths in the playlist.</param>
+    /// <returns>The total duration of the playlist.</returns>
+    private TimeSpan CalculateTotalDuration(List<FilePathItem> filePaths)
+    {
+        TimeSpan totalDuration = TimeSpan.Zero;
+
+        foreach (var filePathItem in filePaths)
+        {
+            if (!string.IsNullOrEmpty(filePathItem.Text)) // Handle TTS
+            {
+                // Estimate TTS duration (e.g., 10 characters per second)
+                filePathItem.Duration = TimeSpan.FromSeconds(filePathItem.Text.Length / 10.0);
+            }
+            else if (File.Exists(filePathItem.Path)) // Handle audio file
+            {
+                try
+                {
+                    using (var reader = new AudioFileReader(filePathItem.Path))
+                    {
+                        filePathItem.Duration = reader.TotalTime;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogMessage($"Error calculating duration for file {filePathItem.Path}: {ex.Message}");
+                    filePathItem.Duration = TimeSpan.Zero; // Default to zero if an error occurs
+                }
+            }
+            else if (Directory.Exists(filePathItem.Path)) // Handle folder
+            {
+                var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3");
+                foreach (var audioFile in audioFiles)
+                {
+                    try
+                    {
+                        using (var reader = new AudioFileReader(audioFile))
+                        {
+                            filePathItem.Duration += reader.TotalTime;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogMessage($"Error calculating duration for file {audioFile}: {ex.Message}");
+                    }
+                }
+            }
+
+            totalDuration += filePathItem.Duration;
+        }
+
+        return totalDuration;
     }
 
     private void SetupTimerForScheduleItem(ScheduleItem scheduleItem)

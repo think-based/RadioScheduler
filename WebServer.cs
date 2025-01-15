@@ -128,7 +128,7 @@ public class WebServer
                 Name = item.Name, // Include the Name field
                 Playlist = item.FilePaths.Count > 0 ? item.FilePaths[0].Path : "No files", // Use the first file path or a placeholder
                 StartTime = item.NextOccurrence.ToString("yyyy-MM-dd HH:mm:ss"),
-                EndTime = item.NextOccurrence.Add(item.Duration).ToString("yyyy-MM-dd HH:mm:ss"),
+                EndTime = item.NextOccurrence.Add(item.TotalDuration).ToString("yyyy-MM-dd HH:mm:ss"), // Use TotalDuration
                 TriggerEvent = item.Trigger,
                 Status = item.NextOccurrence > DateTime.Now ? "Upcoming" : "In Progress"
             });
