@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Speech.Synthesis;
 using System.Timers;
 using NAudio.Wave;
 using Newtonsoft.Json;
@@ -95,13 +96,13 @@ public class Scheduler
     private TimeSpan CalculateTotalDuration(List<FilePathItem> filePaths)
     {
         TimeSpan totalDuration = TimeSpan.Zero;
+        var ttsEngine = new SpeechSynthesizer(); // Initialize TTS engine
 
         foreach (var filePathItem in filePaths)
         {
             if (!string.IsNullOrEmpty(filePathItem.Text)) // Handle TTS
             {
-                // Estimate TTS duration (e.g., 10 characters per second)
-                filePathItem.Duration = TimeSpan.FromSeconds(filePathItem.Text.Length / 10.0);
+                filePathItem.Duration = CalculateTtsDuration(filePathItem.Text, ttsEngine);
             }
             else if (File.Exists(filePathItem.Path)) // Handle audio file
             {
@@ -140,9 +141,47 @@ public class Scheduler
             totalDuration += filePathItem.Duration;
         }
 
+        ttsEngine.Dispose(); // Clean up TTS engine
         return totalDuration;
     }
 
+    /// <summary>
+    /// Calculates the exact duration of TTS playback using the SpeechSynthesizer.
+    /// </summary>
+    /// <param name="text">The TTS text.</param>
+    /// <param name="ttsEngine">The TTS engine.</param>
+    /// <returns>The duration of the TTS playback.</returns>
+    private TimeSpan CalculateTtsDuration(string text, SpeechSynthesizer ttsEngine)
+    {
+        try
+        {
+            // Use the TTS engine to get the exact duration
+            var prompt = new PromptBuilder();
+            prompt.AppendText(text);
+
+            // Measure the duration
+            var ttsStream = new MemoryStream();
+            ttsEngine.SetOutputToWaveStream(ttsStream);
+            ttsEngine.Speak(prompt);
+
+            // Calculate duration based on the audio stream
+            ttsStream.Position = 0; // Reset stream position
+            using (var reader = new WaveFileReader(ttsStream))
+            {
+                return reader.TotalTime; // Exact duration of the TTS audio
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error calculating TTS duration: {ex.Message}");
+            return TimeSpan.FromSeconds(text.Length / 10.0); // Fallback to estimation
+        }
+    }
+
+    /// <summary>
+    /// Sets up a timer for a schedule item.
+    /// </summary>
+    /// <param name="scheduleItem">The schedule item.</param>
     private void SetupTimerForScheduleItem(ScheduleItem scheduleItem)
     {
         DateTime now = DateTime.Now;
@@ -166,6 +205,10 @@ public class Scheduler
         }
     }
 
+    /// <summary>
+    /// Handles the start of a playlist.
+    /// </summary>
+    /// <param name="scheduleItem">The schedule item.</param>
     private void OnPlaylistStart(ScheduleItem scheduleItem)
     {
         Logger.LogMessage($"Starting playback for schedule: {scheduleItem.Name}");
@@ -184,25 +227,6 @@ public class Scheduler
             {
                 SetupTimerForScheduleItem(scheduleItem);
             }
-        }
-    }
-
-    public void AddScheduleItem(ScheduleItem item)
-    {
-        lock (_lock)
-        {
-            // Calculate and cache the NextOccurrence when adding the item
-            item.NextOccurrence = GetNextOccurrence(item, DateTime.Now);
-            _scheduleItems.Add(item);
-        }
-    }
-
-    public List<ScheduleItem> GetScheduledItems()
-    {
-        lock (_lock)
-        {
-            // Return a copy of the list to avoid modifying the original
-            return new List<ScheduleItem>(_scheduleItems);
         }
     }
 
