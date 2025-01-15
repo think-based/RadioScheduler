@@ -11,10 +11,50 @@ public class Scheduler
 {
     private readonly object _lock = new object();
     private List<ScheduleItem> _scheduleItems;
+    private string _configFilePath;
 
     public Scheduler()
     {
         _scheduleItems = new List<ScheduleItem>();
+        _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf");
+        ReloadScheduleConfig(); // Load the schedule configuration on initialization
+    }
+
+    /// <summary>
+    /// Reloads the schedule configuration from the audio.conf file.
+    /// </summary>
+    public void ReloadScheduleConfig()
+    {
+        lock (_lock)
+        {
+            try
+            {
+                if (File.Exists(_configFilePath))
+                {
+                    string json = File.ReadAllText(_configFilePath);
+                    var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
+
+                    // Validate and update the schedule items
+                    _scheduleItems.Clear();
+                    foreach (var item in newItems)
+                    {
+                        item.Validate();
+                        item.NextOccurrence = GetNextOccurrence(item, DateTime.Now);
+                        _scheduleItems.Add(item);
+                    }
+
+                    Logger.LogMessage($"Reloaded {_scheduleItems.Count} schedule items from {_configFilePath}.");
+                }
+                else
+                {
+                    Logger.LogMessage($"Config file not found: {_configFilePath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogMessage($"Error reloading schedule config: {ex.Message}");
+            }
+        }
     }
 
     public void AddScheduleItem(ScheduleItem item)
