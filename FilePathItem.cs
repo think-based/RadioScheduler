@@ -2,7 +2,6 @@
 // FileName: FilePathItem.cs
 
 using System;
-using System.IO;
 
 namespace RadioScheduler.Entities
 {
