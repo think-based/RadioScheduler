@@ -9,176 +9,50 @@ using Newtonsoft.Json;
 
 public class Scheduler
 {
-    public event Action BeforePlayback;
-    public event Action AfterPlayback;
-
-    private AudioPlayer _audioPlayer;
+    private readonly object _lock = new object();
     private List<ScheduleItem> _scheduleItems;
-    private readonly object _configLock = new object();
-    private string _configFilePath;
-    private List<Timer> _timers;
-    private string _lastConfigHash;
-    private FileSystemWatcher _configWatcher;
 
     public Scheduler()
     {
-        _audioPlayer = new AudioPlayer();
-        _audioPlayer.PlaylistFinished += OnPlaylistFinished;
         _scheduleItems = new List<ScheduleItem>();
-        _timers = new List<Timer>();
-
-        _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf");
-        EnsureConfigFileExists();
-
-        // Set _lastConfigHash to null initially
-        _lastConfigHash = null;
-
-        Logger.LogMessage("Radio Scheduler Service started.");
-
-        _configWatcher = new FileSystemWatcher
-        {
-            Path = Path.GetDirectoryName(_configFilePath),
-            Filter = Path.GetFileName(_configFilePath),
-            NotifyFilter = NotifyFilters.LastWrite
-        };
-
-        _configWatcher.Changed += OnConfigFileChanged;
-        _configWatcher.EnableRaisingEvents = true;
-
-        // Force the initial load of the config file
-        ReloadScheduleConfig();
     }
 
-    private void EnsureConfigFileExists()
+    public void AddScheduleItem(ScheduleItem item)
     {
-        if (!File.Exists(_configFilePath))
+        lock (_lock)
         {
-            try
-            {
-                File.WriteAllText(_configFilePath, "[]");
-                Logger.LogMessage("Config file created: audio.conf");
-            }
-            catch (Exception ex)
-            {
-                Logger.LogMessage($"Error creating config file: {ex.Message}");
-            }
+            // Calculate and cache the NextOccurrence when adding the item
+            item.NextOccurrence = GetNextOccurrence(item, DateTime.Now);
+            _scheduleItems.Add(item);
         }
     }
 
-    private void OnConfigFileChanged(object sender, FileSystemEventArgs e)
+    public List<ScheduleItem> GetScheduledItems()
     {
-        Logger.LogMessage("Config file changed. Reloading...");
-        ReloadScheduleConfig();
-    }
-
-    private bool HasConfigChanged()
-    {
-        if (_lastConfigHash == null)
+        lock (_lock)
         {
-            return true; // Force reload if _lastConfigHash is null
-        }
-
-        string currentHash = FileHashHelper.CalculateFileHash(_configFilePath);
-        return currentHash != _lastConfigHash;
-    }
-
-    public void ReloadScheduleConfig()
-    {
-        lock (_configLock)
-        {
-            try
-            {
-                // If _lastConfigHash is null, force a reload
-                if (_lastConfigHash == null || HasConfigChanged())
-                {
-                    if (File.Exists(_configFilePath))
-                    {
-                        string json = File.ReadAllText(_configFilePath);
-                        var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
-
-                        foreach (var item in newItems)
-                        {
-                            item.Validate();
-                            item.NextOccurrence = GetNextOccurrence(item, DateTime.Now); // Initialize NextOccurrence
-                        }
-
-                        _scheduleItems = newItems;
-
-                        Logger.LogMessage($"Loaded {_scheduleItems.Count} schedule items.");
-
-                        // Clear existing timers
-                        foreach (var timer in _timers)
-                        {
-                            timer.Stop();
-                            timer.Dispose();
-                        }
-                        _timers.Clear();
-
-                        // Set up timers for each schedule item
-                        foreach (var scheduleItem in _scheduleItems)
-                        {
-                            if (scheduleItem.Type == "Periodic")
-                            {
-                                SetupTimerForScheduleItem(scheduleItem);
-                            }
-                        }
-
-                        // Calculate the hash after loading the config file
-                        _lastConfigHash = FileHashHelper.CalculateFileHash(_configFilePath);
-
-                        Logger.LogMessage("Config reloaded successfully.");
-                    }
-                    else
-                    {
-                        Logger.LogMessage("Config file not found!");
-                    }
-                }
-                else
-                {
-                    Logger.LogMessage("Config file has not changed. Skipping reload.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogMessage($"Error reloading config: {ex.Message}");
-            }
+            // Return a copy of the list to avoid modifying the original
+            return new List<ScheduleItem>(_scheduleItems);
         }
     }
 
-    private void SetupTimerForScheduleItem(ScheduleItem scheduleItem)
+    /// <summary>
+    /// Calculates the next occurrence of a schedule item.
+    /// </summary>
+    /// <param name="item">The schedule item.</param>
+    /// <param name="now">The current date and time.</param>
+    /// <returns>The next occurrence of the schedule item.</returns>
+    private DateTime GetNextOccurrence(ScheduleItem item, DateTime now)
     {
-        DateTime now = DateTime.Now;
-        DateTime nextOccurrence = GetNextOccurrence(scheduleItem, now);
-
-        if (nextOccurrence > now)
-        {
-            double delay = (nextOccurrence - now).TotalMilliseconds;
-
-            Timer timer = new Timer(delay);
-            timer.AutoReset = false; // Only trigger once
-            timer.Elapsed += (sender, e) => OnPlaylistStart(scheduleItem);
-            timer.Start();
-            _timers.Add(timer);
-
-            Logger.LogMessage($"Timer set for schedule '{scheduleItem.Name}' at {nextOccurrence}");
-        }
-        else
-        {
-            Logger.LogMessage($"No valid occurrence found for schedule '{scheduleItem.Name}'.");
-        }
-    }
-
-    private DateTime GetNextOccurrence(ScheduleItem scheduleItem, DateTime now)
-    {
-        if (scheduleItem.Type == "Periodic")
+        if (item.Type == "Periodic")
         {
             // Start with the current time
             DateTime nextOccurrence = now;
 
             // Handle Second field
-            if (scheduleItem.Second.StartsWith("*/"))
+            if (item.Second.StartsWith("*/"))
             {
-                int interval = int.Parse(scheduleItem.Second.Substring(2)); // Extract "30" from "*/30"
+                int interval = int.Parse(item.Second.Substring(2)); // Extract "30" from "*/30"
                 int currentSecond = now.Second;
 
                 // Calculate the next second
@@ -189,12 +63,12 @@ public class Scheduler
                     nextOccurrence = nextOccurrence.AddMinutes(1);
                 }
 
-                nextOccurrence = nextOccurrence.AddSeconds(nextSecond);
+                nextOccurrence = nextOccurrence.AddSeconds(nextSecond - currentSecond);
             }
-            else if (scheduleItem.Second != "*")
+            else if (item.Second != "*")
             {
                 // Specific second (e.g., "30" for the 30th second)
-                int targetSecond = int.Parse(scheduleItem.Second);
+                int targetSecond = int.Parse(item.Second);
                 if (targetSecond < now.Second)
                 {
                     nextOccurrence = nextOccurrence.AddMinutes(1); // Move to the next minute
@@ -203,9 +77,9 @@ public class Scheduler
             }
 
             // Handle Minute field
-            if (scheduleItem.Minute.StartsWith("*/"))
+            if (item.Minute.StartsWith("*/"))
             {
-                int interval = int.Parse(scheduleItem.Minute.Substring(2)); // Extract "5" from "*/5"
+                int interval = int.Parse(item.Minute.Substring(2)); // Extract "5" from "*/5"
                 int currentMinute = now.Minute;
 
                 // Calculate the next minute
@@ -216,12 +90,12 @@ public class Scheduler
                     nextOccurrence = nextOccurrence.AddHours(1);
                 }
 
-                nextOccurrence = nextOccurrence.AddMinutes(nextMinute);
+                nextOccurrence = nextOccurrence.AddMinutes(nextMinute - currentMinute);
             }
-            else if (scheduleItem.Minute != "*")
+            else if (item.Minute != "*")
             {
                 // Specific minute (e.g., "15" for the 15th minute)
-                int targetMinute = int.Parse(scheduleItem.Minute);
+                int targetMinute = int.Parse(item.Minute);
                 if (targetMinute < now.Minute)
                 {
                     nextOccurrence = nextOccurrence.AddHours(1); // Move to the next hour
@@ -230,9 +104,9 @@ public class Scheduler
             }
 
             // Handle Hour field
-            if (scheduleItem.Hour.StartsWith("*/"))
+            if (item.Hour.StartsWith("*/"))
             {
-                int interval = int.Parse(scheduleItem.Hour.Substring(2)); // Extract "2" from "*/2"
+                int interval = int.Parse(item.Hour.Substring(2)); // Extract "2" from "*/2"
                 int currentHour = now.Hour;
 
                 // Calculate the next hour
@@ -243,12 +117,12 @@ public class Scheduler
                     nextOccurrence = nextOccurrence.AddDays(1);
                 }
 
-                nextOccurrence = nextOccurrence.AddHours(nextHour);
+                nextOccurrence = nextOccurrence.AddHours(nextHour - currentHour);
             }
-            else if (scheduleItem.Hour != "*")
+            else if (item.Hour != "*")
             {
                 // Specific hour (e.g., "14" for 2 PM)
-                int targetHour = int.Parse(scheduleItem.Hour);
+                int targetHour = int.Parse(item.Hour);
                 if (targetHour < now.Hour)
                 {
                     nextOccurrence = nextOccurrence.AddDays(1); // Move to the next day
@@ -257,9 +131,9 @@ public class Scheduler
             }
 
             // Handle DayOfMonth field
-            if (scheduleItem.DayOfMonth != "*")
+            if (item.DayOfMonth != "*")
             {
-                int targetDay = int.Parse(scheduleItem.DayOfMonth);
+                int targetDay = int.Parse(item.DayOfMonth);
                 if (targetDay < now.Day)
                 {
                     nextOccurrence = nextOccurrence.AddMonths(1); // Move to the next month
@@ -268,9 +142,9 @@ public class Scheduler
             }
 
             // Handle Month field
-            if (scheduleItem.Month != "*")
+            if (item.Month != "*")
             {
-                int targetMonth = int.Parse(scheduleItem.Month);
+                int targetMonth = int.Parse(item.Month);
                 if (targetMonth < now.Month)
                 {
                     nextOccurrence = nextOccurrence.AddYears(1); // Move to the next year
@@ -279,9 +153,9 @@ public class Scheduler
             }
 
             // Handle DayOfWeek field
-            if (scheduleItem.DayOfWeek != "*")
+            if (item.DayOfWeek != "*")
             {
-                int targetDayOfWeek = int.Parse(scheduleItem.DayOfWeek);
+                int targetDayOfWeek = int.Parse(item.DayOfWeek);
                 int currentDayOfWeek = (int)now.DayOfWeek;
 
                 // Calculate the next occurrence of the target day of the week
@@ -301,7 +175,7 @@ public class Scheduler
 
             return nextOccurrence;
         }
-        else if (scheduleItem.Type == "NonPeriodic")
+        else if (item.Type == "NonPeriodic")
         {
             // Non-periodic items are not automatically scheduled
             return DateTime.MaxValue;
@@ -309,84 +183,5 @@ public class Scheduler
 
         // Default: No valid occurrence
         return DateTime.MaxValue;
-    }
-
-    /// <summary>
-    /// Manually triggers a non-periodic schedule item by its ItemId.
-    /// </summary>
-    /// <param name="itemId">The ID of the schedule item to trigger.</param>
-    public void TriggerNonPeriodicItem(int itemId)
-    {
-        lock (_configLock)
-        {
-            var scheduleItem = _scheduleItems.Find(item => item.ItemId == itemId);
-            if (scheduleItem != null && scheduleItem.Type == "NonPeriodic")
-            {
-                Logger.LogMessage($"Manually triggering non-periodic item: {scheduleItem.Name}");
-                OnPlaylistStart(scheduleItem);
-            }
-            else
-            {
-                Logger.LogMessage($"Non-periodic item with ID {itemId} not found.");
-            }
-        }
-    }
-
-    private void OnPlaylistStart(ScheduleItem scheduleItem)
-    {
-        Logger.LogMessage($"Starting playback for schedule: {scheduleItem.Name}");
-        BeforePlayback?.Invoke();
-
-        // Stop the current playlist (if any)
-        _audioPlayer.Stop();
-
-        // Start the new playlist
-        _audioPlayer.Play(scheduleItem.FilePaths);
-
-        AfterPlayback?.Invoke();
-
-        // If the schedule is periodic, set up the next occurrence
-        if (scheduleItem.Type == "Periodic")
-        {
-            DateTime nextOccurrence = GetNextOccurrence(scheduleItem, DateTime.Now);
-            if (nextOccurrence != DateTime.MaxValue)
-            {
-                SetupTimerForScheduleItem(scheduleItem);
-            }
-        }
-    }
-
-    private void OnPlaylistFinished()
-    {
-        AfterPlayback?.Invoke();
-    }
-
-    public List<ScheduleItem> GetScheduledItems()
-    {
-        // Recalculate NextOccurrence for each item before returning the list
-        DateTime now = DateTime.Now;
-
-        List<ScheduleItem> upcomingItems = new List<ScheduleItem>();
-
-        foreach (var item in _scheduleItems)
-        {
-            DateTime nextOccurrence = GetNextOccurrence(item, now);
-            if (nextOccurrence != DateTime.MaxValue)
-            {
-                item.NextOccurrence = nextOccurrence;
-                upcomingItems.Add(item);
-            }
-        }
-
-        return upcomingItems;
-    }
-
-    public string GetCurrentPlaybackStatus()
-    {
-        if (_audioPlayer.IsPlaying)
-        {
-            return $"Currently playing: {_audioPlayer.CurrentFile}";
-        }
-        return "No playback in progress.";
     }
 }
