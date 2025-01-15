@@ -162,13 +162,17 @@ public class Scheduler
 
             Logger.LogMessage($"Timer set for schedule '{scheduleItem.Name}' at {nextOccurrence}");
         }
+        else
+        {
+            Logger.LogMessage($"No valid occurrence found for schedule '{scheduleItem.Name}'.");
+        }
     }
 
     private DateTime GetNextOccurrence(ScheduleItem scheduleItem, DateTime now)
     {
         if (scheduleItem.Type == "Periodic")
         {
-            // Calculate the next occurrence for periodic items
+            // Start with the current time
             DateTime nextOccurrence = now;
 
             // Handle Second field
