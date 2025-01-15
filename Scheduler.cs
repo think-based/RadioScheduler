@@ -12,11 +12,15 @@ public class Scheduler
     private readonly object _lock = new object();
     private List<ScheduleItem> _scheduleItems;
     private string _configFilePath;
+    private List<Timer> _timers;
+    private AudioPlayer _audioPlayer;
 
     public Scheduler()
     {
         _scheduleItems = new List<ScheduleItem>();
+        _timers = new List<Timer>();
         _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf");
+        _audioPlayer = new AudioPlayer(); // Initialize the AudioPlayer
         ReloadScheduleConfig(); // Load the schedule configuration on initialization
     }
 
@@ -34,6 +38,9 @@ public class Scheduler
                     string json = File.ReadAllText(_configFilePath);
                     var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
 
+                    // Log the number of items loaded
+                    Logger.LogMessage($"Loaded {newItems.Count} items from {_configFilePath}.");
+
                     // Validate and update the schedule items
                     _scheduleItems.Clear();
                     foreach (var item in newItems)
@@ -41,9 +48,26 @@ public class Scheduler
                         item.Validate();
                         item.NextOccurrence = GetNextOccurrence(item, DateTime.Now);
                         _scheduleItems.Add(item);
+
+                        // Log each item
+                        Logger.LogMessage($"Added item: {item.Name}, NextOccurrence: {item.NextOccurrence}");
                     }
 
-                    Logger.LogMessage($"Reloaded {_scheduleItems.Count} schedule items from {_configFilePath}.");
+                    // Set up timers for periodic schedules
+                    foreach (var timer in _timers)
+                    {
+                        timer.Stop();
+                        timer.Dispose();
+                    }
+                    _timers.Clear();
+
+                    foreach (var scheduleItem in _scheduleItems)
+                    {
+                        if (scheduleItem.Type == "Periodic")
+                        {
+                            SetupTimerForScheduleItem(scheduleItem);
+                        }
+                    }
                 }
                 else
                 {
@@ -53,6 +77,50 @@ public class Scheduler
             catch (Exception ex)
             {
                 Logger.LogMessage($"Error reloading schedule config: {ex.Message}");
+            }
+        }
+    }
+
+    private void SetupTimerForScheduleItem(ScheduleItem scheduleItem)
+    {
+        DateTime now = DateTime.Now;
+        DateTime nextOccurrence = GetNextOccurrence(scheduleItem, now);
+
+        if (nextOccurrence > now)
+        {
+            double delay = (nextOccurrence - now).TotalMilliseconds;
+
+            Timer timer = new Timer(delay);
+            timer.AutoReset = false; // Only trigger once
+            timer.Elapsed += (sender, e) => OnPlaylistStart(scheduleItem);
+            timer.Start();
+            _timers.Add(timer);
+
+            Logger.LogMessage($"Timer set for schedule '{scheduleItem.Name}' at {nextOccurrence}");
+        }
+        else
+        {
+            Logger.LogMessage($"No valid occurrence found for schedule '{scheduleItem.Name}'.");
+        }
+    }
+
+    private void OnPlaylistStart(ScheduleItem scheduleItem)
+    {
+        Logger.LogMessage($"Starting playback for schedule: {scheduleItem.Name}");
+
+        // Stop the current playlist (if any)
+        _audioPlayer.Stop();
+
+        // Start the new playlist
+        _audioPlayer.Play(scheduleItem.FilePaths);
+
+        // If the schedule is periodic, set up the next occurrence
+        if (scheduleItem.Type == "Periodic")
+        {
+            DateTime nextOccurrence = GetNextOccurrence(scheduleItem, DateTime.Now);
+            if (nextOccurrence != DateTime.MaxValue)
+            {
+                SetupTimerForScheduleItem(scheduleItem);
             }
         }
     }
