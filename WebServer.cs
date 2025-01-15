@@ -119,27 +119,18 @@ public class WebServer
     {
         try
         {
-            // Fetch schedule data from the Scheduler
-            var scheduler = _scheduler;
-            var scheduleItems = scheduler.GetScheduledItems();
-
-            // Filter items for the next 24 hours
-            var now = DateTime.Now;
-            var next24Hours = now.AddHours(24);
-            var upcomingItems = scheduleItems
-                .Where(item => item.NextOccurrence >= now && item.NextOccurrence <= next24Hours)
-                .OrderBy(item => item.NextOccurrence)
-                .ToList();
+            // Fetch the list of scheduled items directly from the Scheduler
+            var scheduleItems = _scheduler.GetScheduledItems();
 
             // Create a JSON response
-            var responseData = upcomingItems.Select(item => new
+            var responseData = scheduleItems.Select(item => new
             {
                 Name = item.Name, // Include the Name field
                 Playlist = item.FilePaths.Count > 0 ? item.FilePaths[0].Path : "No files", // Use the first file path or a placeholder
                 StartTime = item.NextOccurrence.ToString("yyyy-MM-dd HH:mm:ss"),
                 EndTime = item.NextOccurrence.Add(item.Duration).ToString("yyyy-MM-dd HH:mm:ss"),
                 TriggerEvent = item.Trigger,
-                Status = item.NextOccurrence > now ? "Upcoming" : "In Progress"
+                Status = item.NextOccurrence > DateTime.Now ? "Upcoming" : "In Progress"
             });
 
             // Serialize the response to JSON
