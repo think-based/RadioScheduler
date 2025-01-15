@@ -2,41 +2,36 @@
 // FileName: Program.cs
 
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace RadioSchedulerService
 {
-    static class Program
+    class Program
     {
-        private static PrayTimeScheduler _prayTimeScheduler;
-        private static InstantPlayManager _instantPlayManager;
-        private static WebServer _webServer;
-        private static CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private PrayTimeScheduler _prayTimeScheduler;
+        private InstantPlayManager _instantPlayManager;
+        private WebServer _webServer;
+        private Scheduler _scheduler;
+        private CancellationTokenSource _cancellationTokenSource;
 
-        // Static instance of Scheduler
-        private static Scheduler _scheduler;
+        public Program()
+        {
+            _cancellationTokenSource = new CancellationTokenSource();
+            _scheduler = new Scheduler();
+            _instantPlayManager = new InstantPlayManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InstantPlay"));
+            _prayTimeScheduler = new PrayTimeScheduler();
+            _webServer = new WebServer(_scheduler);
+        }
 
-        static async Task Main()
+        public async Task RunAsync()
         {
             try
             {
                 // Load settings from the configuration file
                 LoadSettingsFromConfig();
 
-                // Initialize the Scheduler (static instance)
-                _scheduler = new Scheduler();
-
-                // Initialize the InstantPlayManager
-                string instantPlayFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InstantPlay");
-                _instantPlayManager = new InstantPlayManager(instantPlayFolderPath);
-
-                // Initialize the PrayTimeScheduler
-                _prayTimeScheduler = new PrayTimeScheduler();
-
-                // Initialize the WebServer with the static Scheduler instance
-                _webServer = new WebServer(_scheduler);
+                // Start the WebServer
                 _webServer.Start();
 
                 // Display prayer times in the console
@@ -46,7 +41,10 @@ namespace RadioSchedulerService
                 Console.CancelKeyPress += OnConsoleCancelKeyPress;
 
                 // Keep the application running until cancellation is requested
-                await RunApplicationAsync();
+                while (!_cancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    await Task.Delay(1000, _cancellationTokenSource.Token); // Check every second
+                }
             }
             catch (Exception ex)
             {
@@ -66,18 +64,7 @@ namespace RadioSchedulerService
             Console.WriteLine("Application stopped.");
         }
 
-        private static async Task RunApplicationAsync()
-        {
-            Console.WriteLine("Radio Scheduler Service started. Press Ctrl+C to exit.");
-
-            // Keep the application running until cancellation is requested
-            while (!_cancellationTokenSource.Token.IsCancellationRequested)
-            {
-                await Task.Delay(1000, _cancellationTokenSource.Token); // Check every second
-            }
-        }
-
-        private static void OnConsoleCancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        private void OnConsoleCancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
             Console.WriteLine("Stopping Radio Scheduler Service...");
 
@@ -88,7 +75,7 @@ namespace RadioSchedulerService
             e.Cancel = true;
         }
 
-        private static void LoadSettingsFromConfig()
+        private void LoadSettingsFromConfig()
         {
             try
             {
@@ -119,7 +106,7 @@ namespace RadioSchedulerService
             }
         }
 
-        private static void DisplayPrayerTimes()
+        private void DisplayPrayerTimes()
         {
             // Get current date and time
             DateTime now = DateTime.Now;
@@ -139,6 +126,12 @@ namespace RadioSchedulerService
             Console.WriteLine($"Sunset: {prayerTimes[4]}");
             Console.WriteLine($"Maghrib: {prayerTimes[5]}");
             Console.WriteLine($"Isha: {prayerTimes[6]}");
+        }
+
+        static async Task Main(string[] args)
+        {
+            Program program = new Program();
+            await program.RunAsync();
         }
     }
 }
