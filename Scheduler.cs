@@ -16,6 +16,8 @@ public class Scheduler
     private string _configFilePath;
     private AudioPlayer _audioPlayer;
     private Timer _checkTimer; // Single timer to check schedules every second
+    private Timer _configCheckTimer;
+    private string _currentFileHash;
 
     public Scheduler()
     {
@@ -23,13 +25,21 @@ public class Scheduler
         _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf");
         _audioPlayer = new AudioPlayer();
 
+
         // Set up the single timer to check schedules every second
         _checkTimer = new Timer(1000); // 1-second interval
         _checkTimer.Elapsed += OnCheckTimerElapsed;
         _checkTimer.AutoReset = true;
         _checkTimer.Enabled = true;
 
+        // Set up the timer for checking config file changes
+        _configCheckTimer = new Timer(60000); // 1-minute interval
+        _configCheckTimer.Elapsed += OnConfigFileCheckTimerElapsed;
+        _configCheckTimer.AutoReset = true;
+        _configCheckTimer.Enabled = true;
+
         ReloadScheduleConfig(); // Load the schedule configuration on initialization
+        _currentFileHash = CalculateConfigHash();
     }
 
     /// <summary>
@@ -68,34 +78,84 @@ public class Scheduler
             Logger.LogMessage($"Error reloading schedule config: {ex.Message}");
         }
     }
-
     /// <summary>
     /// Handles the timer tick event to check for scheduled tasks.
     /// </summary>
     private void OnCheckTimerElapsed(object sender, ElapsedEventArgs e)
     {
         DateTime now = DateTime.Now;
+        DateTime nowTruncated = TruncateDateTimeToSeconds(now);
+        string currentEvent = CurrentTrigger.Event; // Get current event from CurrentTrigger
+
 
         foreach (var item in _scheduleItems)
         {
-            // Check if the task is due to run
-            if (item.NextOccurrence <= now)
-            {
-                // Trigger playback
-                OnPlaylistStart(item);
+            DateTime nextTruncated = TruncateDateTimeToSeconds(item.NextOccurrence);
 
-                // Update the next occurrence for periodic tasks
+            if (nextTruncated <= nowTruncated)
+            {
                 if (item.Type == "Periodic")
                 {
-                    item.NextOccurrence = GetNextOccurrence(item, now);
+                    HandlePeriodicItem(item, now, nowTruncated, nextTruncated);
                 }
                 else
                 {
-                    // Non-periodic tasks are only triggered once
-                    item.NextOccurrence = DateTime.MaxValue;
+                    HandleNonPeriodicItem(item, nowTruncated, nextTruncated, currentEvent);
                 }
             }
         }
+    }
+
+    private void HandlePeriodicItem(ScheduleItem item, DateTime now, DateTime nowTruncated, DateTime nextTruncated)
+    {
+        if (nextTruncated == nowTruncated)
+        {
+            OnPlaylistStart(item);
+        }
+        item.NextOccurrence = GetNextOccurrence(item, now);
+    }
+
+    private void HandleNonPeriodicItem(ScheduleItem item, DateTime nowTruncated, DateTime nextTruncated, string currentEvent)
+    {
+        if (nextTruncated == nowTruncated &&
+                  !string.IsNullOrEmpty(item.Trigger) &&
+                    item.Trigger.Equals(currentEvent, StringComparison.OrdinalIgnoreCase))
+
+        {
+            OnPlaylistStart(item);
+            item.NextOccurrence = DateTime.MaxValue;
+            CurrentTrigger.Event = null;
+        }
+    }
+
+    private DateTime TruncateDateTimeToSeconds(DateTime dateTime)
+    {
+        return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second);
+    }
+
+    /// <summary>
+    /// Handles the timer tick event to check for configuration file changes.
+    /// </summary>
+    private void OnConfigFileCheckTimerElapsed(object sender, ElapsedEventArgs e)
+    {
+        var newFileHash = CalculateConfigHash();
+
+        if (newFileHash != _currentFileHash)
+        {
+            Logger.LogMessage("Config file changed, reloading configuration.");
+            ReloadScheduleConfig();
+            _currentFileHash = newFileHash;
+
+        }
+    }
+    /// <summary>
+    /// Calculates the hash of the audio config file.
+    /// </summary>
+    private string CalculateConfigHash()
+    {
+        if (!File.Exists(_configFilePath))
+            return "";
+        return FileHashHelper.CalculateFileHash(_configFilePath);
     }
 
     /// <summary>
@@ -213,7 +273,6 @@ public class Scheduler
             return TimeSpan.FromSeconds(text.Length / 10.0); // Fallback to estimation
         }
     }
-
     /// <summary>
     /// Calculates the next occurrence of a schedule item.
     /// </summary>
@@ -223,92 +282,94 @@ public class Scheduler
         {
             DateTime nextOccurrence = now;
 
+
             // Handle Second field
             if (item.Second.StartsWith("*/"))
             {
                 int interval = int.Parse(item.Second.Substring(2));
-                int nextSecond = (now.Second / interval + 1) * interval;
-                if (nextSecond >= 60)
-                {
-                    nextSecond = 0;
-                    nextOccurrence = nextOccurrence.AddMinutes(1);
-                }
-                nextOccurrence = nextOccurrence.AddSeconds(nextSecond - now.Second);
+                nextOccurrence = nextOccurrence.AddSeconds(interval);
             }
             else if (item.Second != "*")
             {
                 int targetSecond = int.Parse(item.Second);
-                if (targetSecond < now.Second)
+                if (targetSecond <= now.Second)
                 {
                     nextOccurrence = nextOccurrence.AddMinutes(1);
+                    nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, nextOccurrence.Day, nextOccurrence.Hour, nextOccurrence.Minute, targetSecond);
+
                 }
-                nextOccurrence = nextOccurrence.AddSeconds(targetSecond - now.Second);
+                else
+                {
+                    nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, nextOccurrence.Day, nextOccurrence.Hour, nextOccurrence.Minute, targetSecond);
+                }
             }
 
             // Handle Minute field
             if (item.Minute.StartsWith("*/"))
             {
                 int interval = int.Parse(item.Minute.Substring(2));
-                int nextMinute = (now.Minute / interval + 1) * interval;
-                if (nextMinute >= 60)
-                {
-                    nextMinute = 0;
-                    nextOccurrence = nextOccurrence.AddHours(1);
-                }
-                nextOccurrence = nextOccurrence.AddMinutes(nextMinute - now.Minute);
+                nextOccurrence = nextOccurrence.AddMinutes(interval);
             }
             else if (item.Minute != "*")
             {
                 int targetMinute = int.Parse(item.Minute);
-                if (targetMinute < now.Minute)
+                if (targetMinute <= now.Minute)
                 {
                     nextOccurrence = nextOccurrence.AddHours(1);
+                    nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, nextOccurrence.Day, nextOccurrence.Hour, targetMinute, nextOccurrence.Second);
                 }
-                nextOccurrence = nextOccurrence.AddMinutes(targetMinute - now.Minute);
-            }
+                else
+                {
+                    nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, nextOccurrence.Day, nextOccurrence.Hour, targetMinute, nextOccurrence.Second);
 
+                }
+            }
             // Handle Hour field
             if (item.Hour.StartsWith("*/"))
             {
                 int interval = int.Parse(item.Hour.Substring(2));
-                int nextHour = (now.Hour / interval + 1) * interval;
-                if (nextHour >= 24)
-                {
-                    nextHour = 0;
-                    nextOccurrence = nextOccurrence.AddDays(1);
-                }
-                nextOccurrence = nextOccurrence.AddHours(nextHour - now.Hour);
+                nextOccurrence = nextOccurrence.AddHours(interval);
             }
             else if (item.Hour != "*")
             {
                 int targetHour = int.Parse(item.Hour);
-                if (targetHour < now.Hour)
+                if (targetHour <= now.Hour)
                 {
                     nextOccurrence = nextOccurrence.AddDays(1);
-                }
-                nextOccurrence = nextOccurrence.AddHours(targetHour - now.Hour);
-            }
+                    nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, nextOccurrence.Day, targetHour, nextOccurrence.Minute, nextOccurrence.Second);
 
+                }
+                else
+                {
+                    nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, nextOccurrence.Day, targetHour, nextOccurrence.Minute, nextOccurrence.Second);
+
+                }
+            }
             // Handle DayOfMonth field
             if (item.DayOfMonth != "*")
             {
                 int targetDay = int.Parse(item.DayOfMonth);
-                if (targetDay < now.Day)
+                if (targetDay <= now.Day)
                 {
                     nextOccurrence = nextOccurrence.AddMonths(1);
+
                 }
                 nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, targetDay, nextOccurrence.Hour, nextOccurrence.Minute, nextOccurrence.Second);
+
+
             }
 
             // Handle Month field
             if (item.Month != "*")
             {
                 int targetMonth = int.Parse(item.Month);
-                if (targetMonth < now.Month)
+                if (targetMonth <= now.Month)
                 {
                     nextOccurrence = nextOccurrence.AddYears(1);
                 }
+
                 nextOccurrence = new DateTime(nextOccurrence.Year, targetMonth, nextOccurrence.Day, nextOccurrence.Hour, nextOccurrence.Minute, nextOccurrence.Second);
+
             }
 
             // Handle DayOfWeek field
@@ -323,8 +384,10 @@ public class Scheduler
                 {
                     daysToAdd = 7; // Move to the next week
                 }
+
                 nextOccurrence = nextOccurrence.AddDays(daysToAdd);
             }
+
 
             // Ensure the next occurrence is in the future
             if (nextOccurrence <= now)
@@ -332,8 +395,11 @@ public class Scheduler
                 return DateTime.MaxValue; // No valid occurrence found
             }
 
+
             return nextOccurrence;
+
+
         }
-        return DateTime.MaxValue; // No valid occurrence for non-periodic tasks
+        return DateTime.MaxValue;
     }
 }

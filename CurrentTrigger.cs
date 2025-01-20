@@ -3,8 +3,8 @@
 
 using System;
 
-public class CurrentTrigger
+public static class CurrentTrigger
 {
-    public string Event { get; set; } // نام تریگر (مانند "afternoon")
-    public DateTime? Time { get; set; } // زمان پایان پخش (nullable)
+    public static string Event { get; set; } //  Name of the trigger
+    public static DateTime? Time { get; set; } //  Time when the trigger finished
 }

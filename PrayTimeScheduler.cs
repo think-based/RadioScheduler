@@ -8,12 +8,9 @@ public class PrayTimeScheduler
 {
     private Timer _timer;
     private PrayTime _prayTime;
-    private CurrentTrigger _currentTrigger;
-
     public PrayTimeScheduler()
     {
         _prayTime = new PrayTime();
-        _currentTrigger = new CurrentTrigger();
 
         // تنظیم تایمر پویا
         _timer = new Timer();
@@ -133,8 +130,8 @@ public class PrayTimeScheduler
 
     private void SetCurrentTrigger(string eventName, DateTime triggerTime)
     {
-        _currentTrigger.Event = eventName;
-        _currentTrigger.Time = triggerTime;
+        CurrentTrigger.Event = eventName;
+        CurrentTrigger.Time = triggerTime;
 
         // چاپ اطلاعات برای بررسی
         Logger.LogMessage($"CurrentTrigger set to: {eventName} at {triggerTime}");
