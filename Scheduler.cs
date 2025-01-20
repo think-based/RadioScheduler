@@ -4,26 +4,25 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Speech.Synthesis;
 using System.Timers;
 using NAudio.Wave;
 using Newtonsoft.Json;
 using RadioScheduler.Entities;
+using static Enums;
 
 public class Scheduler
 {
-    private List<ScheduleItem> _scheduleItems;
-    private string _configFilePath;
     private AudioPlayer _audioPlayer;
     private Timer _checkTimer; // Single timer to check schedules every second
-    private Timer _configCheckTimer;
-    private string _currentFileHash;
+    public SchedulerConfigManager _configManager;
+
 
     public Scheduler()
     {
-        _scheduleItems = new List<ScheduleItem>();
-        _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf");
         _audioPlayer = new AudioPlayer();
+        _configManager = new SchedulerConfigManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf"));
 
 
         // Set up the single timer to check schedules every second
@@ -32,50 +31,16 @@ public class Scheduler
         _checkTimer.AutoReset = true;
         _checkTimer.Enabled = true;
 
-        // Set up the timer for checking config file changes
-        _configCheckTimer = new Timer(60000); // 1-minute interval
-        _configCheckTimer.Elapsed += OnConfigFileCheckTimerElapsed;
-        _configCheckTimer.AutoReset = true;
-        _configCheckTimer.Enabled = true;
 
-        ReloadScheduleConfig(); // Load the schedule configuration on initialization
-        _currentFileHash = CalculateConfigHash();
+        _configManager.ConfigReloaded += OnConfigReloaded;
+
     }
-
-    /// <summary>
-    /// Reloads the schedule configuration from the audio.conf file.
-    /// </summary>
-    public void ReloadScheduleConfig()
+    private void OnConfigReloaded()
     {
-        try
+        Logger.LogMessage("Configuration reloaded.");
+        foreach (var item in _configManager.ScheduleItems)
         {
-            if (File.Exists(_configFilePath))
-            {
-                string json = File.ReadAllText(_configFilePath);
-                var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
-
-                // Clear existing schedule items
-                _scheduleItems.Clear();
-
-                // Add and validate new schedule items
-                foreach (var item in newItems)
-                {
-                    item.Validate();
-                    item.NextOccurrence = GetNextOccurrence(item, DateTime.Now);
-                    item.TotalDuration = CalculateTotalDuration(item.FilePaths); // Calculate total duration
-                    _scheduleItems.Add(item);
-                }
-
-                Logger.LogMessage($"Loaded {newItems.Count} items from {_configFilePath}.");
-            }
-            else
-            {
-                Logger.LogMessage($"Config file not found: {_configFilePath}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogMessage($"Error reloading schedule config: {ex.Message}");
+            item.NextOccurrence = GetNextOccurrence(item, DateTime.Now);
         }
     }
     /// <summary>
@@ -84,84 +49,146 @@ public class Scheduler
     private void OnCheckTimerElapsed(object sender, ElapsedEventArgs e)
     {
         DateTime now = DateTime.Now;
-        DateTime nowTruncated = TruncateDateTimeToSeconds(now);
-        string currentEvent = CurrentTrigger.Event; // Get current event from CurrentTrigger
+        DateTime currentDateTimeTruncated = TruncateDateTimeToSeconds(now);
 
 
-        foreach (var item in _scheduleItems)
+        foreach (var item in _configManager.ScheduleItems)
         {
-            DateTime nextTruncated = TruncateDateTimeToSeconds(item.NextOccurrence);
+            //Check if item is canceled
+            if (item.Status == ScheduleStatus.Canceled)
+                continue;
 
-            if (nextTruncated <= nowTruncated)
+            DateTime nextOccurrenceTruncated = TruncateDateTimeToSeconds(item.NextOccurrence);
+
+            if (nextOccurrenceTruncated <= currentDateTimeTruncated)
             {
-                if (item.Type == "Periodic")
+                if (item.Type == ScheduleType.Periodic)
                 {
-                    HandlePeriodicItem(item, now, nowTruncated, nextTruncated);
+                    HandlePeriodicItem(item, now, currentDateTimeTruncated, nextOccurrenceTruncated);
                 }
                 else
                 {
-                    HandleNonPeriodicItem(item, nowTruncated, nextTruncated, currentEvent);
+                    UpdateNonPeriodicNextOccurrence(item, currentDateTimeTruncated, nextOccurrenceTruncated, now);
+                    if (nextOccurrenceTruncated == currentDateTimeTruncated)
+                    {
+                        HandlePlayback(item, now);
+                    }
+                }
+            }
+            else
+            {
+                if (item.Type == ScheduleType.Periodic)
+                {
+                    item.Status = ScheduleStatus.TimeWaiting;
+                }
+                else
+                {
+                    item.Status = ScheduleStatus.EventWaiting;
                 }
             }
         }
     }
 
-    private void HandlePeriodicItem(ScheduleItem item, DateTime now, DateTime nowTruncated, DateTime nextTruncated)
+    private void HandlePeriodicItem(ScheduleItem item, DateTime now, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated)
     {
-        if (nextTruncated == nowTruncated)
+        if (nextOccurrenceTruncated == currentDateTimeTruncated)
         {
-            OnPlaylistStart(item);
+            HandlePlayback(item, now);
         }
         item.NextOccurrence = GetNextOccurrence(item, now);
     }
-
-    private void HandleNonPeriodicItem(ScheduleItem item, DateTime nowTruncated, DateTime nextTruncated, string currentEvent)
+    private void HandlePlayback(ScheduleItem item, DateTime now)
     {
-        if (nextTruncated == nowTruncated &&
-                  !string.IsNullOrEmpty(item.Trigger) &&
-                    item.Trigger.Equals(currentEvent, StringComparison.OrdinalIgnoreCase))
-
+        if (_audioPlayer.IsPlaying)
         {
-            OnPlaylistStart(item);
-            item.NextOccurrence = DateTime.MaxValue;
-            CurrentTrigger.Event = null;
+            OnConflictOccurred(item);
+            _audioPlayer.Stop(); // Stop the current playback
+        }
+        item.Status = ScheduleStatus.Playing;
+        HandlePlaylistPlayback(item);
+        item.LastPlayTime = now;
+    }
+    private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now)
+    {
+        foreach (var trigger in ActiveTriggers.Triggers)
+        {
+            if (nextOccurrenceTruncated == currentDateTimeTruncated &&
+                 !string.IsNullOrEmpty(item.Trigger) &&
+                    item.Trigger.Equals(trigger.Event, StringComparison.OrdinalIgnoreCase))
+            {
+                if (item.TriggerTime != trigger.Time)
+                {
+                    item.TriggerTime = trigger.Time;
+                    if (item.TriggerType == TriggerTypes.Immediate)
+                    {
+                        item.NextOccurrence = trigger.Time.Value;
+                    }
+                    else if (item.TriggerType == TriggerTypes.Delayed)
+                    {
+                        if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
+                        {
+                            item.NextOccurrence = trigger.Time.Value.Add(delay);
+                        }
+                        else
+                        {
+                            Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
+                            item.NextOccurrence = DateTime.MaxValue;
+                        }
+
+                    }
+                    else if (item.TriggerType == TriggerTypes.Timed)
+                    {
+                        item.NextOccurrence = trigger.Time.Value.Add(-item.TotalDuration);
+                    }
+                }
+                else
+                {
+                    if (item.TriggerType == TriggerTypes.Immediate || item.TriggerType == TriggerTypes.Timed)
+                    {
+                        item.NextOccurrence = trigger.Time.Value;
+                    }
+                    else if (item.TriggerType == TriggerTypes.Delayed)
+                    {
+                        if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
+                        {
+                            item.NextOccurrence = trigger.Time.Value.Add(delay);
+                        }
+                        else
+                        {
+                            Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
+                            item.NextOccurrence = DateTime.MaxValue;
+                        }
+                    }
+                }
+
+                break;
+            }
         }
     }
-
+    private void OnConflictOccurred(object conflictData)
+    {
+        if (conflictData is ScheduleItem item)
+        {
+            string conflictMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Conflict: Playlist '{item.Name}' scheduled but another playlist is already playing.";
+            Logger.LogMessage(conflictMessage);
+            Console.WriteLine(conflictMessage);
+        }
+        else
+        {
+            Logger.LogMessage($"Conflict detected, but no data was provided");
+            Console.WriteLine("Conflict detected, but no data was provided");
+        }
+    }
     private DateTime TruncateDateTimeToSeconds(DateTime dateTime)
     {
         return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second);
     }
 
-    /// <summary>
-    /// Handles the timer tick event to check for configuration file changes.
-    /// </summary>
-    private void OnConfigFileCheckTimerElapsed(object sender, ElapsedEventArgs e)
-    {
-        var newFileHash = CalculateConfigHash();
-
-        if (newFileHash != _currentFileHash)
-        {
-            Logger.LogMessage("Config file changed, reloading configuration.");
-            ReloadScheduleConfig();
-            _currentFileHash = newFileHash;
-
-        }
-    }
-    /// <summary>
-    /// Calculates the hash of the audio config file.
-    /// </summary>
-    private string CalculateConfigHash()
-    {
-        if (!File.Exists(_configFilePath))
-            return "";
-        return FileHashHelper.CalculateFileHash(_configFilePath);
-    }
 
     /// <summary>
     /// Handles the start of a scheduled playlist.
     /// </summary>
-    private void OnPlaylistStart(ScheduleItem scheduleItem)
+    private void HandlePlaylistPlayback(ScheduleItem scheduleItem)
     {
         // Log the playlist name and time to the Visual Studio console
         Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Playing playlist: {scheduleItem.Name}");
@@ -183,105 +210,25 @@ public class Scheduler
     public List<ScheduleItem> GetScheduledItems()
     {
         // Return a copy of the list to avoid modifying the original
-        return new List<ScheduleItem>(_scheduleItems);
+        return _configManager.ScheduleItems
+             .OrderBy(item => item.NextOccurrence)
+            .Select(item => {
+                if (item.Status != ScheduleStatus.Played && item.NextOccurrence <= DateTime.Now)
+                    item.Status = ScheduleStatus.TimeWaiting;
+
+                return item;
+            })
+             .ToList();
     }
 
-    /// <summary>
-    /// Calculates the total duration of a playlist.
-    /// </summary>
-    private TimeSpan CalculateTotalDuration(List<FilePathItem> filePaths)
-    {
-        TimeSpan totalDuration = TimeSpan.Zero;
-        var ttsEngine = new SpeechSynthesizer(); // Initialize TTS engine
-
-        foreach (var filePathItem in filePaths)
-        {
-            if (!string.IsNullOrEmpty(filePathItem.Text)) // Handle TTS
-            {
-                filePathItem.Duration = CalculateTtsDuration(filePathItem.Text, ttsEngine);
-            }
-            else if (File.Exists(filePathItem.Path)) // Handle audio file
-            {
-                try
-                {
-                    using (var reader = new AudioFileReader(filePathItem.Path))
-                    {
-                        filePathItem.Duration = reader.TotalTime;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogMessage($"Error calculating duration for file {filePathItem.Path}: {ex.Message}");
-                    filePathItem.Duration = TimeSpan.Zero; // Default to zero if an error occurs
-                }
-            }
-            else if (Directory.Exists(filePathItem.Path)) // Handle folder
-            {
-                var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3");
-                foreach (var audioFile in audioFiles)
-                {
-                    try
-                    {
-                        using (var reader = new AudioFileReader(audioFile))
-                        {
-                            filePathItem.Duration += reader.TotalTime;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogMessage($"Error calculating duration for file {audioFile}: {ex.Message}");
-                    }
-                }
-            }
-
-            totalDuration += filePathItem.Duration;
-        }
-
-        ttsEngine.Dispose(); // Clean up TTS engine
-        return totalDuration;
-    }
-
-    /// <summary>
-    /// Calculates the exact duration of TTS playback using the SpeechSynthesizer.
-    /// </summary>
-    /// <param name="text">The TTS text.</param>
-    /// <param name="ttsEngine">The TTS engine.</param>
-    /// <returns>The duration of the TTS playback.</returns>
-    private TimeSpan CalculateTtsDuration(string text, SpeechSynthesizer ttsEngine)
-    {
-        try
-        {
-            // Use the TTS engine to get the exact duration
-            var prompt = new PromptBuilder();
-            prompt.AppendText(text);
-
-            // Measure the duration
-            var ttsStream = new MemoryStream();
-            ttsEngine.SetOutputToWaveStream(ttsStream);
-            ttsEngine.Speak(prompt);
-
-            // Calculate duration based on the audio stream
-            ttsStream.Position = 0; // Reset stream position
-            using (var reader = new WaveFileReader(ttsStream))
-            {
-                return reader.TotalTime; // Exact duration of the TTS audio
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogMessage($"Error calculating TTS duration: {ex.Message}");
-            return TimeSpan.FromSeconds(text.Length / 10.0); // Fallback to estimation
-        }
-    }
     /// <summary>
     /// Calculates the next occurrence of a schedule item.
     /// </summary>
     private DateTime GetNextOccurrence(ScheduleItem item, DateTime now)
     {
-        if (item.Type == "Periodic")
+        if (item.Type == ScheduleType.Periodic)
         {
             DateTime nextOccurrence = now;
-
 
             // Handle Second field
             if (item.Second.StartsWith("*/"))

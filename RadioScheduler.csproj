@@ -81,8 +81,9 @@
     <Compile Include="AppSettings.cs" />
     <Compile Include="AudioPlayer.cs" />
     <Compile Include="CalendarHelper.cs" />
-    <Compile Include="ConfigManager.cs" />
-    <Compile Include="CurrentTrigger.cs" />
+    <Compile Include="AppConfigManager.cs" />
+    <Compile Include="ActiveTriggers.cs" />
+    <Compile Include="Enums.cs" />
     <Compile Include="FileHashHelper.cs" />
     <Compile Include="FilePathItem.cs" />
     <Compile Include="InstantPlayManager.cs" />
@@ -96,6 +97,7 @@
     </Compile>
     <Compile Include="ScheduleItem.cs" />
     <Compile Include="Scheduler.cs" />
+    <Compile Include="SchedulerConfigManager.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="WebServer.cs" />
   </ItemGroup>

@@ -81,7 +81,7 @@ namespace RadioSchedulerService
             try
             {
                 // Load settings from the configuration file
-                var config = ConfigManager.LoadConfig();
+                var config = AppConfigManager.LoadConfig();
                 var appSettings = config.Application;
 
                 // Set application settings

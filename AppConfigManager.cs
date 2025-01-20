@@ -1,11 +1,11 @@
 //Be Naame Khoda
-//FileName: ConfigManager.cs
+//FileName: AppConfigManager.cs
 
 using Newtonsoft.Json;
 using System;
 using System.IO;
 
-public static class ConfigManager
+public static class AppConfigManager
 {
     private static readonly string ConfigFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AppSettings.conf");
 

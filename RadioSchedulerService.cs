@@ -37,13 +37,14 @@ namespace RadioSchedulerService
             _timer.Stop();
             _timer.Dispose();
             _scheduler = null;
+            _webServer = null;
 
             Logger.LogMessage("RadioSchedulerService stopped.");
         }
 
         private void OnTimerElapsed(object sender, ElapsedEventArgs e)
         {
-            _scheduler.ReloadScheduleConfig();
+            _scheduler._configManager.ReloadScheduleConfig();
         }
     }
 }

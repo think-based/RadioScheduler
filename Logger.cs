@@ -7,6 +7,7 @@ using System.IO;
 public static class Logger
 {
     public static readonly string LogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.log");
+    private static readonly object _logLock = new object(); // Lock object for thread safety
 
     static Logger()
     {
@@ -28,10 +29,14 @@ public static class Logger
     {
         try
         {
-            string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}";
-            using (StreamWriter writer = new StreamWriter(LogFilePath, true))
+            lock (_logLock) // Ensures exclusive access
             {
-                writer.WriteLine(logEntry);
+                string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}";
+                using (FileStream fileStream = new FileStream(LogFilePath, FileMode.Append, FileAccess.Write, FileShare.Read))
+                using (StreamWriter writer = new StreamWriter(fileStream))
+                {
+                    writer.WriteLine(logEntry);
+                }
             }
         }
         catch (Exception ex)
@@ -40,12 +45,16 @@ public static class Logger
         }
     }
 
+
     public static void ClearLog()
     {
         try
         {
-            // پاک کردن محتوای فایل لاگ
-            File.WriteAllText(LogFilePath, string.Empty);
+            lock (_logLock)
+            {
+                // پاک کردن محتوای فایل لاگ
+                File.WriteAllText(LogFilePath, string.Empty);
+            }
             Logger.LogMessage("Log file cleared."); // ثبت پیام در لاگ پس از پاک کردن
         }
         catch (Exception ex)

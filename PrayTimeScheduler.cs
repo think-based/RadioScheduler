@@ -130,9 +130,7 @@ public class PrayTimeScheduler
 
     private void SetCurrentTrigger(string eventName, DateTime triggerTime)
     {
-        CurrentTrigger.Event = eventName;
-        CurrentTrigger.Time = triggerTime;
-
+        ActiveTriggers.AddTrigger(eventName, triggerTime);
         // چاپ اطلاعات برای بررسی
         Logger.LogMessage($"CurrentTrigger set to: {eventName} at {triggerTime}");
     }
