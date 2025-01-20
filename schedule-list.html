@@ -1,0 +1,34 @@
+<!-- Be Naame Khoda -->
+<!-- FileName: schedule-list.html -->
+
+<div class="card">
+    <div class="card-header">
+        <h2>Schedule List</h2>
+    </div>
+    <div class="card-body">
+        <p>Upcoming playlists within the next 24 hours:</p>
+        <div id="loading-spinner" class="text-center">
+            <i class="fas fa-spinner fa-spin fa-3x"></i>
+            <p>Loading schedule...</p>
+        </div>
+        <div id="schedule-list-content" style="display: none;">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Trigger Event</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="schedule-list-body">
+                    <!-- Schedule items will be dynamically inserted here -->
+                </tbody>
+            </table>
+        </div>
+        <div id="error-message" class="alert alert-danger" style="display: none;">
+            Error loading schedule. Please try again.
+        </div>
+    </div>
+</div>
