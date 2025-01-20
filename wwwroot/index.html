@@ -67,4 +67,77 @@
                     <div class="collapse navbar-collapse" id="navbarSupportedContent">
                         <ul class="navbar-nav ml-auto">
                             <li class="nav-item">
-                                <a class="nav-link"
+                                <a class="nav-link" href="#" id="home-link" aria-label="Home">
+                                    <i class="fas fa-home"></i>
+                                    <p>Home</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" id="viewlog-link" aria-label="View Log">
+                                    <i class="fas fa-list-alt"></i>
+                                    <p>View Log</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" id="schedule-list-link" aria-label="Schedule List">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <p>Schedule List</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" id="clear-log-link" aria-label="Clear Log">
+                                    <i class="fas fa-trash"></i>
+                                    <p>Clear Log</p>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Content -->
+            <div class="content">
+                <div class="container-fluid" id="content">
+                    <!-- Loading Spinner -->
+                    <div id="loading-spinner" class="text-center" style="display: none;">
+                        <i class="fas fa-spinner fa-spin fa-3x"></i>
+                        <p>Loading...</p>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="error-message" class="alert alert-danger" style="display: none;">
+                        Error loading content. Please try again.
+                    </div>
+
+                    <!-- Dynamic content will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="container-fluid">
+                    <nav class="float-left">
+                        <ul>
+                            <li>
+                                <a href="#" aria-label="Radio Scheduler">Radio Scheduler</a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <div class="copyright float-right">
+                        &copy; <script>document.write(new Date().getFullYear())</script>, made with <i class="fas fa-heart"></i> by Your Team.
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="/js/jquery.min.js" defer></script>
+    <!-- Bootstrap JS -->
+    <script src="/js/bootstrap.min.js" defer></script>
+    <!-- Light Bootstrap Dashboard JS -->
+    <script src="/js/light-bootstrap-dashboard.js" defer></script>
+    <!-- Custom JS -->
+    <script src="/js/main.js" defer></script>
+</body>
+</html>
