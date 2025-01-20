@@ -118,7 +118,7 @@ public class WebServer
                 Name = item.Name,
                 StartTime = item.NextOccurrence.ToString("yyyy-MM-dd HH:mm:ss"),
                 EndTime = item.NextOccurrence.Add(item.TotalDuration).ToString("yyyy-MM-dd HH:mm:ss"),
-                TotalDuration = item.TotalDuration.TotalMilliseconds, // Convert TimeSpan to milliseconds
+                TotalDuration = item.TotalDuration.TotalSeconds, // Convert TimeSpan to milliseconds
                 LastPlayTime = item.LastPlayTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A",
                 TriggerTime = item.TriggerTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A",
                 Status = item.Status.ToString()
