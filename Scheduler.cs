@@ -188,15 +188,12 @@ public class Scheduler
     /// <returns>A list of scheduled items.</returns>
     public List<ScheduleItem> GetScheduledItems()
     {
+        DateTime now = DateTime.Now;
         // Return a copy of the list to avoid modifying the original
         return _configManager.ScheduleItems
-             .OrderBy(item => item.NextOccurrence)
-            .Select(item => {
-                if (item.Status != ScheduleStatus.Played && item.NextOccurrence <= DateTime.Now)
-                    item.Status = ScheduleStatus.TimeWaiting;
-
-                return item;
-            })
+             .Where(item => item.NextOccurrence >= now)
+            .OrderBy(item => item.NextOccurrence)
+           .Take(30)
             .ToList();
     }
     /// <summary>
