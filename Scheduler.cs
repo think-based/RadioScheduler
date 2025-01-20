@@ -36,15 +36,17 @@ public class Scheduler
     private void OnConfigReloaded()
     {
         Logger.LogMessage("Configuration reloaded.");
-        foreach (var item in _configManager.ScheduleItems)
-        {
-            item.NextOccurrence = GetNextOccurrence(item, DateTime.Now);
-        }
+        CheckScheduleItems();
     }
     /// <summary>
     /// Handles the timer tick event to check for scheduled tasks.
     /// </summary>
     private void OnCheckTimerElapsed(object sender, ElapsedEventArgs e)
+    {
+        CheckScheduleItems();
+    }
+
+    private void CheckScheduleItems()
     {
         DateTime now = DateTime.Now;
         DateTime currentDateTimeTruncated = TruncateDateTimeToSeconds(now);

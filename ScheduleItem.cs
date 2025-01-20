@@ -37,7 +37,7 @@ public class ScheduleItem
             throw new ArgumentException("Trigger should not be set for Periodic items.");
         }
 
-        if (Type == ScheduleType.NonPeriodic && (Second != null || Minute != null || Hour != null || DayOfMonth != null || Month != null || DayOfWeek != null))
+        if (Type == ScheduleType.NonPeriodic && (Second != null || Minute != null || Hour != null ))
         {
             throw new ArgumentException("Periodic fields (Second, Minute, Hour, DayOfMonth, Month, DayOfWeek) should not be set for NonPeriodic items.");
         }
