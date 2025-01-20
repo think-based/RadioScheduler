@@ -103,6 +103,10 @@ public class Scheduler
     /// </summary>
     private void OnPlaylistStart(ScheduleItem scheduleItem)
     {
+        // Log the playlist name and time to the Visual Studio console
+        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Playing playlist: {scheduleItem.Name}");
+
+        // Log the event to the application log
         Logger.LogMessage($"Starting playback for schedule: {scheduleItem.Name}");
 
         // Stop the current playlist (if any)
