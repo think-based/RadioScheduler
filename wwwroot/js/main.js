@@ -55,7 +55,7 @@ function initializePage(page) {
     if (page === 'home') {
         initializeHomePage();
     } else if (page === 'viewlog') {
-        initializeLogPolling();
+        initializeLogPage();
     } else if (page === 'schedule-list') {
         initializeScheduleListPage();
     }
@@ -103,21 +103,33 @@ function fetchPrayerTimes() {
 }
 
 /**
- * Initializes real-time log updates using Server-Sent Events (SSE).
+ * Initializes the log page.
  */
-function initializeLogPolling() {
-    const logContentElement = $('#log-content');
-    if (!logContentElement.length) return;
+function initializeLogPage() {
+    // Fetch log content when the page loads
+    fetchLogContent();
 
-    const eventSource = new EventSource('/api/logs/stream');
-    eventSource.onmessage = function (event) {
-        logContentElement.text(event.data);
-        logContentElement.scrollTop(logContentElement[0].scrollHeight); // Auto-scroll to bottom
-    };
+    // Handle Refresh button click
+    $('#refresh-log-button').on('click', function () {
+        fetchLogContent();
+    });
+}
 
-    eventSource.onerror = function () {
-        logContentElement.text('Error connecting to log stream.');
-    };
+/**
+ * Fetches and displays log content.
+ */
+function fetchLogContent() {
+    showLoadingSpinner();
+    $.get('/api/logs')
+        .done(function (data) {
+            $('#log-content').text(data);
+        })
+        .fail(function (error) {
+            showError('Error fetching log content.');
+        })
+        .always(function () {
+            hideLoadingSpinner();
+        });
 }
 
 /**
@@ -161,7 +173,7 @@ function clearLog() {
         .done(function () {
             // Reload the log content after clearing
             if ($('#log-content').length) {
-                initializeLogPolling();
+                fetchLogContent();
             }
         })
         .fail(function (error) {
