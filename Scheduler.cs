@@ -1,15 +1,13 @@
 // Be Naame Khoda
 // FileName: Scheduler.cs
-
+// TODO : fix audio.conf : noperiodic : month, dayofmonth...
+// TODO : fix audio.conf : calender and locals and timezones
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Speech.Synthesis;
 using System.Timers;
 using NAudio.Wave;
-using Newtonsoft.Json;
-using RadioScheduler.Entities;
 using static Enums;
 
 public class Scheduler
@@ -113,9 +111,7 @@ public class Scheduler
     {
         foreach (var trigger in ActiveTriggers.Triggers)
         {
-            if (nextOccurrenceTruncated == currentDateTimeTruncated &&
-                 !string.IsNullOrEmpty(item.Trigger) &&
-                    item.Trigger.Equals(trigger.Event, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(item.Trigger) && item.Trigger.Equals(trigger.Event, StringComparison.OrdinalIgnoreCase))
             {
                 if (item.TriggerTime != trigger.Time)
                 {
