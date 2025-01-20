@@ -20,6 +20,10 @@ $(document).ready(function () {
         e.preventDefault();
         loadPage('schedule-list');
     });
+    $('#events-link').on('click', function (e) {
+        e.preventDefault();
+        loadPage('events');
+    });
 
     // Handle Clear Log button click
     $('#clear-log-link').on('click', function (e) {
@@ -58,6 +62,8 @@ function initializePage(page) {
         initializeLogPage();
     } else if (page === 'schedule-list') {
         initializeScheduleListPage();
+    } else if(page === 'events') {
+        initializeEventsPage();
     }
 }
 
@@ -141,6 +147,8 @@ function initializeScheduleListPage() {
         .done(function (data) {
             const scheduleListBody = $('#schedule-list-body');
             scheduleListBody.empty();
+             // Show the schedule list content
+            $('#schedule-list-content').show();
 
             data.forEach(item => {
                 const row = `
@@ -150,7 +158,7 @@ function initializeScheduleListPage() {
                         <td>${formatDateTime(item.EndTime)}</td>
                         <td>${formatDuration(item.TotalDuration)}</td>
                         <td>${formatDateTime(item.LastPlayTime)}</td>
-                        <td>${formatDateTime(item.TriggerTime)}</td>
+                        <td>${item.TriggerTime && item.TriggerTime !== "N/A" ? formatDateTime(item.TriggerTime) : 'N/A'}</td>
                         <td>${item.Status}</td>
                     </tr>
                 `;
@@ -164,7 +172,12 @@ function initializeScheduleListPage() {
             hideLoadingSpinner();
         });
 }
-
+/**
+ * Initializes the events page.
+ */
+function initializeEventsPage() {
+    fetchTriggers();
+}
 /**
  * Clears the log file and reloads the log content.
  */
@@ -180,7 +193,163 @@ function clearLog() {
             showError('Error clearing log.');
         });
 }
+/**
+ * Fetches and displays the triggers list.
+ */
+function fetchTriggers() {
+    showLoadingSpinner();
+    $.get('/api/triggers')
+        .done(function(data) {
+            const eventsListBody = $('#events-list-body');
+            eventsListBody.empty();
+            //Show the table
+            $('#events-list-content').show();
+              data.forEach(item => {
+                  const row = `
+                    <tr>
+                        <td>${item.triggerEvent}</td>
+                       <td>${item.type}</td>
+                        <td>${formatDateTime(item.time)}</td>
+                         <td>
+                            ${item.type === 'Manual' ? 
+                                `<button class="btn btn-sm btn-primary" onclick="editTrigger('${item.triggerEvent}')" >Edit</button>
+                                 <button class="btn btn-sm btn-danger"  onclick="deleteTrigger('${item.triggerEvent}')" >Delete</button>`
+                                : 'Read-Only'}
+                         </td>
+                    </tr>
+                `;
+                eventsListBody.append(row);
+              });
 
+        })
+        .fail(function (error) {
+           showError('Error fetching events.');
+        })
+       .always(function () {
+          hideLoadingSpinner();
+       });
+}
+/**
+ * Deletes a trigger.
+ * @param {string} triggerEventName - The name of the event to delete.
+ */
+function deleteTrigger(triggerEventName) {
+     if (!confirm(`Are you sure you want to delete trigger: ${triggerEventName}?`)) {
+        return;
+    }
+    $.ajax({
+        url: '/api/triggers',
+        type: 'DELETE',
+         contentType: 'application/json',
+        data: JSON.stringify({ triggerEvent: triggerEventName }),
+        success: function (result) {
+            fetchTriggers();
+            alert(`Trigger "${triggerEventName}" deleted successfully!`);
+        },
+        error: function (error) {
+            showError(`Error deleting trigger "${triggerEventName}".`);
+        }
+    });
+}
+/**
+ * Opens the trigger editing modal.
+ * @param {string} triggerEventName - The name of the event to edit.
+ */
+/**
+ * Opens the trigger editing modal.
+ * @param {string} triggerEventName - The name of the event to edit.
+ */
+function editTrigger(triggerEventName) {
+    // Set the event name in the modal
+    $('#edit-trigger-name').val(triggerEventName);
+
+   //Fetch the data for the trigger and populate the form
+
+     $.get(`/api/triggers/${triggerEventName}`)
+         .done(function (data) {
+             // Format the datetime if time exists, else set to null
+               const formattedTime = data.time ? formatDateTimeForInput(data.time) : null;
+             $('#edit-trigger-time').val(formattedTime);
+
+            $('#edit-trigger-modal').modal('show');
+
+     })
+       .fail(function (error) {
+           showError('Error fetching event.');
+      });
+}
+/**
+ * Formats a date-time string for datetime-local input.
+ * @param {string} dateTime - The date-time string.
+ * @returns {string} - The formatted date-time string.
+ */
+function formatDateTimeForInput(dateTime) {
+    if (!dateTime) return '';
+    const date = new Date(dateTime);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+/**
+ * Submits the new trigger data.
+ */
+function submitNewTrigger() {
+    const triggerEventName = $('#new-trigger-name').val();
+    const triggerEventTime = $('#new-trigger-time').val();
+
+    $.ajax({
+        url: '/api/triggers',
+        type: 'POST',
+        contentType: 'application/json',
+       data: JSON.stringify({
+            triggerEvent: triggerEventName,
+            time: triggerEventTime
+        }),
+        success: function (result) {
+            $('#new-trigger-modal').modal('hide');
+            fetchTriggers();
+            alert('New trigger added successfully!');
+           $('#new-trigger-name').val('');
+          $('#new-trigger-time').val('');
+        },
+        error: function(error) {
+              showError('Error adding new trigger.');
+        }
+    });
+}
+/**
+ * Submits the edited trigger data.
+ */
+function submitEditedTrigger() {
+    const triggerEventName = $('#edit-trigger-name').val();
+    const triggerEventTime = $('#edit-trigger-time').val();
+     $.ajax({
+        url: '/api/triggers',
+        type: 'PUT',
+        contentType: 'application/json',
+         data: JSON.stringify({
+            triggerEvent: triggerEventName,
+            time: triggerEventTime
+        }),
+        success: function (result) {
+             $('#edit-trigger-modal').modal('hide');
+           fetchTriggers();
+           alert('Trigger updated successfully!');
+        },
+        error: function(error) {
+            showError(`Error updating trigger "${triggerEventName}".`);
+        }
+    });
+}
+/**
+ * Opens the new trigger modal
+ */
+function openNewTriggerModal() {
+    $('#new-trigger-modal').modal('show');
+}
 /**
  * Shows the loading spinner.
  */
@@ -217,10 +386,12 @@ function hideError() {
  */
 function formatDuration(duration) {
     if (!duration) return 'N/A';
-    const hours = Math.floor(duration / 3600000);
-    const minutes = Math.floor((duration % 3600000) / 60000);
-    const seconds = Math.floor((duration % 60000) / 1000);
-    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    const seconds = Math.floor(duration / 1000); // Convert milliseconds to seconds
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    return `${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}`;
 }
 
 /**

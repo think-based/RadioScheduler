@@ -17,7 +17,7 @@
 <body>
     <div class="wrapper">
         <!-- Sidebar -->
-        <div class="sidebar" data-color="purple" data-image="/img/sidebar.jpg">
+        <nav class="sidebar" data-color="purple" data-image="/img/sidebar.jpg" aria-label="Main Navigation">
             <div class="sidebar-wrapper">
                 <div class="logo">
                     <a href="#" class="simple-text" aria-label="Radio Scheduler Home">
@@ -44,6 +44,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="#" id="events-link" aria-label="Events">
+                            <i class="fas fa-bolt"></i>
+                            <p>Events</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="#" id="clear-log-link" aria-label="Clear Log">
                             <i class="fas fa-trash"></i>
                             <p>Clear Log</p>
@@ -51,12 +57,12 @@
                     </li>
                 </ul>
             </div>
-        </div>
+        </nav>
 
         <!-- Main Panel -->
         <div class="main-panel">
             <!-- Navbar -->
-            <nav class="navbar navbar-expand-lg navbar-transparent navbar-absolute fixed-top">
+            <nav class="navbar navbar-expand-lg navbar-transparent navbar-absolute fixed-top" aria-label="Top Navigation">
                 <div class="container-fluid">
                     <div class="navbar-wrapper">
                         <a class="navbar-brand" href="#" aria-label="Dashboard">Dashboard</a>
@@ -85,6 +91,12 @@
                                 </a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link" href="#" id="events-link" aria-label="Events">
+                                    <i class="fas fa-bolt"></i>
+                                    <p>Events</p>
+                                </a>
+                             </li>
+                            <li class="nav-item">
                                 <a class="nav-link" href="#" id="clear-log-link" aria-label="Clear Log">
                                     <i class="fas fa-trash"></i>
                                     <p>Clear Log</p>
@@ -96,7 +108,7 @@
             </nav>
 
             <!-- Content -->
-            <div class="content">
+            <main class="content">
                 <div class="container-fluid" id="content">
                     <!-- Loading Spinner -->
                     <div id="loading-spinner" class="text-center" style="display: none;">
@@ -111,10 +123,10 @@
 
                     <!-- Dynamic content will be loaded here -->
                 </div>
-            </div>
+            </main>
 
             <!-- Footer -->
-            <footer class="footer">
+            <footer class="footer" aria-label="Footer">
                 <div class="container-fluid">
                     <nav class="float-left">
                         <ul>
@@ -124,7 +136,7 @@
                         </ul>
                     </nav>
                     <div class="copyright float-right">
-                        &copy; <script>document.write(new Date().getFullYear())</script>, made with <i class="fas fa-heart"></i> by Your Team.
+                        © <script>document.write(new Date().getFullYear())</script>, made with <i class="fas fa-heart"></i> by Your Team.
                     </div>
                 </div>
             </footer>

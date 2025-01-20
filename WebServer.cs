@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Linq;
+using static ActiveTriggers;
 
 public class WebServer
 {
@@ -70,6 +71,11 @@ public class WebServer
             {
                 ServeHtmlFile(response, Path.Combine("wwwroot", "schedule-list.html"));
             }
+            // Serve events.html for /events.html
+            else if (path == "/events.html")
+            {
+                ServeHtmlFile(response, Path.Combine("wwwroot", "events.html"));
+            }
             // Handle AJAX requests for dynamic content
             else if (path == "/clearlog")
             {
@@ -85,6 +91,42 @@ public class WebServer
             {
                 ServeScheduleList(response);
             }
+            // API endpoint to fetch prayer times
+            else if (path == "/api/prayertimes")
+            {
+                ServePrayerTimes(request, response);
+            }
+            // API endpoint to fetch, delete and add triggers
+            else if (path == "/api/triggers")
+            {
+                switch (request.HttpMethod)
+                {
+                    case "GET":
+                        ServeTriggers(response);
+                        break;
+                    case "POST":
+                        AddTrigger(request, response);
+                        break;
+                    case "PUT":
+                        EditTrigger(request, response);
+                        break;
+                    case "DELETE":
+                        DeleteTrigger(request, response);
+                        break;
+                    default:
+                        response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+                        break;
+                }
+            }
+            // API endpoint to fetch trigger by name
+            else if (path.StartsWith("/api/triggers/"))
+            {
+                if (request.HttpMethod == "GET")
+                    ServeTriggerByName(request, response);
+                else
+                    response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+            }
+
             else
             {
                 response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -98,6 +140,227 @@ public class WebServer
         finally
         {
             response.OutputStream.Close();
+        }
+    }
+
+    /// <summary>
+    /// Serves all triggers.
+    /// </summary>
+    /// <param name="response">The HTTP listener response object.</param>
+    private void ServeTriggers(HttpListenerResponse response)
+    {
+        try
+        {
+            var triggers = ActiveTriggers.Triggers.Select(item => new
+            {
+                triggerEvent = item.Event,
+                time = item.Time,
+                type = item.Type.ToString()
+            }).ToList();
+
+            var jsonResponse = JsonConvert.SerializeObject(triggers);
+            var buffer = Encoding.UTF8.GetBytes(jsonResponse);
+            response.ContentType = "application/json";
+            response.ContentLength64 = buffer.Length;
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error serving triggers: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        }
+    }
+    /// <summary>
+    /// Serves a single trigger by name.
+    /// </summary>
+    /// <param name="request">The HTTP request object.</param>
+    /// <param name="response">The HTTP response object.</param>
+    private void ServeTriggerByName(HttpListenerRequest request, HttpListenerResponse response)
+    {
+        try
+        {
+            string eventName = request.Url.Segments.Last();
+            var trigger = ActiveTriggers.Triggers.FirstOrDefault(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
+
+            if (trigger.Equals(default((string, DateTime?, TriggerSource))))
+            {
+                response.StatusCode = (int)HttpStatusCode.NotFound;
+                return;
+            }
+
+            var triggerObj = new
+            {
+                triggerEvent = trigger.Event,
+                time = trigger.Time,
+                type = trigger.Type.ToString()
+            };
+
+            string jsonResponse = JsonConvert.SerializeObject(triggerObj);
+            byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
+            response.ContentType = "application/json";
+            response.ContentLength64 = buffer.Length;
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error serving trigger by name: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        }
+    }
+    /// <summary>
+    /// Adds a manual trigger
+    /// </summary>
+    /// <param name="request">The HTTP request object.</param>
+    /// <param name="response">The HTTP response object.</param>
+    private void AddTrigger(HttpListenerRequest request, HttpListenerResponse response)
+    {
+        try
+        {
+            string requestBody;
+            using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+            {
+                requestBody = reader.ReadToEnd();
+            }
+            dynamic data;
+            try
+            {
+                data = JsonConvert.DeserializeObject<dynamic>(requestBody);
+            }
+            catch (JsonSerializationException)
+            {
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return;
+            }
+            if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
+            {
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return;
+            }
+            string eventName = data.triggerEvent.ToString();
+            DateTime? triggerTime = null;
+            if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
+            {
+                DateTime parsedTime;
+                if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm:ss", null, System.Globalization.DateTimeStyles.None, out parsedTime))
+                {
+                    triggerTime = parsedTime;
+                }
+                else if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm", null, System.Globalization.DateTimeStyles.None, out parsedTime))
+                {
+                    triggerTime = parsedTime;
+                }
+                else
+                {
+                    response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return;
+                }
+            }
+
+            ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
+            response.StatusCode = (int)HttpStatusCode.OK;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error adding trigger: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        }
+    }
+    /// <summary>
+    /// Edits a manual trigger
+    /// </summary>
+    /// <param name="request">The HTTP request object.</param>
+    /// <param name="response">The HTTP response object.</param>
+    private void EditTrigger(HttpListenerRequest request, HttpListenerResponse response)
+    {
+        try
+        {
+            string requestBody;
+            using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+            {
+                requestBody = reader.ReadToEnd();
+            }
+            dynamic data;
+            try
+            {
+                data = JsonConvert.DeserializeObject<dynamic>(requestBody);
+            }
+            catch (JsonSerializationException)
+            {
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return;
+            }
+            if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
+            {
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return;
+            }
+
+            string eventName = data.triggerEvent.ToString();
+            DateTime? triggerTime = null;
+            if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
+            {
+                DateTime parsedTime;
+                if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm:ss", null, System.Globalization.DateTimeStyles.None, out parsedTime))
+                {
+                    triggerTime = parsedTime;
+                }
+                else if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm", null, System.Globalization.DateTimeStyles.None, out parsedTime))
+                {
+                    triggerTime = parsedTime;
+                }
+                else
+                {
+                    response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return;
+                }
+
+            }
+            ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
+            response.StatusCode = (int)HttpStatusCode.OK;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error editing trigger: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        }
+    }
+    /// <summary>
+    /// Deletes a trigger
+    /// </summary>
+    /// <param name="request">The HTTP request object.</param>
+    /// <param name="response">The HTTP response object.</param>
+    private void DeleteTrigger(HttpListenerRequest request, HttpListenerResponse response)
+    {
+        try
+        {
+            string requestBody;
+            using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+            {
+                requestBody = reader.ReadToEnd();
+            }
+            dynamic data;
+            try
+            {
+                data = JsonConvert.DeserializeObject<dynamic>(requestBody);
+            }
+            catch (JsonSerializationException)
+            {
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return;
+            }
+            if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
+            {
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                return;
+            }
+            string eventName = data.triggerEvent.ToString();
+            ActiveTriggers.RemoveTrigger(eventName);
+            response.StatusCode = (int)HttpStatusCode.OK;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error deleting trigger: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }
     }
 
@@ -118,9 +381,9 @@ public class WebServer
                 Name = item.Name,
                 StartTime = item.NextOccurrence.ToString("yyyy-MM-dd HH:mm:ss"),
                 EndTime = item.NextOccurrence.Add(item.TotalDuration).ToString("yyyy-MM-dd HH:mm:ss"),
-                TotalDuration = item.TotalDuration.TotalSeconds, // Convert TimeSpan to milliseconds
-                LastPlayTime = item.LastPlayTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A",
-                TriggerTime = item.TriggerTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A",
+                TotalDuration = item.TotalDuration.TotalMilliseconds, // Keep milliseconds here!
+                LastPlayTime = item.LastPlayTime != null ? item.LastPlayTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
+                TriggerTime = item.TriggerTime != null ? item.TriggerTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
                 Status = item.Status.ToString()
             });
 
@@ -136,6 +399,53 @@ public class WebServer
         catch (Exception ex)
         {
             Logger.LogMessage($"Error serving schedule list: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        }
+    }
+
+    /// <summary>
+    /// Serves the prayer times as a JSON response.
+    /// </summary>
+    /// <param name="request">The HTTP request object.</param>
+    /// <param name="response">The HTTP response object.</param>
+    private void ServePrayerTimes(HttpListenerRequest request, HttpListenerResponse response)
+    {
+        try
+        {
+            // Get the query parameters from the request
+            int year = int.Parse(request.QueryString.Get("year"));
+            int month = int.Parse(request.QueryString.Get("month"));
+            int day = int.Parse(request.QueryString.Get("day"));
+
+            // Calculate prayer times using PrayTime class
+            var prayTime = new PrayTime();
+            string[] prayerTimes = prayTime.getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
+
+            // Create an anonymous object to hold the prayer times
+            var prayerTimesObject = new
+            {
+                Fajr = prayerTimes[0],
+                Sunrise = prayerTimes[1],
+                Dhuhr = prayerTimes[2],
+                Asr = prayerTimes[3],
+                Sunset = prayerTimes[4],
+                Maghrib = prayerTimes[5],
+                Isha = prayerTimes[6]
+            };
+
+            // Serialize the object into JSON
+            string jsonResponse = JsonConvert.SerializeObject(prayerTimesObject);
+
+            // Set response headers and send the JSON content
+            byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
+            response.ContentType = "application/json";
+            response.ContentLength64 = buffer.Length;
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error serving prayer times: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }
     }
@@ -242,6 +552,7 @@ public class WebServer
             case ".jpg": return "image/jpeg";
             case ".png": return "image/png";
             case ".html": return "text/html";
+            case ".json": return "application/json";
             default: return "text/plain";
         }
     }
