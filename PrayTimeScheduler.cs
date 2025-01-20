@@ -3,6 +3,8 @@
 
 using System;
 using System.Timers;
+using static ActiveTriggers;
+using static Enums;
 
 public class PrayTimeScheduler
 {
@@ -130,7 +132,9 @@ public class PrayTimeScheduler
 
     private void SetCurrentTrigger(string eventName, DateTime triggerTime)
     {
-        ActiveTriggers.AddTrigger(eventName, triggerTime);
+        ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Systematic);
+
+
         // چاپ اطلاعات برای بررسی
         Logger.LogMessage($"CurrentTrigger set to: {eventName} at {triggerTime}");
     }

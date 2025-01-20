@@ -41,11 +41,11 @@ public class ScheduleItem
         {
             throw new ArgumentException("Periodic fields (Second, Minute, Hour, DayOfMonth, Month, DayOfWeek) should not be set for NonPeriodic items.");
         }
-
-        if (TriggerType != TriggerTypes.Delayed && string.IsNullOrEmpty(DelayTime))
+        if (TriggerType != TriggerTypes.Delayed && !string.IsNullOrEmpty(DelayTime))
         {
-            throw new ArgumentException("DelayTime should only be set when TriggerType is Delayed.");
+            DelayTime = null;
         }
+
         if (TriggerType == TriggerTypes.Delayed && string.IsNullOrEmpty(DelayTime))
         {
             throw new ArgumentException("DelayTime must be set when TriggerType is Delayed.");

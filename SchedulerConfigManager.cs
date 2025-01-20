@@ -30,6 +30,7 @@ public class SchedulerConfigManager
 
         ReloadScheduleConfig();
         _currentFileHash = CalculateConfigHash();
+        ConfigReloaded?.Invoke();
     }
 
 
@@ -40,6 +41,7 @@ public class SchedulerConfigManager
     {
         try
         {
+
             if (File.Exists(_configFilePath))
             {
                 string json = File.ReadAllText(_configFilePath);
@@ -61,7 +63,17 @@ public class SchedulerConfigManager
                         item.Status = ScheduleStatus.TimeWaiting; // Initial status
                         item.LastPlayTime = null;
                         item.Validate();
+                        if (item.TriggerType == TriggerTypes.Delayed && !string.IsNullOrEmpty(item.DelayTime))
+                        {
+                            if (!TimeSpan.TryParse(item.DelayTime, out _))
+                            {
+                                Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'. Setting to 00:00:00.");
+                                item.DelayTime = "00:00:00";
+                            }
+
+                        }
                         item.TotalDuration = CalculateTotalDuration(item.FilePaths);
+
                         ScheduleItems.Add(item);
 
                     }
@@ -80,6 +92,7 @@ public class SchedulerConfigManager
                 }
 
 
+
                 Logger.LogMessage($"Loaded {ScheduleItems.Count} items from {_configFilePath}.");
             }
             else
@@ -91,10 +104,7 @@ public class SchedulerConfigManager
         {
             Logger.LogMessage($"Error reloading schedule config: {ex.Message}");
         }
-        finally
-        {
-            ConfigReloaded?.Invoke();
-        }
+
     }
     /// <summary>
     /// Handles the timer tick event to check for configuration file changes.
@@ -140,13 +150,12 @@ public class SchedulerConfigManager
                 {
                     using (var reader = new AudioFileReader(filePathItem.Path))
                     {
-                        filePathItem.Duration = reader.TotalTime;
+                        totalDuration += reader.TotalTime;
                     }
                 }
                 catch (Exception ex)
                 {
                     Logger.LogMessage($"Error calculating duration for file {filePathItem.Path}: {ex.Message}");
-                    filePathItem.Duration = TimeSpan.Zero; // Default to zero if an error occurs
                 }
             }
             else if (Directory.Exists(filePathItem.Path)) // Handle folder
@@ -158,7 +167,7 @@ public class SchedulerConfigManager
                     {
                         using (var reader = new AudioFileReader(audioFile))
                         {
-                            filePathItem.Duration += reader.TotalTime;
+                            totalDuration += reader.TotalTime;
                         }
                     }
                     catch (Exception ex)
@@ -207,5 +216,4 @@ public class SchedulerConfigManager
             return TimeSpan.FromSeconds(text.Length / 10.0); // Fallback to estimation
         }
     }
-
 }

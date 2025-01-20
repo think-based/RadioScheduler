@@ -24,13 +24,11 @@ public class Scheduler
         _audioPlayer = new AudioPlayer();
         _configManager = new SchedulerConfigManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf"));
 
-
         // Set up the single timer to check schedules every second
         _checkTimer = new Timer(1000); // 1-second interval
         _checkTimer.Elapsed += OnCheckTimerElapsed;
         _checkTimer.AutoReset = true;
         _checkTimer.Enabled = true;
-
 
         _configManager.ConfigReloaded += OnConfigReloaded;
 
@@ -59,20 +57,19 @@ public class Scheduler
                 continue;
 
             DateTime nextOccurrenceTruncated = TruncateDateTimeToSeconds(item.NextOccurrence);
-
+            if (nextOccurrenceTruncated == currentDateTimeTruncated)
+            {
+                HandleScheduledPlayback(item, now);
+            }
             if (nextOccurrenceTruncated <= currentDateTimeTruncated)
             {
                 if (item.Type == ScheduleType.Periodic)
                 {
-                    HandlePeriodicItem(item, now, currentDateTimeTruncated, nextOccurrenceTruncated);
+                    item.NextOccurrence = GetNextOccurrence(item, now);
                 }
                 else
                 {
                     UpdateNonPeriodicNextOccurrence(item, currentDateTimeTruncated, nextOccurrenceTruncated, now);
-                    if (nextOccurrenceTruncated == currentDateTimeTruncated)
-                    {
-                        HandlePlayback(item, now);
-                    }
                 }
             }
             else
@@ -89,23 +86,25 @@ public class Scheduler
         }
     }
 
-    private void HandlePeriodicItem(ScheduleItem item, DateTime now, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated)
-    {
-        if (nextOccurrenceTruncated == currentDateTimeTruncated)
-        {
-            HandlePlayback(item, now);
-        }
-        item.NextOccurrence = GetNextOccurrence(item, now);
-    }
-    private void HandlePlayback(ScheduleItem item, DateTime now)
+    private void HandleScheduledPlayback(ScheduleItem item, DateTime now)
     {
         if (_audioPlayer.IsPlaying)
         {
             OnConflictOccurred(item);
             _audioPlayer.Stop(); // Stop the current playback
         }
+        // Log the playlist name and time to the Visual Studio console
+        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Playing playlist: {item.Name}");
+
+        // Log the event to the application log
+        Logger.LogMessage($"Starting playback for schedule: {item.Name}");
+
+        // Stop the current playlist (if any)
+        _audioPlayer.Stop();
+
+        // Start the new playlist
+        _audioPlayer.Play(item.FilePaths);
         item.Status = ScheduleStatus.Playing;
-        HandlePlaylistPlayback(item);
         item.LastPlayTime = now;
     }
     private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now)
@@ -134,7 +133,6 @@ public class Scheduler
                             Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
                             item.NextOccurrence = DateTime.MaxValue;
                         }
-
                     }
                     else if (item.TriggerType == TriggerTypes.Timed)
                     {
@@ -160,11 +158,11 @@ public class Scheduler
                         }
                     }
                 }
-
                 break;
             }
         }
     }
+
     private void OnConflictOccurred(object conflictData)
     {
         if (conflictData is ScheduleItem item)
@@ -184,25 +182,6 @@ public class Scheduler
         return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second);
     }
 
-
-    /// <summary>
-    /// Handles the start of a scheduled playlist.
-    /// </summary>
-    private void HandlePlaylistPlayback(ScheduleItem scheduleItem)
-    {
-        // Log the playlist name and time to the Visual Studio console
-        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Playing playlist: {scheduleItem.Name}");
-
-        // Log the event to the application log
-        Logger.LogMessage($"Starting playback for schedule: {scheduleItem.Name}");
-
-        // Stop the current playlist (if any)
-        _audioPlayer.Stop();
-
-        // Start the new playlist
-        _audioPlayer.Play(scheduleItem.FilePaths);
-    }
-
     /// <summary>
     /// Gets the list of scheduled items.
     /// </summary>
@@ -218,9 +197,8 @@ public class Scheduler
 
                 return item;
             })
-             .ToList();
+            .ToList();
     }
-
     /// <summary>
     /// Calculates the next occurrence of a schedule item.
     /// </summary>

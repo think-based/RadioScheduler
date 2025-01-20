@@ -7,8 +7,13 @@ using System.Linq;
 
 public static class ActiveTriggers
 {
-    public static List<(string Event, DateTime? Time)> Triggers { get; set; } = new List<(string Event, DateTime? Time)>();
-    public static void AddTrigger(string eventName, DateTime? triggerTime)
+    public enum TriggerSource
+    {
+        Systematic,
+        Manual
+    }
+    public static List<(string Event, DateTime? Time, TriggerSource Type)> Triggers { get; set; } = new List<(string Event, DateTime? Time, TriggerSource Type)>();
+    public static void AddTrigger(string eventName, DateTime? triggerTime, TriggerSource type)
     {
         // Check if a trigger with the same name already exists
         int existingIndex = Triggers.FindIndex(trigger => trigger.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
@@ -16,12 +21,12 @@ public static class ActiveTriggers
         if (existingIndex >= 0)
         {
             // Update the existing trigger with the new time
-            Triggers[existingIndex] = (eventName, triggerTime);
+            Triggers[existingIndex] = (eventName, triggerTime, type);
         }
         else
         {
             // Add the new trigger
-            Triggers.Add((eventName, triggerTime));
+            Triggers.Add((eventName, triggerTime, type));
         }
 
     }
