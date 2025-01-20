@@ -4,7 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Speech.Synthesis;
 using System.Timers;
+using NAudio.Wave;
 using Newtonsoft.Json;
 using RadioScheduler.Entities;
 
@@ -76,6 +78,7 @@ public class Scheduler
 
         foreach (var item in _scheduleItems)
         {
+            // Check if the task is due to run
             if (item.NextOccurrence <= now)
             {
                 // Trigger playback
