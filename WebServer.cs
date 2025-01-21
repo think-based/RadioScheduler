@@ -274,18 +274,14 @@ public class WebServer
              if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
              {
                 DateTime parsedTime;
-                  if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm:ss", null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+                  if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
                 {
                     triggerTime = parsedTime;
                 }
-                else if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm", null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
-               {
-                     triggerTime = parsedTime;
-                }
-                 else
-                {
+                else
+                 {
                      response.StatusCode = (int)HttpStatusCode.BadRequest;
-                     response.StatusDescription = "Invalid time format. Please use yyyy-MM-ddTHH:mm:ss or yyyy-MM-ddTHH:mm format";
+                     response.StatusDescription = "Invalid time format. Please provide a valid date and time.";
                      return;
                 }
 
@@ -338,20 +334,16 @@ public class WebServer
            string eventName = data.triggerEvent.ToString();
              DateTime? triggerTime = null;
              if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
-            {
+             {
                  DateTime parsedTime;
-                if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm:ss", null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+                if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
                 {
                     triggerTime = parsedTime;
-                }
-                else if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm", null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
-                 {
-                     triggerTime = parsedTime;
                 }
                else
                {
                     response.StatusCode = (int)HttpStatusCode.BadRequest;
-                  response.StatusDescription = "Invalid time format. Please use yyyy-MM-ddTHH:mm:ss or yyyy-MM-ddTHH:mm format";
+                  response.StatusDescription = "Invalid time format. Please provide a valid date and time.";
                   return;
                 }
 
