@@ -46,4 +46,13 @@ public static class ActiveTriggers
         Triggers.Clear();
     }
 }
+public class ActiveTriggersManager : ITriggerManager
+{
+    public List<(string Event, DateTime? Time, ActiveTriggers.TriggerSource Type)> Triggers => ActiveTriggers.Triggers;
+
+    public bool ContainsTrigger(string eventName)
+    {
+        return ActiveTriggers.ContainsTrigger(eventName);
+    }
+}
     
