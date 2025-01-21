@@ -32,6 +32,7 @@ public class Scheduler
         _configManager.ConfigReloaded += OnConfigReloaded;
     }
 
+    public ISchedulerConfigManager ConfigManager => _configManager;
     private void OnConfigReloaded()
     {
         Logger.LogMessage("Configuration reloaded.");
