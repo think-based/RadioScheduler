@@ -1,4 +1,4 @@
-﻿//Be Naame Khoda
+      //Be Naame Khoda
 //FileName: SchedulerConfigManager.cs
 
 using System;
@@ -11,7 +11,7 @@ using NAudio.Wave;
 using RadioScheduler.Entities;
 using System.Speech.Synthesis;
 
-public class SchedulerConfigManager
+public class SchedulerConfigManager : ISchedulerConfigManager
 {
     private string _configFilePath;
     private string _currentFileHash;
@@ -94,6 +94,7 @@ public class SchedulerConfigManager
 
 
                 Logger.LogMessage($"Loaded {ScheduleItems.Count} items from {_configFilePath}.");
+                ConfigReloaded?.Invoke();
             }
             else
             {
@@ -217,3 +218,4 @@ public class SchedulerConfigManager
         }
     }
 }
+    
