@@ -244,64 +244,69 @@ public class WebServer
     /// <param name="response">The HTTP response object.</param>
   private void AddTrigger(HttpListenerRequest request, HttpListenerResponse response)
     {
-        try
+       try
         {
-             string requestBody;
+            string requestBody;
             using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
             {
                 requestBody = reader.ReadToEnd();
             }
             dynamic data;
-              try
-             {
-                 data = JsonConvert.DeserializeObject<dynamic>(requestBody);
-            }
-             catch (JsonSerializationException)
+             try
             {
-                 response.StatusCode = (int)HttpStatusCode.BadRequest;
-                  response.StatusDescription = "Invalid JSON format in the request body.";
-                  WriteStringResponse(response, response.StatusDescription);
-                return;
+                  data = JsonConvert.DeserializeObject<dynamic>(requestBody);
              }
-            if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
-           {
+            catch (JsonSerializationException)
+            {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
-               response.StatusDescription = "The triggerEvent cannot be empty";
+                response.StatusDescription = "Invalid JSON format in the request body.";
+               WriteStringResponse(response, response.StatusDescription);
+                 return;
+            }
+            if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
+            {
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                response.StatusDescription = "The triggerEvent cannot be empty";
                  WriteStringResponse(response, response.StatusDescription);
                 return;
-             }
+            }
 
-             string eventName = data.triggerEvent.ToString();
-             DateTime? triggerTime = null;
-             if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
-             {
+            string eventName = data.triggerEvent.ToString();
+            DateTime? triggerTime = null;
+            if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
+            {
                 DateTime parsedTime;
-                  if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+                if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
                 {
-                    triggerTime = parsedTime;
+                     TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
+                     TimeZoneInfo targetTimeZone = TimeZoneInfo.CreateCustomTimeZone(
+                     "PrayTimeZone",
+                     TimeSpan.FromHours(Settings.TimeZone),
+                     "PrayTimeZone",
+                     "PrayTimeZone");
+
+                     triggerTime = TimeZoneInfo.ConvertTime(parsedTime, TimeZoneInfo.Utc, targetTimeZone);
                 }
                 else
-                 {
-                     response.StatusCode = (int)HttpStatusCode.BadRequest;
+                {
+                    response.StatusCode = (int)HttpStatusCode.BadRequest;
                      response.StatusDescription = "Invalid time format. Please provide a valid date and time.";
-                     WriteStringResponse(response, response.StatusDescription);
+                   WriteStringResponse(response, response.StatusDescription);
                      return;
                 }
+            }
 
-             }
-
-
-             ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
+            ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
             response.StatusCode = (int)HttpStatusCode.OK;
-              response.StatusDescription = "Trigger added successfully.";
+             response.StatusDescription = "Trigger added successfully.";
                WriteStringResponse(response, response.StatusDescription);
         }
-       catch (Exception ex)
+        catch (Exception ex)
         {
             Logger.LogMessage($"Error adding trigger: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
-             response.StatusDescription = $"Error adding trigger: {ex.Message}";
-               WriteStringResponse(response, response.StatusDescription);
+              response.StatusDescription = $"Error adding trigger: {ex.Message}";
+             WriteStringResponse(response, response.StatusDescription);
         }
     }
    /// <summary>
@@ -343,12 +348,19 @@ public class WebServer
              if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
             {
                  DateTime parsedTime;
-                if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+                 if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
                 {
-                    triggerTime = parsedTime;
+                      TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
+                     TimeZoneInfo targetTimeZone = TimeZoneInfo.CreateCustomTimeZone(
+                     "PrayTimeZone",
+                     TimeSpan.FromHours(Settings.TimeZone),
+                     "PrayTimeZone",
+                     "PrayTimeZone");
+
+                    triggerTime = TimeZoneInfo.ConvertTime(parsedTime, TimeZoneInfo.Utc, targetTimeZone);
                 }
-               else
-               {
+                else
+                {
                     response.StatusCode = (int)HttpStatusCode.BadRequest;
                   response.StatusDescription = "Invalid time format. Please provide a valid date and time.";
                    WriteStringResponse(response, response.StatusDescription);
@@ -407,14 +419,14 @@ public class WebServer
             ActiveTriggers.RemoveTrigger(eventName);
             response.StatusCode = (int)HttpStatusCode.OK;
             response.StatusDescription = "Trigger deleted successfully.";
-              WriteStringResponse(response, response.StatusDescription);
+             WriteStringResponse(response, response.StatusDescription);
         }
         catch (Exception ex)
         {
              Logger.LogMessage($"Error deleting trigger: {ex.Message}");
              response.StatusCode = (int)HttpStatusCode.InternalServerError;
            response.StatusDescription = $"Error deleting trigger: {ex.Message}";
-                WriteStringResponse(response, response.StatusDescription);
+               WriteStringResponse(response, response.StatusDescription);
        }
     }
     /// <summary>
@@ -449,7 +461,7 @@ public class WebServer
                 EndTime = item.NextOccurrence.Add(item.TotalDuration).ToString("yyyy-MM-dd HH:mm:ss"),
                 TotalDuration = item.TotalDuration.TotalMilliseconds, // Keep milliseconds here!
                 LastPlayTime = item.LastPlayTime != null ? item.LastPlayTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
-                TriggerTime = item.TriggerTime != null ? item.TriggerTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
+                 TriggerTime = item.TriggerTime != null ? item.TriggerTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
                 Status = item.Status.ToString()
             });
 
