@@ -51,7 +51,7 @@ namespace RadioSchedulerService
 
         private void OnTimerElapsed(object sender, ElapsedEventArgs e)
         {
-            _scheduler._configManager.ReloadScheduleConfig();
+            _scheduler.ConfigManager.ReloadScheduleConfig();
         }
     }
 }
