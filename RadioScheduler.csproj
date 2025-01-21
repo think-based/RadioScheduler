@@ -78,6 +78,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApiRequestHandler.cs" />
     <Compile Include="AppSettings.cs" />
     <Compile Include="AudioPlayer.cs" />
     <Compile Include="CalendarHelper.cs" />
