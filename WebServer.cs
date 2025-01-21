@@ -260,12 +260,14 @@ public class WebServer
             {
                  response.StatusCode = (int)HttpStatusCode.BadRequest;
                   response.StatusDescription = "Invalid JSON format in the request body.";
+                  WriteStringResponse(response, response.StatusDescription);
                 return;
              }
             if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
            {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
                response.StatusDescription = "The triggerEvent cannot be empty";
+                 WriteStringResponse(response, response.StatusDescription);
                 return;
              }
 
@@ -282,6 +284,7 @@ public class WebServer
                  {
                      response.StatusCode = (int)HttpStatusCode.BadRequest;
                      response.StatusDescription = "Invalid time format. Please provide a valid date and time.";
+                     WriteStringResponse(response, response.StatusDescription);
                      return;
                 }
 
@@ -291,12 +294,14 @@ public class WebServer
              ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
             response.StatusCode = (int)HttpStatusCode.OK;
               response.StatusDescription = "Trigger added successfully.";
+               WriteStringResponse(response, response.StatusDescription);
         }
        catch (Exception ex)
         {
             Logger.LogMessage($"Error adding trigger: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            response.StatusDescription = $"Error adding trigger: {ex.Message}";
+             response.StatusDescription = $"Error adding trigger: {ex.Message}";
+               WriteStringResponse(response, response.StatusDescription);
         }
     }
    /// <summary>
@@ -322,19 +327,21 @@ public class WebServer
             {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
                response.StatusDescription = "Invalid JSON format in the request body.";
+                WriteStringResponse(response, response.StatusDescription);
                  return;
             }
             if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
             {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
                response.StatusDescription = "The triggerEvent cannot be empty";
+                WriteStringResponse(response, response.StatusDescription);
                  return;
             }
 
            string eventName = data.triggerEvent.ToString();
              DateTime? triggerTime = null;
              if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
-             {
+            {
                  DateTime parsedTime;
                 if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
                 {
@@ -344,6 +351,7 @@ public class WebServer
                {
                     response.StatusCode = (int)HttpStatusCode.BadRequest;
                   response.StatusDescription = "Invalid time format. Please provide a valid date and time.";
+                   WriteStringResponse(response, response.StatusDescription);
                   return;
                 }
 
@@ -351,12 +359,14 @@ public class WebServer
             ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
             response.StatusCode = (int)HttpStatusCode.OK;
              response.StatusDescription = "Trigger updated successfully.";
+               WriteStringResponse(response, response.StatusDescription);
          }
         catch (Exception ex)
         {
             Logger.LogMessage($"Error editing trigger: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
              response.StatusDescription = $"Error editing trigger: {ex.Message}";
+                WriteStringResponse(response, response.StatusDescription);
          }
     }
     /// <summary>
@@ -382,12 +392,14 @@ public class WebServer
              {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
                 response.StatusDescription = "Invalid JSON format in the request body.";
+                 WriteStringResponse(response, response.StatusDescription);
                 return;
              }
             if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
              {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
                 response.StatusDescription = "The triggerEvent cannot be empty";
+               WriteStringResponse(response, response.StatusDescription);
                return;
             }
 
@@ -395,14 +407,29 @@ public class WebServer
             ActiveTriggers.RemoveTrigger(eventName);
             response.StatusCode = (int)HttpStatusCode.OK;
             response.StatusDescription = "Trigger deleted successfully.";
+              WriteStringResponse(response, response.StatusDescription);
         }
         catch (Exception ex)
         {
              Logger.LogMessage($"Error deleting trigger: {ex.Message}");
              response.StatusCode = (int)HttpStatusCode.InternalServerError;
            response.StatusDescription = $"Error deleting trigger: {ex.Message}";
+                WriteStringResponse(response, response.StatusDescription);
        }
     }
+    /// <summary>
+        /// Writes the string message to the response body
+        /// </summary>
+        /// <param name="response"></param>
+        /// <param name="message"></param>
+   private void WriteStringResponse(HttpListenerResponse response, string message)
+        {
+             byte[] buffer = Encoding.UTF8.GetBytes(message);
+            response.ContentType = "text/plain";
+            response.ContentLength64 = buffer.Length;
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+       }
+
     /// <summary>
     /// Serves the schedule list as a JSON response.
     /// </summary>
