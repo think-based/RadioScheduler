@@ -281,7 +281,7 @@ function editTrigger(triggerEventName) {
      $.get(`/api/triggers/${triggerEventName}`)
          .done(function (data) {
               // Format the datetime if time exists, else set to null
-            const formattedTime =  convertUtcToLocalTime(data.time);
+            const formattedTime = data.time ? formatDateTimeForInput(data.time) : null;
             $('#edit-trigger-time').val(formattedTime);
             $('#edit-trigger-modal').modal('show');
 
@@ -295,10 +295,13 @@ function editTrigger(triggerEventName) {
  */
 function openNewTriggerModal() {
     const now = new Date();
+     const year = String(now.getFullYear());
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
 
-    $('#new-trigger-time').val(`${hours}:${minutes}`); // Use time format
+    $('#new-trigger-time').val(`${year}-${month}-${day}T${hours}:${minutes}`);
     $('#new-trigger-modal').modal('show');
 }
 /**
@@ -307,9 +310,9 @@ function openNewTriggerModal() {
  * @returns {string} - The formatted date-time string.
  */
 function formatDateTimeForInput(dateTime) {
-    if (!dateTime) return '';
+     if (!dateTime) return '';
     const date = new Date(dateTime);
-    const year = date.getFullYear();
+    const year = String(date.getFullYear());
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const hours = String(date.getHours()).padStart(2, '0');
@@ -360,7 +363,7 @@ function submitNewTrigger() {
 function submitEditedTrigger() {
     const triggerEventName = $('#edit-trigger-name').val();
     const triggerEventTime = $('#edit-trigger-time').val();
-    const triggerEventTimeUtc = convertLocalTimeToUtc(triggerEventTime);
+     const triggerEventTimeUtc = convertLocalTimeToUtc(triggerEventTime);
      $.ajax({
         url: '/api/triggers',
         type: 'PUT',
@@ -445,9 +448,9 @@ function pad(num) {
 
 function convertLocalTimeToUtc(timeString) {
     if(!timeString) return null;
-    const localTime = new Date(`1970-01-01T${timeString}`);
+    const localTime = new Date(timeString);
     const utcTime = new Date(localTime.getTime() - (localTime.getTimezoneOffset() * 60000));
-       const formattedUtcTime = utcTime.toISOString().slice(0, 19); // Remove milliseconds
+       const formattedUtcTime = utcTime.toISOString().slice(0, 19); // Remove milliseconds and Z
     return formattedUtcTime;
 }
 
