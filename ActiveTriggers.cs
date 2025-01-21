@@ -12,7 +12,7 @@ public static class ActiveTriggers
         Systematic,
         Manual
     }
-    public static List<(string Event, DateTime? Time, TriggerSource Type)> Triggers { get; set; } = new List<(string Event, DateTime? Time, TriggerSource Type)>();
+    public static List<(string Event, DateTime? Time, TriggerSource Type)> Triggers { get; } = new List<(string Event, DateTime? Time, TriggerSource Type)>();
     public static void AddTrigger(string eventName, DateTime? triggerTime, TriggerSource type)
     {
         // Check if a trigger with the same name already exists
@@ -41,6 +41,13 @@ public static class ActiveTriggers
         return Triggers.Exists(trigger => trigger.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
     }
 
+    public static (string Event, DateTime? Time, TriggerSource Type)? GetTrigger(string eventName)
+    {
+         var trigger = Triggers.FirstOrDefault(trigger => trigger.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
+           if(trigger.Equals(default((string, DateTime?, TriggerSource))))
+              return null;
+          return trigger;
+    }
     public static void ClearAll()
     {
         Triggers.Clear();
