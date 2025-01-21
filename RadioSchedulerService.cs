@@ -1,9 +1,10 @@
-//Be Naame Khoda
+      //Be Naame Khoda
 //FileName: RadioSchedulerService.cs
 
 using System;
 using System.ServiceProcess;
 using System.Timers;
+using System.IO;
 
 namespace RadioSchedulerService
 {
@@ -20,7 +21,13 @@ namespace RadioSchedulerService
 
         protected override void OnStart(string[] args)
         {
-            _scheduler = new Scheduler();
+             // Create concrete implementations
+            IAudioPlayer audioPlayer = new AudioPlayer();
+            ISchedulerConfigManager configManager = new SchedulerConfigManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf"));
+            IScheduleCalculatorFactory scheduleCalculatorFactory = new ScheduleCalculatorFactory();
+             ITriggerManager triggerManager = ActiveTriggers.Triggers as ITriggerManager;
+
+             _scheduler = new Scheduler(audioPlayer, configManager, scheduleCalculatorFactory, triggerManager);
             _webServer = new WebServer(_scheduler);
             _webServer.Start();
 
@@ -48,3 +55,4 @@ namespace RadioSchedulerService
         }
     }
 }
+    
