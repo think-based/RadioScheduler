@@ -6,16 +6,19 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using RadioSchedulerService;
 
 public class WebServer
 {
     private HttpListener _listener;
     private readonly ApiRequestHandler _apiHandler;
+      private readonly Scheduler _scheduler;
     public WebServer(Scheduler scheduler)
     {
          var triggerManager = new ActiveTriggersManager();
         _apiHandler = new ApiRequestHandler(triggerManager);
+        _scheduler = scheduler;
         _listener = new HttpListener();
         _listener.Prefixes.Add("http://localhost:8080/");
     }
@@ -146,6 +149,86 @@ public class WebServer
             response.OutputStream.Close();
         }
     }
+    private void ServeScheduleList(HttpListenerResponse response)
+    {
+         try
+        {
+            // Fetch the list of scheduled items directly from the Scheduler
+            var scheduleItems = _scheduler.GetScheduledItems();
+
+            // Create a JSON response with all required fields
+            var responseData = scheduleItems.Select(item => new
+            {
+                Name = item.Name,
+                StartTime = item.NextOccurrence.ToString("yyyy-MM-dd HH:mm:ss"),
+                EndTime = item.NextOccurrence.Add(item.TotalDuration).ToString("yyyy-MM-dd HH:mm:ss"),
+                TotalDuration = item.TotalDuration.TotalMilliseconds, // Keep milliseconds here!
+                LastPlayTime = item.LastPlayTime != null ? item.LastPlayTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
+                TriggerTime = item.TriggerTime != null ? item.TriggerTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
+                Status = item.Status.ToString()
+            });
+
+            // Serialize the response to JSON
+            string jsonResponse = JsonConvert.SerializeObject(responseData);
+
+            // Send the response
+            byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
+            response.ContentType = "application/json";
+            response.ContentLength64 = buffer.Length;
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error serving schedule list: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        }
+    }
+     /// <summary>
+    /// Serves the prayer times as a JSON response.
+    /// </summary>
+    /// <param name="request">The HTTP request object.</param>
+    /// <param name="response">The HTTP response object.</param>
+    private void ServePrayerTimes(HttpListenerRequest request, HttpListenerResponse response)
+    {
+        try
+        {
+            // Get the query parameters from the request
+            int year = int.Parse(request.QueryString.Get("year"));
+            int month = int.Parse(request.QueryString.Get("month"));
+            int day = int.Parse(request.QueryString.Get("day"));
+
+            // Calculate prayer times using PrayTime class
+            var prayTime = new PrayTime();
+            string[] prayerTimes = prayTime.getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
+
+            // Create an anonymous object to hold the prayer times
+            var prayerTimesObject = new
+            {
+                Fajr = prayerTimes[0],
+                Sunrise = prayerTimes[1],
+                Dhuhr = prayerTimes[2],
+                Asr = prayerTimes[3],
+                Sunset = prayerTimes[4],
+                Maghrib = prayerTimes[5],
+                Isha = prayerTimes[6]
+            };
+
+            // Serialize the object into JSON
+            string jsonResponse = JsonConvert.SerializeObject(prayerTimesObject);
+
+            // Set response headers and send the JSON content
+            byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
+            response.ContentType = "application/json";
+            response.ContentLength64 = buffer.Length;
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error serving prayer times: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        }
+    }
 
     /// <summary>
     /// Serves a static file (CSS, JS, images).
@@ -233,106 +316,6 @@ public class WebServer
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }
     }
-
-     /// <summary>
-        /// Writes the string message to the response body
-        /// </summary>
-        /// <param name="response"></param>
-        /// <param name="message"></param>
-   private void WriteStringResponse(HttpListenerResponse response, string message)
-        {
-             byte[] buffer = Encoding.UTF8.GetBytes(message);
-            response.ContentType = "text/plain";
-            response.ContentLength64 = buffer.Length;
-            response.OutputStream.Write(buffer, 0, buffer.Length);
-       }
-
-      /// <summary>
-    /// Serves the schedule list as a JSON response.
-    /// </summary>
-    /// <param name="response">The HTTP listener response object.</param>
-    private void ServeScheduleList(HttpListenerResponse response)
-    {
-        try
-        {
-            // Fetch the list of scheduled items directly from the Scheduler
-            var scheduleItems = _scheduler.GetScheduledItems();
-
-            // Create a JSON response with all required fields
-            var responseData = scheduleItems.Select(item => new
-            {
-                Name = item.Name,
-                StartTime = item.NextOccurrence.ToString("yyyy-MM-dd HH:mm:ss"),
-                EndTime = item.NextOccurrence.Add(item.TotalDuration).ToString("yyyy-MM-dd HH:mm:ss"),
-                TotalDuration = item.TotalDuration.TotalMilliseconds, // Keep milliseconds here!
-                LastPlayTime = item.LastPlayTime != null ? item.LastPlayTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
-                TriggerTime = item.TriggerTime != null ? item.TriggerTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
-                Status = item.Status.ToString()
-            });
-
-            // Serialize the response to JSON
-            string jsonResponse = JsonConvert.SerializeObject(responseData);
-
-            // Send the response
-            byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
-            response.ContentType = "application/json";
-            response.ContentLength64 = buffer.Length;
-            response.OutputStream.Write(buffer, 0, buffer.Length);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogMessage($"Error serving schedule list: {ex.Message}");
-            response.StatusCode = (int)HttpStatusCode.InternalServerError;
-        }
-    }
-
-    /// <summary>
-    /// Serves the prayer times as a JSON response.
-    /// </summary>
-    /// <param name="request">The HTTP request object.</param>
-    /// <param name="response">The HTTP response object.</param>
-    private void ServePrayerTimes(HttpListenerRequest request, HttpListenerResponse response)
-    {
-        try
-        {
-            // Get the query parameters from the request
-            int year = int.Parse(request.QueryString.Get("year"));
-            int month = int.Parse(request.QueryString.Get("month"));
-            int day = int.Parse(request.QueryString.Get("day"));
-
-            // Calculate prayer times using PrayTime class
-            var prayTime = new PrayTime();
-            string[] prayerTimes = prayTime.getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
-
-            // Create an anonymous object to hold the prayer times
-            var prayerTimesObject = new
-            {
-                Fajr = prayerTimes[0],
-                Sunrise = prayerTimes[1],
-                Dhuhr = prayerTimes[2],
-                Asr = prayerTimes[3],
-                Sunset = prayerTimes[4],
-                Maghrib = prayerTimes[5],
-                Isha = prayerTimes[6]
-            };
-
-            // Serialize the object into JSON
-            string jsonResponse = JsonConvert.SerializeObject(prayerTimesObject);
-
-            // Set response headers and send the JSON content
-            byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
-            response.ContentType = "application/json";
-            response.ContentLength64 = buffer.Length;
-            response.OutputStream.Write(buffer, 0, buffer.Length);
-
-        }
-        catch (Exception ex)
-        {
-            Logger.LogMessage($"Error serving prayer times: {ex.Message}");
-            response.StatusCode = (int)HttpStatusCode.InternalServerError;
-        }
-    }
-
 
     /// <summary>
     /// Gets the MIME type for a file based on its extension.
