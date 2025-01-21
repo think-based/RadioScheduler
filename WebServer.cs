@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RadioSchedulerService;
+using System.Linq;
 
 public class WebServer
 {
@@ -142,7 +143,7 @@ public class WebServer
             Logger.LogMessage($"Error processing request: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
               response.StatusDescription = $"Error processing request: {ex.Message}";
-             WriteStringResponse(response, response.StatusDescription);
+             _apiHandler.WriteStringResponse(response, response.StatusDescription);
         }
         finally
         {
