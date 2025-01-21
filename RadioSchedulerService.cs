@@ -25,9 +25,10 @@ namespace RadioSchedulerService
             IAudioPlayer audioPlayer = new AudioPlayer();
             ISchedulerConfigManager configManager = new SchedulerConfigManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf"));
             IScheduleCalculatorFactory scheduleCalculatorFactory = new ScheduleCalculatorFactory();
-             ITriggerManager triggerManager = ActiveTriggers.Triggers as ITriggerManager;
+            ITriggerManager triggerManager = new ActiveTriggersManager();
 
-             _scheduler = new Scheduler(audioPlayer, configManager, scheduleCalculatorFactory, triggerManager);
+
+            _scheduler = new Scheduler(audioPlayer, configManager, scheduleCalculatorFactory, triggerManager);
             _webServer = new WebServer(_scheduler);
             _webServer.Start();
 
