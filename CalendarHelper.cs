@@ -1,5 +1,5 @@
-// Be Naame Khoda
-// FileName: CalendarHelper.cs
+      //Be Naame Khoda
+//FileName: CalendarHelper.cs
 
 using System;
 using System.Globalization;
@@ -35,4 +35,26 @@ public static class CalendarHelper
             throw new ArgumentException($"Unsupported region: {region}");
         }
     }
+
+       public static DateTime ConvertToLocalTimeZone(DateTime dateTime, double timeZone, string region)
+    {
+        // Convert system time to the local time zone based on settings
+        TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
+       TimeZoneInfo targetTimeZone = TimeZoneInfo.CreateCustomTimeZone(
+            "PrayTimeZone",
+            TimeSpan.FromHours(timeZone),
+            "PrayTimeZone",
+            "PrayTimeZone");
+
+        try
+        {
+            return TimeZoneInfo.ConvertTime(dateTime, systemTimeZone, targetTimeZone);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+             Logger.LogMessage($"Invalid time zone with value {timeZone}.");
+            return dateTime;
+        }
+    }
 }
+    
