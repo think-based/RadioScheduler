@@ -1,6 +1,5 @@
-// Be Naame Khoda
-// FileName: AudioPlayer.cs
-
+      //Be Naame Khoda
+//FileName: AudioPlayer.cs
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
@@ -11,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using RadioScheduler.Entities;
 
-public class AudioPlayer
+public class AudioPlayer : IAudioPlayer
 {
     private WaveOutEvent _audioPlayerWaveOut;
     private AudioFileReader _currentAudioFile;
@@ -370,3 +369,4 @@ public class AudioPlayer
         return totalDuration;
     }
 }
+    
