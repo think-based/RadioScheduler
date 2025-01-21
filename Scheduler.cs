@@ -1,7 +1,6 @@
-// Be Naame Khoda
-// FileName: Scheduler.cs
-// TODO : fix audio.conf : noperiodic : month, dayofmonth...
-// TODO : fix audio.conf : calender and locals and timezones
+      //Be Naame Khoda
+//FileName: Scheduler.cs
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,16 +11,18 @@ using static Enums;
 
 public class Scheduler
 {
-    private AudioPlayer _audioPlayer;
+    private readonly IAudioPlayer _audioPlayer;
+    private readonly ISchedulerConfigManager _configManager;
+    private readonly IScheduleCalculatorFactory _scheduleCalculatorFactory;
+    private readonly ITriggerManager _triggerManager;
     private Timer _checkTimer; // Single timer to check schedules every second
-    public SchedulerConfigManager _configManager;
 
-
-    public Scheduler()
+    public Scheduler(IAudioPlayer audioPlayer, ISchedulerConfigManager configManager, IScheduleCalculatorFactory scheduleCalculatorFactory, ITriggerManager triggerManager)
     {
-        _audioPlayer = new AudioPlayer();
-        _configManager = new SchedulerConfigManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf"));
-
+        _audioPlayer = audioPlayer;
+        _configManager = configManager;
+        _scheduleCalculatorFactory = scheduleCalculatorFactory;
+        _triggerManager = triggerManager;
         // Set up the single timer to check schedules every second
         _checkTimer = new Timer(1000); // 1-second interval
         _checkTimer.Elapsed += OnCheckTimerElapsed;
@@ -29,8 +30,8 @@ public class Scheduler
         _checkTimer.Enabled = true;
 
         _configManager.ConfigReloaded += OnConfigReloaded;
-
     }
+
     private void OnConfigReloaded()
     {
         Logger.LogMessage("Configuration reloaded.");
@@ -47,44 +48,52 @@ public class Scheduler
     private void CheckScheduleItems()
     {
         DateTime now = DateTime.Now;
-        DateTime currentDateTimeTruncated = TruncateDateTimeToSeconds(now);
-
-
-        foreach (var item in _configManager.ScheduleItems)
+        DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now, Settings.TimeZone, "US");
+        List<ScheduleItem> dueItems = GetDueScheduleItems(convertedNow);
+        foreach (var item in dueItems)
         {
-            //Check if item is canceled
-            if (item.Status == ScheduleStatus.Canceled)
-                continue;
-
-            DateTime nextOccurrenceTruncated = TruncateDateTimeToSeconds(item.NextOccurrence);
-            if (nextOccurrenceTruncated == currentDateTimeTruncated)
-            {
-                HandleScheduledPlayback(item, now);
-            }
-            if (nextOccurrenceTruncated <= currentDateTimeTruncated)
-            {
-                if (item.Type == ScheduleType.Periodic)
-                {
-                    item.NextOccurrence = GetNextOccurrence(item, now);
-                }
-                else
-                {
-                    UpdateNonPeriodicNextOccurrence(item, currentDateTimeTruncated, nextOccurrenceTruncated, now);
-                }
-            }
-            else
-            {
-                if (item.Type == ScheduleType.Periodic)
-                {
-                    item.Status = ScheduleStatus.TimeWaiting;
-                }
-                else
-                {
-                    item.Status = ScheduleStatus.EventWaiting;
-                }
-            }
+            ProcessScheduleItem(item, convertedNow);
         }
     }
+
+    private void ProcessScheduleItem(ScheduleItem item, DateTime now)
+    {
+         if (item.Status == ScheduleStatus.Canceled)
+                 return;
+
+         DateTime currentDateTimeTruncated = TruncateDateTimeToSeconds(now);
+         DateTime nextOccurrenceTruncated = TruncateDateTimeToSeconds(item.NextOccurrence);
+
+         if (nextOccurrenceTruncated == currentDateTimeTruncated)
+         {
+              HandleScheduledPlayback(item, now);
+         }
+         else if (nextOccurrenceTruncated <= currentDateTimeTruncated)
+        {
+           if (item.Type == ScheduleType.Periodic)
+           {
+             var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
+              item.NextOccurrence = calculator.GetNextOccurrence(item, now);
+          }
+         else
+         {
+            var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
+           if(calculator.IsNonPeriodicTriggerValid(item, now))
+                    UpdateNonPeriodicNextOccurrence(item, currentDateTimeTruncated, nextOccurrenceTruncated, now);
+          }
+       }
+         else
+         {
+          if (item.Type == ScheduleType.Periodic)
+             {
+                   item.Status = ScheduleStatus.TimeWaiting;
+              }
+           else
+           {
+                item.Status = ScheduleStatus.EventWaiting;
+             }
+         }
+     }
 
     private void HandleScheduledPlayback(ScheduleItem item, DateTime now)
     {
@@ -107,16 +116,16 @@ public class Scheduler
         item.Status = ScheduleStatus.Playing;
         item.LastPlayTime = now;
     }
-    private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now)
+     private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now)
     {
-        foreach (var trigger in ActiveTriggers.Triggers)
+          foreach (var trigger in _triggerManager.Triggers)
         {
             if (!string.IsNullOrEmpty(item.Trigger) && item.Trigger.Equals(trigger.Event, StringComparison.OrdinalIgnoreCase))
             {
                 if (item.TriggerTime != trigger.Time)
                 {
                     item.TriggerTime = trigger.Time;
-                    if (item.TriggerType == TriggerTypes.Immediate)
+                     if (item.TriggerType == TriggerTypes.Immediate)
                     {
                         item.NextOccurrence = trigger.Time.Value;
                     }
@@ -136,31 +145,31 @@ public class Scheduler
                     {
                         item.NextOccurrence = trigger.Time.Value.Add(-item.TotalDuration);
                     }
+
                 }
                 else
                 {
-                    if (item.TriggerType == TriggerTypes.Immediate || item.TriggerType == TriggerTypes.Timed)
+                     if (item.TriggerType == TriggerTypes.Immediate || item.TriggerType == TriggerTypes.Timed)
                     {
                         item.NextOccurrence = trigger.Time.Value;
                     }
-                    else if (item.TriggerType == TriggerTypes.Delayed)
+                     else if (item.TriggerType == TriggerTypes.Delayed)
                     {
-                        if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
+                         if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
                         {
-                            item.NextOccurrence = trigger.Time.Value.Add(delay);
-                        }
-                        else
-                        {
+                           item.NextOccurrence = trigger.Time.Value.Add(delay);
+                         }
+                         else
+                         {
                             Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
-                            item.NextOccurrence = DateTime.MaxValue;
-                        }
-                    }
+                             item.NextOccurrence = DateTime.MaxValue;
+                         }
+                     }
                 }
                 break;
             }
-        }
+       }
     }
-
     private void OnConflictOccurred(object conflictData)
     {
         if (conflictData is ScheduleItem item)
@@ -186,140 +195,19 @@ public class Scheduler
     /// <returns>A list of scheduled items.</returns>
     public List<ScheduleItem> GetScheduledItems()
     {
-        DateTime now = DateTime.Now;
-        // Return a copy of the list to avoid modifying the original
-        return _configManager.ScheduleItems
-             .Where(item => item.NextOccurrence >= now)
-            .OrderBy(item => item.NextOccurrence)
-           .Take(30)
-            .ToList();
-    }
-    /// <summary>
-    /// Calculates the next occurrence of a schedule item.
-    /// </summary>
-    private DateTime GetNextOccurrence(ScheduleItem item, DateTime now)
+           DateTime now = DateTime.Now;
+           DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now, Settings.TimeZone, "US");
+           // Return a copy of the list to avoid modifying the original
+         return _configManager.ScheduleItems
+              .Where(item => item.NextOccurrence >= convertedNow)
+             .OrderBy(item => item.NextOccurrence)
+            .Take(30)
+             .ToList();
+     }
+   private DateTime GetNextOccurrence(ScheduleItem item, DateTime now)
     {
-        if (item.Type == ScheduleType.Periodic)
-        {
-            DateTime nextOccurrence = now;
-
-            // Handle Second field
-            if (item.Second.StartsWith("*/"))
-            {
-                int interval = int.Parse(item.Second.Substring(2));
-                nextOccurrence = nextOccurrence.AddSeconds(interval);
-            }
-            else if (item.Second != "*")
-            {
-                int targetSecond = int.Parse(item.Second);
-                if (targetSecond <= now.Second)
-                {
-                    nextOccurrence = nextOccurrence.AddMinutes(1);
-                    nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, nextOccurrence.Day, nextOccurrence.Hour, nextOccurrence.Minute, targetSecond);
-
-                }
-                else
-                {
-                    nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, nextOccurrence.Day, nextOccurrence.Hour, nextOccurrence.Minute, targetSecond);
-                }
-            }
-
-            // Handle Minute field
-            if (item.Minute.StartsWith("*/"))
-            {
-                int interval = int.Parse(item.Minute.Substring(2));
-                nextOccurrence = nextOccurrence.AddMinutes(interval);
-            }
-            else if (item.Minute != "*")
-            {
-                int targetMinute = int.Parse(item.Minute);
-                if (targetMinute <= now.Minute)
-                {
-                    nextOccurrence = nextOccurrence.AddHours(1);
-                    nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, nextOccurrence.Day, nextOccurrence.Hour, targetMinute, nextOccurrence.Second);
-                }
-                else
-                {
-                    nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, nextOccurrence.Day, nextOccurrence.Hour, targetMinute, nextOccurrence.Second);
-
-                }
-            }
-            // Handle Hour field
-            if (item.Hour.StartsWith("*/"))
-            {
-                int interval = int.Parse(item.Hour.Substring(2));
-                nextOccurrence = nextOccurrence.AddHours(interval);
-            }
-            else if (item.Hour != "*")
-            {
-                int targetHour = int.Parse(item.Hour);
-                if (targetHour <= now.Hour)
-                {
-                    nextOccurrence = nextOccurrence.AddDays(1);
-                    nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, nextOccurrence.Day, targetHour, nextOccurrence.Minute, nextOccurrence.Second);
-
-                }
-                else
-                {
-                    nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, nextOccurrence.Day, targetHour, nextOccurrence.Minute, nextOccurrence.Second);
-
-                }
-            }
-            // Handle DayOfMonth field
-            if (item.DayOfMonth != "*")
-            {
-                int targetDay = int.Parse(item.DayOfMonth);
-                if (targetDay <= now.Day)
-                {
-                    nextOccurrence = nextOccurrence.AddMonths(1);
-
-                }
-                nextOccurrence = new DateTime(nextOccurrence.Year, nextOccurrence.Month, targetDay, nextOccurrence.Hour, nextOccurrence.Minute, nextOccurrence.Second);
-
-
-            }
-
-            // Handle Month field
-            if (item.Month != "*")
-            {
-                int targetMonth = int.Parse(item.Month);
-                if (targetMonth <= now.Month)
-                {
-                    nextOccurrence = nextOccurrence.AddYears(1);
-                }
-
-                nextOccurrence = new DateTime(nextOccurrence.Year, targetMonth, nextOccurrence.Day, nextOccurrence.Hour, nextOccurrence.Minute, nextOccurrence.Second);
-
-            }
-
-            // Handle DayOfWeek field
-            if (item.DayOfWeek != "*")
-            {
-                int targetDayOfWeek = int.Parse(item.DayOfWeek);
-                int currentDayOfWeek = (int)now.DayOfWeek;
-
-                // Calculate the next occurrence of the target day of the week
-                int daysToAdd = (targetDayOfWeek - currentDayOfWeek + 7) % 7;
-                if (daysToAdd == 0 && nextOccurrence <= now)
-                {
-                    daysToAdd = 7; // Move to the next week
-                }
-
-                nextOccurrence = nextOccurrence.AddDays(daysToAdd);
-            }
-
-
-            // Ensure the next occurrence is in the future
-            if (nextOccurrence <= now)
-            {
-                return DateTime.MaxValue; // No valid occurrence found
-            }
-
-
-            return nextOccurrence;
-
-
-        }
-        return DateTime.MaxValue;
+        var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
+          return calculator.GetNextOccurrence(item,now);
     }
 }
+    
