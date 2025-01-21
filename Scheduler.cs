@@ -74,39 +74,49 @@ public class Scheduler
         }
         
      }
-    private void ProcessPeriodicItem(ScheduleItem item, DateTime now , DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated)
+    private void ProcessPeriodicItem(ScheduleItem item, DateTime now, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated)
     {
         if (nextOccurrenceTruncated == currentDateTimeTruncated)
         {
             HandleScheduledPlayback(item, now);
+            return; // Exit the method as playback is handled
         }
-        else if (nextOccurrenceTruncated <= currentDateTimeTruncated)
+
+        if (nextOccurrenceTruncated <= currentDateTimeTruncated)
         {
             var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
             item.NextOccurrence = calculator.GetNextOccurrence(item, now);
+            return; //Exit the method as next occurance has been set
         }
-        else
-        {
-            item.Status = ScheduleStatus.TimeWaiting;
-        }
+
+        item.Status = ScheduleStatus.TimeWaiting; // No update needed, wait for next time
 
     }
     private void ProcessNonPeriodicItem(ScheduleItem item, DateTime now, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated)
     {
+        var trigger = ActiveTriggers.GetTrigger(item.Trigger);
+
         if (nextOccurrenceTruncated == currentDateTimeTruncated)
         {
             HandleScheduledPlayback(item, now);
+            return; // Exit as we have handled the playback
         }
-        else if (nextOccurrenceTruncated <= currentDateTimeTruncated  )
+
+        if (nextOccurrenceTruncated <= currentDateTimeTruncated || !trigger.HasValue || (trigger.HasValue && item.TriggerTime != trigger.Value.Time))
         {
             var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
             if (calculator.IsNonPeriodicTriggerValid(item, now))
                 UpdateNonPeriodicNextOccurrence(item, currentDateTimeTruncated, nextOccurrenceTruncated, now);
+            else
+            {
+                item.Status = ScheduleStatus.EventWaiting;
+            }
+
+            return; // Exit as we have handled the updating
         }
-        else
-        {
-            item.Status = ScheduleStatus.EventWaiting;
-        }
+
+
+        item.Status = ScheduleStatus.EventWaiting; // No condition matches. waiting for the event
     }
     private void HandleScheduledPlayback(ScheduleItem item, DateTime now)
     {
