@@ -86,7 +86,12 @@
     <Compile Include="Enums.cs" />
     <Compile Include="FileHashHelper.cs" />
     <Compile Include="FilePathItem.cs" />
+    <Compile Include="IAudioPlayer.cs" />
     <Compile Include="InstantPlayManager.cs" />
+    <Compile Include="IScheduleCalculator.cs" />
+    <Compile Include="IScheduleCalculatorFactory.cs" />
+    <Compile Include="ISchedulerConfigManager.cs" />
+    <Compile Include="ITriggerManager.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="PrayTime.cs" />
     <Compile Include="PrayTimeScheduler.cs" />
@@ -95,6 +100,8 @@
     <Compile Include="RadioSchedulerService.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="ScheduleCalculator.cs" />
+    <Compile Include="ScheduleCalculatorFactory.cs" />
     <Compile Include="ScheduleItem.cs" />
     <Compile Include="Scheduler.cs" />
     <Compile Include="SchedulerConfigManager.cs" />

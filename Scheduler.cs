@@ -64,38 +64,50 @@ public class Scheduler
 
          DateTime currentDateTimeTruncated = TruncateDateTimeToSeconds(now);
          DateTime nextOccurrenceTruncated = TruncateDateTimeToSeconds(item.NextOccurrence);
-
-         if (nextOccurrenceTruncated == currentDateTimeTruncated)
-         {
-              HandleScheduledPlayback(item, now);
-         }
-         else if (nextOccurrenceTruncated <= currentDateTimeTruncated)
+        if (item.Type == ScheduleType.Periodic)
         {
-           if (item.Type == ScheduleType.Periodic)
-           {
-             var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
-              item.NextOccurrence = calculator.GetNextOccurrence(item, now);
-          }
-         else
-         {
-            var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
-           if(calculator.IsNonPeriodicTriggerValid(item, now))
-                    UpdateNonPeriodicNextOccurrence(item, currentDateTimeTruncated, nextOccurrenceTruncated, now);
-          }
-       }
-         else
-         {
-          if (item.Type == ScheduleType.Periodic)
-             {
-                   item.Status = ScheduleStatus.TimeWaiting;
-              }
-           else
-           {
-                item.Status = ScheduleStatus.EventWaiting;
-             }
-         }
+            ProcessPeriodicItem(item, now, currentDateTimeTruncated, nextOccurrenceTruncated);
+        }
+        else if (item.Type == ScheduleType.NonPeriodic)
+        {
+            ProcessNonPeriodicItem(item, now, currentDateTimeTruncated, nextOccurrenceTruncated);
+        }
+        
      }
+    private void ProcessPeriodicItem(ScheduleItem item, DateTime now , DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated)
+    {
+        if (nextOccurrenceTruncated == currentDateTimeTruncated)
+        {
+            HandleScheduledPlayback(item, now);
+        }
+        else if (nextOccurrenceTruncated <= currentDateTimeTruncated)
+        {
+            var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
+            item.NextOccurrence = calculator.GetNextOccurrence(item, now);
+        }
+        else
+        {
+            item.Status = ScheduleStatus.TimeWaiting;
+        }
 
+    }
+    private void ProcessNonPeriodicItem(ScheduleItem item, DateTime now, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated)
+    {
+        if (nextOccurrenceTruncated == currentDateTimeTruncated)
+        {
+            HandleScheduledPlayback(item, now);
+        }
+        else if (nextOccurrenceTruncated <= currentDateTimeTruncated  )
+        {
+            var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
+            if (calculator.IsNonPeriodicTriggerValid(item, now))
+                UpdateNonPeriodicNextOccurrence(item, currentDateTimeTruncated, nextOccurrenceTruncated, now);
+        }
+        else
+        {
+            item.Status = ScheduleStatus.EventWaiting;
+        }
+    }
     private void HandleScheduledPlayback(ScheduleItem item, DateTime now)
     {
         if (_audioPlayer.IsPlaying)
