@@ -16,7 +16,7 @@ public static class ActiveTriggers
     public static void AddTrigger(string eventName, DateTime? triggerTime, TriggerSource type)
     {
         // Check if a trigger with the same name already exists
-        int existingIndex = Triggers.FindIndex(trigger => trigger.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
+        int existingIndex = Triggers.FindIndex(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
 
         if (existingIndex >= 0)
         {
@@ -34,19 +34,19 @@ public static class ActiveTriggers
 
     public static void RemoveTrigger(string eventName)
     {
-        Triggers.RemoveAll(trigger => trigger.Event == eventName);
+        Triggers.RemoveAll(t => t.Event == eventName);
     }
     public static bool ContainsTrigger(string eventName)
     {
-        return Triggers.Exists(trigger => trigger.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
+        return Triggers.Exists(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
     }
 
     public static (string Event, DateTime? Time, TriggerSource Type)? GetTrigger(string eventName)
     {
-         var trigger = Triggers.FirstOrDefault(trigger => trigger.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
-           if(trigger.Equals(default((string, DateTime?, TriggerSource))))
+         var foundTrigger = Triggers.FirstOrDefault(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
+           if(foundTrigger.Equals(default((string, DateTime?, TriggerSource))))
               return null;
-          return trigger;
+          return foundTrigger;
     }
     public static void ClearAll()
     {
