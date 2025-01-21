@@ -297,7 +297,7 @@ public class WebServer
                     "ApplicationTimeZone",
                      "ApplicationTimeZone");
                    try{
-                        triggerTime = TimeZoneInfo.ConvertTime(parsedTime, TimeZoneInfo.Utc, targetTimeZone);
+                        triggerTime = TimeZoneInfo.ConvertTime(parsedTime, targetTimeZone);
                    }
                    catch (Exception ex)
                     {
