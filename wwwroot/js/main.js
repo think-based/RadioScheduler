@@ -1,7 +1,8 @@
-// Be Naame Khoda
+      // Be Naame Khoda
 // FileName: wwwroot/js/main.js
 
 $(document).ready(function () {
+    fetchTimeZone();
     // Load the home page by default
     loadPage('home');
 
@@ -20,9 +21,9 @@ $(document).ready(function () {
         e.preventDefault();
         loadPage('schedule-list');
     });
-    $('#events-link').on('click', function (e) {
+     $('#triggers-link').on('click', function (e) {
         e.preventDefault();
-        loadPage('events');
+        loadPage('triggers');
     });
 
     // Handle Clear Log button click
@@ -32,9 +33,23 @@ $(document).ready(function () {
     });
 });
 
+let applicationTimeZone = 0;
+/**
+ * Fetches the timezone offset from server.
+ */
+function fetchTimeZone() {
+    $.get('/api/timezone')
+        .done(function (data) {
+            applicationTimeZone = data.TimeZone;
+         })
+        .fail(function (error) {
+           showError('Error fetching time zone.');
+      });
+}
+
 /**
  * Loads a page dynamically into the #content div using AJAX.
- * @param {string} page - The page to load (e.g., 'home', 'viewlog', 'schedule-list').
+ * @param {string} page - The page to load (e.g., 'home', 'viewlog', 'schedule-list', 'triggers').
  */
 function loadPage(page) {
     showLoadingSpinner();
@@ -62,8 +77,8 @@ function initializePage(page) {
         initializeLogPage();
     } else if (page === 'schedule-list') {
         initializeScheduleListPage();
-    } else if(page === 'events') {
-        initializeEventsPage();
+    } else if(page === 'triggers') {
+        initializeTriggersPage();
     }
 }
 
@@ -158,7 +173,7 @@ function initializeScheduleListPage() {
                         <td>${formatDateTime(item.EndTime)}</td>
                         <td>${formatDuration(item.TotalDuration)}</td>
                         <td>${formatDateTime(item.LastPlayTime)}</td>
-                        <td>${item.TriggerTime && item.TriggerTime !== "N/A" ? formatDateTime(item.TriggerTime) : 'N/A'}</td>
+                         <td>${item.TriggerTime && item.TriggerTime !== "N/A" ? formatDateTime(item.TriggerTime) : 'N/A'}</td>
                         <td>${item.Status}</td>
                     </tr>
                 `;
@@ -172,10 +187,11 @@ function initializeScheduleListPage() {
             hideLoadingSpinner();
         });
 }
+
 /**
- * Initializes the events page.
+ * Initializes the triggers page.
  */
-function initializeEventsPage() {
+function initializeTriggersPage() {
     fetchTriggers();
 }
 /**
@@ -205,13 +221,14 @@ function fetchTriggers() {
             //Show the table
             $('#events-list-content').show();
               data.forEach(item => {
+                   const formattedTime = item.time ? convertUtcToLocalTime(item.time) : null;
                   const row = `
                     <tr>
                         <td>${item.triggerEvent}</td>
                        <td>${item.type}</td>
-                        <td>${formatDateTime(item.time)}</td>
+                        <td>${formattedTime}</td>
                          <td>
-                            ${item.type === 'Manual' ? 
+                            ${item.type === 'Manual' ?
                                 `<button class="btn btn-sm btn-primary" onclick="editTrigger('${item.triggerEvent}')" >Edit</button>
                                  <button class="btn btn-sm btn-danger"  onclick="deleteTrigger('${item.triggerEvent}')" >Delete</button>`
                                 : 'Read-Only'}
@@ -223,7 +240,7 @@ function fetchTriggers() {
 
         })
         .fail(function (error) {
-           showError('Error fetching events.');
+           showError('Error fetching triggers.');
         })
        .always(function () {
           hideLoadingSpinner();
@@ -234,7 +251,7 @@ function fetchTriggers() {
  * @param {string} triggerEventName - The name of the event to delete.
  */
 function deleteTrigger(triggerEventName) {
-     if (!confirm(`Are you sure you want to delete trigger: ${triggerEventName}?`)) {
+    if (!confirm(`Are you sure you want to delete trigger: ${triggerEventName}?`)) {
         return;
     }
     $.ajax({
@@ -242,19 +259,15 @@ function deleteTrigger(triggerEventName) {
         type: 'DELETE',
          contentType: 'application/json',
         data: JSON.stringify({ triggerEvent: triggerEventName }),
-        success: function (result) {
-            fetchTriggers();
-            alert(`Trigger "${triggerEventName}" deleted successfully!`);
-        },
+         success: function (result) {
+           fetchTriggers();
+           alert(result);
+          },
         error: function (error) {
             showError(`Error deleting trigger "${triggerEventName}".`);
         }
     });
 }
-/**
- * Opens the trigger editing modal.
- * @param {string} triggerEventName - The name of the event to edit.
- */
 /**
  * Opens the trigger editing modal.
  * @param {string} triggerEventName - The name of the event to edit.
@@ -267,16 +280,26 @@ function editTrigger(triggerEventName) {
 
      $.get(`/api/triggers/${triggerEventName}`)
          .done(function (data) {
-             // Format the datetime if time exists, else set to null
-               const formattedTime = data.time ? formatDateTimeForInput(data.time) : null;
-             $('#edit-trigger-time').val(formattedTime);
-
+              // Format the datetime if time exists, else set to null
+            const formattedTime =  convertUtcToLocalTime(data.time);
+            $('#edit-trigger-time').val(formattedTime);
             $('#edit-trigger-modal').modal('show');
 
      })
        .fail(function (error) {
            showError('Error fetching event.');
       });
+}
+/**
+ * Opens the new trigger modal
+ */
+function openNewTriggerModal() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+
+    $('#new-trigger-time').val(`${hours}:${minutes}`); // Use time format
+    $('#new-trigger-modal').modal('show');
 }
 /**
  * Formats a date-time string for datetime-local input.
@@ -299,23 +322,34 @@ function formatDateTimeForInput(dateTime) {
 function submitNewTrigger() {
     const triggerEventName = $('#new-trigger-name').val();
     const triggerEventTime = $('#new-trigger-time').val();
+      const triggerEventTimeUtc = convertLocalTimeToUtc(triggerEventTime);
 
+    if (!triggerEventName) {
+          $('#new-trigger-name-error').show();
+        return;
+    }
+     if (!triggerEventTime) {
+          $('#new-trigger-time-error').show();
+        return;
+    }
     $.ajax({
         url: '/api/triggers',
         type: 'POST',
         contentType: 'application/json',
        data: JSON.stringify({
             triggerEvent: triggerEventName,
-            time: triggerEventTime
+            time: triggerEventTimeUtc
         }),
-        success: function (result) {
-            $('#new-trigger-modal').modal('hide');
-            fetchTriggers();
-            alert('New trigger added successfully!');
+          success: function (result) {
+           $('#new-trigger-modal').modal('hide');
+           fetchTriggers();
+           alert(result);
            $('#new-trigger-name').val('');
-          $('#new-trigger-time').val('');
-        },
-        error: function(error) {
+           $('#new-trigger-time').val('');
+           $('#new-trigger-name-error').hide();
+           $('#new-trigger-time-error').hide();
+         },
+         error: function(error) {
               showError('Error adding new trigger.');
         }
     });
@@ -326,29 +360,24 @@ function submitNewTrigger() {
 function submitEditedTrigger() {
     const triggerEventName = $('#edit-trigger-name').val();
     const triggerEventTime = $('#edit-trigger-time').val();
+    const triggerEventTimeUtc = convertLocalTimeToUtc(triggerEventTime);
      $.ajax({
         url: '/api/triggers',
         type: 'PUT',
         contentType: 'application/json',
          data: JSON.stringify({
             triggerEvent: triggerEventName,
-            time: triggerEventTime
+            time: triggerEventTimeUtc
         }),
         success: function (result) {
              $('#edit-trigger-modal').modal('hide');
            fetchTriggers();
-           alert('Trigger updated successfully!');
-        },
+           alert(result);
+         },
         error: function(error) {
-            showError(`Error updating trigger "${triggerEventName}".`);
+           showError(`Error updating trigger "${triggerEventName}".`);
         }
     });
-}
-/**
- * Opens the new trigger modal
- */
-function openNewTriggerModal() {
-    $('#new-trigger-modal').modal('show');
 }
 /**
  * Shows the loading spinner.
@@ -413,3 +442,19 @@ function formatDateTime(dateTime) {
 function pad(num) {
     return num.toString().padStart(2, '0');
 }
+
+function convertLocalTimeToUtc(timeString) {
+    if(!timeString) return null;
+    const localTime = new Date(`1970-01-01T${timeString}`);
+    const utcTime = new Date(localTime.getTime() - (localTime.getTimezoneOffset() * 60000));
+       const formattedUtcTime = utcTime.toISOString().slice(0, 19); // Remove milliseconds
+    return formattedUtcTime;
+}
+
+function convertUtcToLocalTime(timeString){
+    if(!timeString) return null;
+       const utcTime = new Date(timeString);
+       const localTime = new Date(utcTime.getTime() + (utcTime.getTimezoneOffset() * 60000) );
+       return localTime.toLocaleTimeString('en-US', { hour12: false ,hour: '2-digit', minute: '2-digit'});
+}
+    
