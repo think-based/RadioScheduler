@@ -1,4 +1,4 @@
-//Be Naame Khoda
+      //Be Naame Khoda
 //FileName: ActiveTriggers.cs
 
 using System;
@@ -46,3 +46,4 @@ public static class ActiveTriggers
         Triggers.Clear();
     }
 }
+    
