@@ -21,7 +21,7 @@ $(document).ready(function () {
         e.preventDefault();
         loadPage('schedule-list');
     });
-     $('#triggers-link').on('click', function (e) {
+     $('#events-link').on('click', function (e) { // Changed to events-link
         e.preventDefault();
         loadPage('triggers');
     });
