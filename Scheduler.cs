@@ -204,6 +204,12 @@ public class Scheduler
             .Take(30)
              .ToList();
      }
+    private List<ScheduleItem> GetDueScheduleItems(DateTime now)
+    {
+        return _configManager.ScheduleItems
+             .Where(item => TruncateDateTimeToSeconds(item.NextOccurrence) <= TruncateDateTimeToSeconds(now))
+             .ToList();
+    }
    private DateTime GetNextOccurrence(ScheduleItem item, DateTime now)
     {
         var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
