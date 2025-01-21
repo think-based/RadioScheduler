@@ -1,4 +1,4 @@
-// Be Naame Khoda
+      // Be Naame Khoda
 // FileName: WebServer.cs
 
 using System;
@@ -72,9 +72,9 @@ public class WebServer
                 ServeHtmlFile(response, Path.Combine("wwwroot", "schedule-list.html"));
             }
             // Serve events.html for /events.html
-            else if (path == "/events.html")
+            else if (path == "/triggers.html")
             {
-                ServeHtmlFile(response, Path.Combine("wwwroot", "events.html"));
+                ServeHtmlFile(response, Path.Combine("wwwroot", "triggers.html"));
             }
             // Handle AJAX requests for dynamic content
             else if (path == "/clearlog")
@@ -95,6 +95,11 @@ public class WebServer
             else if (path == "/api/prayertimes")
             {
                 ServePrayerTimes(request, response);
+            }
+             // API endpoint to get the timezone
+            else if (path == "/api/timezone")
+            {
+                ServeTimezone(response);
             }
             // API endpoint to fetch, delete and add triggers
             else if (path == "/api/triggers")
@@ -142,7 +147,32 @@ public class WebServer
             response.OutputStream.Close();
         }
     }
+       private void ServeTimezone(HttpListenerResponse response)
+    {
+         try
+        {
+            // Create an anonymous object to hold the prayer times
+            var timeZoneObject = new
+            {
+                 TimeZone = Settings.TimeZone
+            };
 
+            // Serialize the object into JSON
+            string jsonResponse = JsonConvert.SerializeObject(timeZoneObject);
+
+            // Set response headers and send the JSON content
+            byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
+            response.ContentType = "application/json";
+            response.ContentLength64 = buffer.Length;
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error serving time zone: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        }
+    }
     /// <summary>
     /// Serves all triggers.
     /// </summary>
@@ -212,60 +242,68 @@ public class WebServer
     /// </summary>
     /// <param name="request">The HTTP request object.</param>
     /// <param name="response">The HTTP response object.</param>
-    private void AddTrigger(HttpListenerRequest request, HttpListenerResponse response)
+  private void AddTrigger(HttpListenerRequest request, HttpListenerResponse response)
     {
         try
         {
-            string requestBody;
+             string requestBody;
             using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
             {
                 requestBody = reader.ReadToEnd();
             }
             dynamic data;
-            try
-            {
-                data = JsonConvert.DeserializeObject<dynamic>(requestBody);
+              try
+             {
+                 data = JsonConvert.DeserializeObject<dynamic>(requestBody);
             }
-            catch (JsonSerializationException)
+             catch (JsonSerializationException)
             {
-                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                 response.StatusCode = (int)HttpStatusCode.BadRequest;
+                  response.StatusDescription = "Invalid JSON format in the request body.";
                 return;
-            }
+             }
             if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
-            {
+           {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
+               response.StatusDescription = "The triggerEvent cannot be empty";
                 return;
-            }
-            string eventName = data.triggerEvent.ToString();
-            DateTime? triggerTime = null;
-            if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
-            {
-                DateTime parsedTime;
-                if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm:ss", null, System.Globalization.DateTimeStyles.None, out parsedTime))
-                {
-                    triggerTime = parsedTime;
-                }
-                else if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm", null, System.Globalization.DateTimeStyles.None, out parsedTime))
-                {
-                    triggerTime = parsedTime;
-                }
-                else
-                {
-                    response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    return;
-                }
-            }
+             }
 
-            ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
+             string eventName = data.triggerEvent.ToString();
+             DateTime? triggerTime = null;
+             if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
+             {
+                DateTime parsedTime;
+                  if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm:ss", null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+                {
+                    triggerTime = parsedTime;
+                }
+                else if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm", null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+               {
+                     triggerTime = parsedTime;
+                }
+                 else
+                {
+                     response.StatusCode = (int)HttpStatusCode.BadRequest;
+                     response.StatusDescription = "Invalid time format. Please use yyyy-MM-ddTHH:mm:ss or yyyy-MM-ddTHH:mm format";
+                     return;
+                }
+
+             }
+
+
+             ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
             response.StatusCode = (int)HttpStatusCode.OK;
+              response.StatusDescription = "Trigger added successfully.";
         }
-        catch (Exception ex)
+       catch (Exception ex)
         {
             Logger.LogMessage($"Error adding trigger: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            response.StatusDescription = $"Error adding trigger: {ex.Message}";
         }
     }
-    /// <summary>
+   /// <summary>
     /// Edits a manual trigger
     /// </summary>
     /// <param name="request">The HTTP request object.</param>
@@ -280,56 +318,61 @@ public class WebServer
                 requestBody = reader.ReadToEnd();
             }
             dynamic data;
-            try
-            {
-                data = JsonConvert.DeserializeObject<dynamic>(requestBody);
+              try
+             {
+                  data = JsonConvert.DeserializeObject<dynamic>(requestBody);
             }
             catch (JsonSerializationException)
             {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
-                return;
+               response.StatusDescription = "Invalid JSON format in the request body.";
+                 return;
             }
             if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
             {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
-                return;
+               response.StatusDescription = "The triggerEvent cannot be empty";
+                 return;
             }
 
-            string eventName = data.triggerEvent.ToString();
-            DateTime? triggerTime = null;
-            if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
+           string eventName = data.triggerEvent.ToString();
+             DateTime? triggerTime = null;
+             if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
             {
-                DateTime parsedTime;
-                if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm:ss", null, System.Globalization.DateTimeStyles.None, out parsedTime))
+                 DateTime parsedTime;
+                if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm:ss", null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
                 {
                     triggerTime = parsedTime;
                 }
-                else if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm", null, System.Globalization.DateTimeStyles.None, out parsedTime))
-                {
-                    triggerTime = parsedTime;
+                else if (DateTime.TryParseExact(data.time.ToString(), "yyyy-MM-ddTHH:mm", null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+                 {
+                     triggerTime = parsedTime;
                 }
-                else
-                {
+               else
+               {
                     response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    return;
+                  response.StatusDescription = "Invalid time format. Please use yyyy-MM-ddTHH:mm:ss or yyyy-MM-ddTHH:mm format";
+                  return;
                 }
 
             }
             ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
             response.StatusCode = (int)HttpStatusCode.OK;
-        }
+             response.StatusDescription = "Trigger updated successfully.";
+         }
         catch (Exception ex)
         {
             Logger.LogMessage($"Error editing trigger: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
-        }
+             response.StatusDescription = $"Error editing trigger: {ex.Message}";
+         }
     }
     /// <summary>
     /// Deletes a trigger
     /// </summary>
     /// <param name="request">The HTTP request object.</param>
     /// <param name="response">The HTTP response object.</param>
-    private void DeleteTrigger(HttpListenerRequest request, HttpListenerResponse response)
+   private void DeleteTrigger(HttpListenerRequest request, HttpListenerResponse response)
     {
         try
         {
@@ -338,32 +381,36 @@ public class WebServer
             {
                 requestBody = reader.ReadToEnd();
             }
-            dynamic data;
-            try
+           dynamic data;
+              try
             {
-                data = JsonConvert.DeserializeObject<dynamic>(requestBody);
+                  data = JsonConvert.DeserializeObject<dynamic>(requestBody);
             }
             catch (JsonSerializationException)
-            {
+             {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
+                response.StatusDescription = "Invalid JSON format in the request body.";
                 return;
-            }
+             }
             if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
-            {
+             {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
-                return;
+                response.StatusDescription = "The triggerEvent cannot be empty";
+               return;
             }
-            string eventName = data.triggerEvent.ToString();
+
+           string eventName = data.triggerEvent.ToString();
             ActiveTriggers.RemoveTrigger(eventName);
             response.StatusCode = (int)HttpStatusCode.OK;
+            response.StatusDescription = "Trigger deleted successfully.";
         }
         catch (Exception ex)
         {
-            Logger.LogMessage($"Error deleting trigger: {ex.Message}");
-            response.StatusCode = (int)HttpStatusCode.InternalServerError;
-        }
+             Logger.LogMessage($"Error deleting trigger: {ex.Message}");
+             response.StatusCode = (int)HttpStatusCode.InternalServerError;
+           response.StatusDescription = $"Error deleting trigger: {ex.Message}";
+       }
     }
-
     /// <summary>
     /// Serves the schedule list as a JSON response.
     /// </summary>
@@ -557,3 +604,4 @@ public class WebServer
         }
     }
 }
+    
