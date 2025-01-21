@@ -71,7 +71,7 @@ public class WebServer
             {
                 ServeHtmlFile(response, Path.Combine("wwwroot", "schedule-list.html"));
             }
-            // Serve events.html for /events.html
+            // Serve events.html for /triggers.html
             else if (path == "/triggers.html")
             {
                 ServeHtmlFile(response, Path.Combine("wwwroot", "triggers.html"));
@@ -141,6 +141,8 @@ public class WebServer
         {
             Logger.LogMessage($"Error processing request: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            response.StatusDescription = $"Error processing request: {ex.Message}";
+             WriteStringResponse(response, response.StatusDescription);
         }
         finally
         {
@@ -243,9 +245,10 @@ public class WebServer
     /// <param name="request">The HTTP request object.</param>
     /// <param name="response">The HTTP response object.</param>
   private void AddTrigger(HttpListenerRequest request, HttpListenerResponse response)
-    {
+  {
+       string message = "";
        try
-        {
+       {
             string requestBody;
             using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
             {
@@ -256,58 +259,74 @@ public class WebServer
             {
                   data = JsonConvert.DeserializeObject<dynamic>(requestBody);
              }
-            catch (JsonSerializationException)
+            catch (JsonSerializationException ex)
             {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
-                response.StatusDescription = "Invalid JSON format in the request body.";
-               WriteStringResponse(response, response.StatusDescription);
+                message =  "Invalid JSON format in the request body.";
+                response.StatusDescription = message;
+               WriteStringResponse(response, message);
                  return;
             }
             if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
             {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
-                response.StatusDescription = "The triggerEvent cannot be empty";
-                 WriteStringResponse(response, response.StatusDescription);
+                message= "The triggerEvent cannot be empty";
+                response.StatusDescription = message;
+                 WriteStringResponse(response, message);
                 return;
             }
 
             string eventName = data.triggerEvent.ToString();
             DateTime? triggerTime = null;
             if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
-            {
-                DateTime parsedTime;
-                if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+             {
+                 DateTime parsedTime;
+                  if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
                 {
                      TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
-                     TimeZoneInfo targetTimeZone = TimeZoneInfo.CreateCustomTimeZone(
-                     "PrayTimeZone",
+                    TimeZoneInfo targetTimeZone = TimeZoneInfo.CreateCustomTimeZone(
+                     "ApplicationTimeZone",
                      TimeSpan.FromHours(Settings.TimeZone),
-                     "PrayTimeZone",
-                     "PrayTimeZone");
-
-                     triggerTime = TimeZoneInfo.ConvertTime(parsedTime, TimeZoneInfo.Utc, targetTimeZone);
+                     "ApplicationTimeZone",
+                     "ApplicationTimeZone");
+                     try{
+                          triggerTime = TimeZoneInfo.ConvertTime(parsedTime, TimeZoneInfo.Utc, targetTimeZone);
+                     }
+                      catch(Exception ex)
+                    {
+                         response.StatusCode = (int)HttpStatusCode.BadRequest;
+                       message =  $"Time zone Conversion error,  {ex.Message}";
+                        response.StatusDescription = message;
+                          WriteStringResponse(response, message);
+                       return;
+                    }
                 }
                 else
-                {
+                 {
                     response.StatusCode = (int)HttpStatusCode.BadRequest;
-                     response.StatusDescription = "Invalid time format. Please provide a valid date and time.";
-                   WriteStringResponse(response, response.StatusDescription);
+                    message = "Invalid time format. Please provide a valid date and time.";
+                     response.StatusDescription = message;
+                   WriteStringResponse(response, message);
                      return;
                 }
+
             }
 
-            ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
-            response.StatusCode = (int)HttpStatusCode.OK;
-             response.StatusDescription = "Trigger added successfully.";
-               WriteStringResponse(response, response.StatusDescription);
-        }
-        catch (Exception ex)
+
+             ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
+             response.StatusCode = (int)HttpStatusCode.OK;
+             message = "Trigger added successfully.";
+               response.StatusDescription = message;
+                WriteStringResponse(response, message);
+         }
+         catch (Exception ex)
         {
-            Logger.LogMessage($"Error adding trigger: {ex.Message}");
+             Logger.LogMessage($"Error adding trigger: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
-              response.StatusDescription = $"Error adding trigger: {ex.Message}";
-             WriteStringResponse(response, response.StatusDescription);
-        }
+             message =  $"Error adding trigger: {ex.Message}";
+            response.StatusDescription = message;
+            WriteStringResponse(response, message);
+         }
     }
    /// <summary>
     /// Edits a manual trigger
@@ -316,6 +335,7 @@ public class WebServer
     /// <param name="response">The HTTP response object.</param>
     private void EditTrigger(HttpListenerRequest request, HttpListenerResponse response)
     {
+        string message = "";
         try
         {
             string requestBody;
@@ -325,21 +345,23 @@ public class WebServer
             }
             dynamic data;
               try
-             {
+            {
                   data = JsonConvert.DeserializeObject<dynamic>(requestBody);
             }
-            catch (JsonSerializationException)
+            catch (JsonSerializationException ex)
             {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
-               response.StatusDescription = "Invalid JSON format in the request body.";
-                WriteStringResponse(response, response.StatusDescription);
+                 message = "Invalid JSON format in the request body.";
+                response.StatusDescription = message;
+                 WriteStringResponse(response, message);
                  return;
             }
             if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
             {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
-               response.StatusDescription = "The triggerEvent cannot be empty";
-                WriteStringResponse(response, response.StatusDescription);
+                 message = "The triggerEvent cannot be empty";
+                response.StatusDescription = message;
+                 WriteStringResponse(response, message);
                  return;
             }
 
@@ -352,34 +374,47 @@ public class WebServer
                 {
                       TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
                      TimeZoneInfo targetTimeZone = TimeZoneInfo.CreateCustomTimeZone(
-                     "PrayTimeZone",
+                     "ApplicationTimeZone",
                      TimeSpan.FromHours(Settings.TimeZone),
-                     "PrayTimeZone",
-                     "PrayTimeZone");
-
-                    triggerTime = TimeZoneInfo.ConvertTime(parsedTime, TimeZoneInfo.Utc, targetTimeZone);
+                     "ApplicationTimeZone",
+                     "ApplicationTimeZone");
+                    try
+                      {
+                           triggerTime = TimeZoneInfo.ConvertTime(parsedTime, TimeZoneInfo.Utc, targetTimeZone);
+                    }
+                   catch (Exception ex)
+                    {
+                         response.StatusCode = (int)HttpStatusCode.BadRequest;
+                         message =  $"Time zone Conversion error,  {ex.Message}";
+                         response.StatusDescription = message;
+                           WriteStringResponse(response, message);
+                         return;
+                    }
                 }
                 else
                 {
                     response.StatusCode = (int)HttpStatusCode.BadRequest;
-                  response.StatusDescription = "Invalid time format. Please provide a valid date and time.";
-                   WriteStringResponse(response, response.StatusDescription);
-                  return;
+                   message = "Invalid time format. Please provide a valid date and time.";
+                   response.StatusDescription = message;
+                     WriteStringResponse(response, message);
+                    return;
                 }
 
             }
-            ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
+             ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Manual);
             response.StatusCode = (int)HttpStatusCode.OK;
-             response.StatusDescription = "Trigger updated successfully.";
-               WriteStringResponse(response, response.StatusDescription);
-         }
-        catch (Exception ex)
+              message = "Trigger updated successfully.";
+            response.StatusDescription = message;
+              WriteStringResponse(response, message);
+        }
+       catch (Exception ex)
         {
-            Logger.LogMessage($"Error editing trigger: {ex.Message}");
-            response.StatusCode = (int)HttpStatusCode.InternalServerError;
-             response.StatusDescription = $"Error editing trigger: {ex.Message}";
-                WriteStringResponse(response, response.StatusDescription);
-         }
+             Logger.LogMessage($"Error editing trigger: {ex.Message}");
+             response.StatusCode = (int)HttpStatusCode.InternalServerError;
+              message =  $"Error editing trigger: {ex.Message}";
+             response.StatusDescription = message;
+                WriteStringResponse(response, message);
+        }
     }
     /// <summary>
     /// Deletes a trigger
@@ -388,9 +423,10 @@ public class WebServer
     /// <param name="response">The HTTP response object.</param>
    private void DeleteTrigger(HttpListenerRequest request, HttpListenerResponse response)
     {
-        try
-        {
-            string requestBody;
+        string message = "";
+         try
+         {
+             string requestBody;
             using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
             {
                 requestBody = reader.ReadToEnd();
@@ -399,34 +435,38 @@ public class WebServer
               try
             {
                   data = JsonConvert.DeserializeObject<dynamic>(requestBody);
-            }
-            catch (JsonSerializationException)
+             }
+            catch (JsonSerializationException ex)
              {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
-                response.StatusDescription = "Invalid JSON format in the request body.";
-                 WriteStringResponse(response, response.StatusDescription);
-                return;
-             }
+               message= "Invalid JSON format in the request body.";
+               response.StatusDescription = message;
+                WriteStringResponse(response, message);
+                 return;
+            }
             if (data == null || string.IsNullOrEmpty(data.triggerEvent?.ToString()))
              {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
-                response.StatusDescription = "The triggerEvent cannot be empty";
-               WriteStringResponse(response, response.StatusDescription);
+                message= "The triggerEvent cannot be empty";
+                response.StatusDescription = message;
+                 WriteStringResponse(response, message);
                return;
-            }
+             }
 
            string eventName = data.triggerEvent.ToString();
             ActiveTriggers.RemoveTrigger(eventName);
-            response.StatusCode = (int)HttpStatusCode.OK;
-            response.StatusDescription = "Trigger deleted successfully.";
-             WriteStringResponse(response, response.StatusDescription);
-        }
+             response.StatusCode = (int)HttpStatusCode.OK;
+             message = "Trigger deleted successfully.";
+            response.StatusDescription = message;
+             WriteStringResponse(response, message);
+         }
         catch (Exception ex)
         {
              Logger.LogMessage($"Error deleting trigger: {ex.Message}");
              response.StatusCode = (int)HttpStatusCode.InternalServerError;
-           response.StatusDescription = $"Error deleting trigger: {ex.Message}";
-               WriteStringResponse(response, response.StatusDescription);
+              message = $"Error deleting trigger: {ex.Message}";
+           response.StatusDescription = message;
+              WriteStringResponse(response, message);
        }
     }
     /// <summary>
@@ -441,7 +481,6 @@ public class WebServer
             response.ContentLength64 = buffer.Length;
             response.OutputStream.Write(buffer, 0, buffer.Length);
        }
-
     /// <summary>
     /// Serves the schedule list as a JSON response.
     /// </summary>
