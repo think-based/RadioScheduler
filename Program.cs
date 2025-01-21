@@ -1,4 +1,4 @@
-// Be Naame Khoda
+      // Be Naame Khoda
 // FileName: Program.cs
 
 using System;
@@ -19,10 +19,17 @@ namespace RadioSchedulerService
         public Program()
         {
             _cancellationTokenSource = new CancellationTokenSource();
-            _scheduler = new Scheduler();
+
+            // Create concrete implementations
+            IAudioPlayer audioPlayer = new AudioPlayer();
+            ISchedulerConfigManager configManager = new SchedulerConfigManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf"));
+            IScheduleCalculatorFactory scheduleCalculatorFactory = new ScheduleCalculatorFactory();
+            ITriggerManager triggerManager = ActiveTriggers.Triggers as ITriggerManager;
+
+            _scheduler = new Scheduler(audioPlayer, configManager, scheduleCalculatorFactory, triggerManager);
             _instantPlayManager = new InstantPlayManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InstantPlay"));
             _prayTimeScheduler = new PrayTimeScheduler();
-            _webServer = new WebServer(_scheduler);
+             _webServer = new WebServer(_scheduler);
         }
 
         public async Task RunAsync()
@@ -136,3 +143,4 @@ namespace RadioSchedulerService
         }
     }
 }
+    
