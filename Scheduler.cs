@@ -49,7 +49,7 @@ public class Scheduler
     private void CheckScheduleItems()
     {
         DateTime now = DateTime.Now;
-        DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now, Settings.TimeZoneOffset, Settings.Region);
+        DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now, Settings.Region);
         List<ScheduleItem> dueItems = GetDueScheduleItems(convertedNow);
         foreach (var item in dueItems)
         {
@@ -102,18 +102,17 @@ public class Scheduler
             return; // Exit as we have handled the playback
         }
 
-        if (nextOccurrenceTruncated <= currentDateTimeTruncated || !trigger.HasValue || (trigger.HasValue && item.TriggerTime != trigger.Value.Time))
-        {
+         if (nextOccurrenceTruncated <= currentDateTimeTruncated || !trigger.HasValue || (trigger.HasValue && item.TriggerTime != trigger.Value.Time))
+       {
             var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
             if (calculator.IsNonPeriodicTriggerValid(item, now))
                 UpdateNonPeriodicNextOccurrence(item, currentDateTimeTruncated, nextOccurrenceTruncated, now);
-            else
+             else
             {
-                item.Status = ScheduleStatus.EventWaiting;
+                 item.Status = ScheduleStatus.EventWaiting;
             }
-
-            return; // Exit as we have handled the updating
-        }
+          return; // Exit as we have handled the updating
+       }
 
 
         item.Status = ScheduleStatus.EventWaiting; // No condition matches. waiting for the event
@@ -222,7 +221,7 @@ public class Scheduler
     public List<ScheduleItem> GetScheduledItems()
     {
            DateTime now = DateTime.Now;
-           DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now, Settings.TimeZoneOffset, Settings.Region);
+           DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now,  Settings.Region);
            // Return a copy of the list to avoid modifying the original
          return _configManager.ScheduleItems
               .Where(item => item.NextOccurrence >= convertedNow)
