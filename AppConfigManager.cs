@@ -21,14 +21,14 @@ public static class AppConfigManager
             string json = File.ReadAllText(ConfigFilePath);
             var settings = JsonConvert.DeserializeObject<AppSettings>(json);
 
-             if (settings != null && !string.IsNullOrEmpty(settings.Application.TimeZoneId))
+            if (settings != null && !string.IsNullOrEmpty(settings.Application.TimeZoneId))
             {
-                 try
+                try
                 {
-                     TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
-                   settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
+                    TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
+                    settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
                 }
-                catch (TimeZoneNotFoundException ex)
+                 catch (TimeZoneNotFoundException ex)
                 {
                      Logger.LogMessage($"Error finding Time Zone {settings.Application.TimeZoneId}. Defaulting to UTC. : {ex.Message}");
                     settings.Application.TimeZoneId = "UTC";
@@ -43,6 +43,12 @@ public static class AppConfigManager
                  TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
                    settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
             }
+           if (settings != null && string.IsNullOrEmpty(settings.Application.Region))
+            {
+                  Logger.LogMessage("Region not found in config, setting default value to US");
+                 settings.Application.Region = "US";
+            }
+
             return settings;
         }
         catch (Exception ex)
