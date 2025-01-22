@@ -95,7 +95,8 @@ namespace RadioSchedulerService
                 // Set application settings
                 Settings.Latitude = appSettings.Latitude;
                 Settings.Longitude = appSettings.Longitude;
-                Settings.TimeZone = appSettings.TimeZone;
+                Settings.TimeZoneId = appSettings.TimeZoneId; // Set the TimeZoneId
+                 Settings.TimeZoneOffset = appSettings.TimeZoneOffset; // Set the TimeZoneOffset
                 Settings.TimerIntervalInMinutes = appSettings.TimerIntervalInMinutes;
                 Settings.AmplifierEnabled = appSettings.AmplifierEnabled;
                 Settings.AmplifierApiUrl = appSettings.AmplifierApiUrl;
@@ -105,7 +106,7 @@ namespace RadioSchedulerService
                 Settings.AsrMethod = (PrayTime.AsrMethods)Enum.Parse(typeof(PrayTime.AsrMethods), appSettings.AsrMethod);
                 Settings.TimeFormat = (PrayTime.TimeFormat)Enum.Parse(typeof(PrayTime.TimeFormat), appSettings.TimeFormat);
                 Settings.AdjustHighLats = (PrayTime.AdjustingMethod)Enum.Parse(typeof(PrayTime.AdjustingMethod), appSettings.AdjustHighLats);
-
+                 Settings.AutoSetAngles();
                 Logger.LogMessage("Settings loaded from configuration file.");
             }
             catch (Exception ex)
@@ -124,7 +125,7 @@ namespace RadioSchedulerService
             int day = now.Day;
 
             // Calculate prayer times for today
-            string[] prayerTimes = new PrayTime().getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
+            string[] prayerTimes = new PrayTime().getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZoneOffset);
 
             // Display prayer times
             Console.WriteLine("Prayer Times for Today:");
