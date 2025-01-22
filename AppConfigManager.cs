@@ -21,26 +21,28 @@ public static class AppConfigManager
             string json = File.ReadAllText(ConfigFilePath);
             var settings = JsonConvert.DeserializeObject<AppSettings>(json);
 
-            if (settings != null && !string.IsNullOrEmpty(settings.Application.TimeZoneId))
+             if (settings != null && !string.IsNullOrEmpty(settings.Application.TimeZoneId))
             {
-                try
+                 try
                 {
-                    TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
+                     TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
+                   settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
+                }
+                catch (TimeZoneNotFoundException ex)
+                {
+                     Logger.LogMessage($"Error finding Time Zone {settings.Application.TimeZoneId}. Defaulting to UTC. : {ex.Message}");
+                    settings.Application.TimeZoneId = "UTC";
+                      TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
                     settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
-                }
-                 catch (TimeZoneNotFoundException ex)
-                {
-                     Logger.LogMessage($"Error finding Time Zone {settings.Application.TimeZoneId} : {ex.Message}");
-                     throw; // Re-throw the exception
-                }
-
+                 }
             }
-              else
+             else
             {
-                   Logger.LogMessage("Time Zone Id not found in config, default offset will be set to 0.");
-                     settings.Application.TimeZoneOffset = 0;
+                  Logger.LogMessage("Time Zone Id not found in config, default offset will be set to UTC.");
+                 settings.Application.TimeZoneId = "UTC";
+                 TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
+                   settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
             }
-
             return settings;
         }
         catch (Exception ex)
