@@ -1,4 +1,4 @@
-//Be Naame Khoda
+      //Be Naame Khoda
 //FileName: AppConfigManager.cs
 
 using Newtonsoft.Json;
@@ -9,7 +9,6 @@ public static class AppConfigManager
 {
     private static readonly string ConfigFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AppSettings.conf");
 
-    // بارگذاری تنظیمات از فایل JSON
     public static AppSettings LoadConfig()
     {
         if (!File.Exists(ConfigFilePath))
@@ -20,7 +19,29 @@ public static class AppConfigManager
         try
         {
             string json = File.ReadAllText(ConfigFilePath);
-            return JsonConvert.DeserializeObject<AppSettings>(json);
+            var settings = JsonConvert.DeserializeObject<AppSettings>(json);
+
+            if (settings != null && !string.IsNullOrEmpty(settings.Application.TimeZoneId))
+            {
+                try
+                {
+                    TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
+                    settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
+                }
+                 catch (TimeZoneNotFoundException ex)
+                {
+                     Logger.LogMessage($"Error finding Time Zone {settings.Application.TimeZoneId} : {ex.Message}");
+                     throw; // Re-throw the exception
+                }
+
+            }
+              else
+            {
+                   Logger.LogMessage("Time Zone Id not found in config, default offset will be set to 0.");
+                     settings.Application.TimeZoneOffset = 0;
+            }
+
+            return settings;
         }
         catch (Exception ex)
         {
@@ -29,7 +50,6 @@ public static class AppConfigManager
         }
     }
 
-    // ذخیره‌سازی تنظیمات در فایل JSON
     public static void SaveConfig(AppSettings settings)
     {
         try
@@ -44,3 +64,4 @@ public static class AppConfigManager
         }
     }
 }
+    
