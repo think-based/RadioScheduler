@@ -20,6 +20,9 @@ namespace RadioSchedulerService
         {
             _cancellationTokenSource = new CancellationTokenSource();
 
+             // Load settings from the configuration file before doing anything
+             LoadSettingsFromConfig();
+
             // Create concrete implementations
             IAudioPlayer audioPlayer = new AudioPlayer();
             ISchedulerConfigManager configManager = new SchedulerConfigManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf"));
@@ -37,9 +40,6 @@ namespace RadioSchedulerService
         {
             try
             {
-                // Load settings from the configuration file
-                LoadSettingsFromConfig();
-
                 // Start the WebServer
                 _webServer.Start();
 
@@ -96,11 +96,11 @@ namespace RadioSchedulerService
                 Settings.Latitude = appSettings.Latitude;
                 Settings.Longitude = appSettings.Longitude;
                 Settings.TimeZoneId = appSettings.TimeZoneId;
-                Settings.TimeZoneOffset = appSettings.TimeZoneOffset;
-                  Settings.Region = appSettings.Region;
+                 Settings.TimeZoneOffset = appSettings.TimeZoneOffset;
                 Settings.TimerIntervalInMinutes = appSettings.TimerIntervalInMinutes;
                 Settings.AmplifierEnabled = appSettings.AmplifierEnabled;
                 Settings.AmplifierApiUrl = appSettings.AmplifierApiUrl;
+                 Settings.Region = appSettings.Region;
 
                 // Set calculation method and time format
                 Settings.CalculationMethod = (PrayTime.CalculationMethod)Enum.Parse(typeof(PrayTime.CalculationMethod), appSettings.CalculationMethod);
@@ -108,6 +108,7 @@ namespace RadioSchedulerService
                 Settings.TimeFormat = (PrayTime.TimeFormat)Enum.Parse(typeof(PrayTime.TimeFormat), appSettings.TimeFormat);
                 Settings.AdjustHighLats = (PrayTime.AdjustingMethod)Enum.Parse(typeof(PrayTime.AdjustingMethod), appSettings.AdjustHighLats);
                  Settings.AutoSetAngles();
+
                 Logger.LogMessage("Settings loaded from configuration file.");
             }
             catch (Exception ex)
