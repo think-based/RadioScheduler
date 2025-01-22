@@ -83,7 +83,7 @@ public class ApiRequestHandler
     {
         try
         {
-             string eventName = request.Url.Segments[request.Url.Segments.Length - 1];
+            string eventName = request.Url.Segments[request.Url.Segments.Length - 1];
            var trigger = _triggerManager.Triggers.FirstOrDefault(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
               if (trigger.Equals(default((string, DateTime?, TriggerSource))))
             {
@@ -373,7 +373,7 @@ public class ApiRequestHandler
     /// </summary>
     /// <param name="response"></param>
     /// <param name="message"></param>
-    protected void WriteStringResponse(HttpListenerResponse response, string message)
+    protected internal void WriteStringResponse(HttpListenerResponse response, string message)
     {
          byte[] buffer = Encoding.UTF8.GetBytes(message);
             response.ContentType = "text/plain";
