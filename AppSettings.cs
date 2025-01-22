@@ -15,6 +15,7 @@ public class ApplicationSettings
     public string CalculationMethod { get; set; }
     public string AsrMethod { get; set; }
     public string TimeFormat { get; set; }
+     public string Region { get; set; }
     public string AdjustHighLats { get; set; }
     public int TimerIntervalInMinutes { get; set; }
     public bool AmplifierEnabled { get; set; }
