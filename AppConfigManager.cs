@@ -1,9 +1,10 @@
-      //Be Naame Khoda
+//Be Naame Khoda
 //FileName: AppConfigManager.cs
 
 using Newtonsoft.Json;
 using System;
 using System.IO;
+using System.Reflection;
 
 public static class AppConfigManager
 {
@@ -28,25 +29,25 @@ public static class AppConfigManager
                     TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
                     settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
                 }
-                 catch (TimeZoneNotFoundException ex)
+                catch (TimeZoneNotFoundException ex)
                 {
-                     Logger.LogMessage($"Error finding Time Zone {settings.Application.TimeZoneId}. Defaulting to UTC. : {ex.Message}");
+                    Logger.LogMessage($"Error finding Time Zone {settings.Application.TimeZoneId}. Defaulting to UTC. : {ex.Message}");
                     settings.Application.TimeZoneId = "UTC";
-                      TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
+                    TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
                     settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
-                 }
+                }
             }
-             else
+            else
             {
-                  Logger.LogMessage("Time Zone Id not found in config, default offset will be set to UTC.");
-                 settings.Application.TimeZoneId = "UTC";
-                 TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
-                   settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
+                Logger.LogMessage("Time Zone Id not found in config, default offset will be set to UTC.");
+                settings.Application.TimeZoneId = "UTC";
+                TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
+                settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
             }
-           if (settings != null && string.IsNullOrEmpty(settings.Application.Region))
+            if (settings != null && string.IsNullOrEmpty(settings.Application.Region))
             {
-                  Logger.LogMessage("Region not found in config, setting default value to US");
-                 settings.Application.Region = "US";
+                Logger.LogMessage("Region not found in config, setting default value to US");
+                settings.Application.Region = "US";
             }
 
             return settings;
@@ -72,4 +73,3 @@ public static class AppConfigManager
         }
     }
 }
-    
