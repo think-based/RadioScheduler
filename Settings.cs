@@ -9,16 +9,16 @@ public static class Settings
     public static double Latitude { get; set; }
     public static double Longitude { get; set; }
     public static string TimeZoneId { get; set; }
-    public static double TimeZoneOffset { get; set; }
+    public static double TimeZoneOffset { get;set;}
     public static PrayTime.CalculationMethod CalculationMethod { get; set; }
     public static PrayTime.AsrMethods AsrMethod { get; set; }
     public static PrayTime.TimeFormat TimeFormat { get; set; }
     public static PrayTime.AdjustingMethod AdjustHighLats { get; set; }
+    public static string Region { get; set; }
     public static int TimerIntervalInMinutes { get; set; }
     public static bool AmplifierEnabled { get; set; }
     public static string AmplifierApiUrl { get; set; }
-
-     private static double _fajrAngle;
+      private static double _fajrAngle;
     private static double _ishaAngle;
 
     public static double FajrAngle => _fajrAngle;
