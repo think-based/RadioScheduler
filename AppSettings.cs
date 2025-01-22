@@ -1,4 +1,4 @@
-//Be Naame Khoda
+      //Be Naame Khoda
 //FileName: AppSettings.cs
 
 public class AppSettings
@@ -10,7 +10,8 @@ public class ApplicationSettings
 {
     public double Latitude { get; set; }
     public double Longitude { get; set; }
-    public double TimeZone { get; set; }
+    public string TimeZoneId { get; set; }
+    public double TimeZoneOffset { get; set; }
     public string CalculationMethod { get; set; }
     public string AsrMethod { get; set; }
     public string TimeFormat { get; set; }
@@ -19,3 +20,4 @@ public class ApplicationSettings
     public bool AmplifierEnabled { get; set; }
     public string AmplifierApiUrl { get; set; }
 }
+    
