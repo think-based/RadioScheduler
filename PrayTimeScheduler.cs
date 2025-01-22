@@ -31,38 +31,32 @@ public class PrayTimeScheduler
 
     private void SetNextPrayTime()
     {
-          // تاریخ و زمان فعلی (با توجه به زمان‌زون اوقات شرعی)
-        DateTime now = DateTime.Now;
-        var timeZoneOffset = Settings.GetTimeZoneOffset();
-         TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
-        TimeZoneInfo prayTimeZone = TimeZoneInfo.CreateCustomTimeZone(
-        "PrayTimeZone",
-        TimeSpan.FromHours(timeZoneOffset),
-        "PrayTimeZone",
-        "PrayTimeZone");
-         DateTime convertedNow =  TimeZoneInfo.ConvertTime(now, systemTimeZone, prayTimeZone);
-        int year = convertedNow.Year;
-        int month = convertedNow.Month;
-        int day = convertedNow.Day;
+        // تاریخ و زمان فعلی (با توجه به زمان‌زون اوقات شرعی)
+        DateTime now = ConvertToPrayTimeZone(DateTime.Now);
+
+        int year = now.Year;
+        int month = now.Month;
+        int day = now.Day;
 
         // استفاده از تنظیمات کاربر
         double latitude = Settings.Latitude;
         double longitude = Settings.Longitude;
-        
+        double timeZone = Settings.TimeZoneOffset; // Changed to TimeZoneOffset
+
         // محاسبه زمان‌های شرعی برای امروز
-        string[] prayerTimes = _prayTime.getPrayerTimes(year, month, day, latitude, longitude, (int)timeZoneOffset);
+        string[] prayerTimes = _prayTime.getPrayerTimes(year, month, day, latitude, longitude, (int)timeZone);
 
         // زمان‌های شرعی به ترتیب: فجر، طلوع آفتاب، ظهر، عصر، غروب آفتاب، مغرب، عشاء
-        DateTime fajrTime = ParseTime(prayerTimes[0], convertedNow);
-        DateTime sunriseTime = ParseTime(prayerTimes[1], convertedNow);
-        DateTime dhuhrTime = ParseTime(prayerTimes[2], convertedNow);
-        DateTime asrTime = ParseTime(prayerTimes[3], convertedNow);
-        DateTime sunsetTime = ParseTime(prayerTimes[4], convertedNow);
-        DateTime maghribTime = ParseTime(prayerTimes[5], convertedNow);
-        DateTime ishaTime = ParseTime(prayerTimes[6], convertedNow);
+        DateTime fajrTime = ParseTime(prayerTimes[0]);
+        DateTime sunriseTime = ParseTime(prayerTimes[1]);
+        DateTime dhuhrTime = ParseTime(prayerTimes[2]);
+        DateTime asrTime = ParseTime(prayerTimes[3]);
+        DateTime sunsetTime = ParseTime(prayerTimes[4]);
+        DateTime maghribTime = ParseTime(prayerTimes[5]);
+        DateTime ishaTime = ParseTime(prayerTimes[6]);
 
         // زمان فعلی (با توجه به زمان‌زون اوقات شرعی)
-         DateTime currentTime = convertedNow;
+        DateTime currentTime = now;
 
         // بررسی زمان شرعی بعدی
         DateTime nextPrayTime = DateTime.MaxValue;
@@ -114,4 +108,69 @@ public class PrayTimeScheduler
         if (currentTime < ishaTime && ishaTime < nextPrayTime)
         {
             nextPrayTime = ishaTime;
+            nextPrayName = "Isha";
+        }
+
+        // اگر زمان شرعی بعدی پیدا نشد، برای فردا فجر تنظیم کنید
+        if (nextPrayTime == DateTime.MaxValue)
+        {
+            nextPrayTime = fajrTime.AddDays(1);
+            nextPrayName = "Fajr";
+        }
+
+        // تنظیم CurrentTrigger
+        SetCurrentTrigger(nextPrayName, nextPrayTime);
+
+        // تنظیم تایمر برای فعال شدن در زمان شرعی بعدی
+        double timeUntilNextPray = (nextPrayTime - currentTime).TotalMilliseconds;
+        _timer.Interval = timeUntilNextPray;
+        _timer.Start();
+
+        // چاپ اطلاعات برای بررسی
+        Logger.LogMessage($"Next prayer: {nextPrayName} at {nextPrayTime}");
+    }
+
+    private void SetCurrentTrigger(string eventName, DateTime triggerTime)
+    {
+        ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Systematic);
+
+        // چاپ اطلاعات برای بررسی
+        Logger.LogMessage($"CurrentTrigger set to: {eventName} at {triggerTime}");
+    }
+
+    private DateTime ParseTime(string time)
+    {
+        // تبدیل زمان از رشته به DateTime
+         DateTime now = ConvertToPrayTimeZone(DateTime.Now);
+        try
+        {
+            DateTime parsedTime = DateTime.ParseExact(time, "HH:mm:ss", null);
+            if (parsedTime < now)
+            {
+                // اگر زمان گذشته باشد، برای فردا تنظیم کنید
+                parsedTime = parsedTime.AddDays(1);
+            }
+            return parsedTime;
+        }
+        catch (FormatException)
+        {
+            // اگر فرمت زمان نادرست باشد، زمان پیش‌فرض برگردانید
+            Logger.LogMessage($"Error parsing time: {time}");
+            return now.AddHours(1); // زمان پیش‌فرض: ۱ ساعت بعد
+        }
+    }
+
+    private DateTime ConvertToPrayTimeZone(DateTime dateTime)
+    {
+        // تبدیل زمان سیستم به زمان‌زون اوقات شرعی
+        TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
+        TimeZoneInfo prayTimeZone = TimeZoneInfo.CreateCustomTimeZone(
+            "PrayTimeZone",
+            TimeSpan.FromHours(Settings.TimeZoneOffset), // Changed to TimeZoneOffset
+            "PrayTimeZone",
+            "PrayTimeZone");
+
+        return TimeZoneInfo.ConvertTime(dateTime, systemTimeZone, prayTimeZone);
+    }
+}
     
