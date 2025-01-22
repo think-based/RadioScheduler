@@ -8,6 +8,7 @@ using System.Text;
 using Newtonsoft.Json;
 using RadioSchedulerService;
 using static ActiveTriggers;
+using System.Linq; // Added missing using directive
 
 public class ApiRequestHandler
 {
@@ -82,7 +83,7 @@ public class ApiRequestHandler
     {
         try
         {
-             string eventName = request.Url.Segments[request.Url.Segments.Length - 1]; //Access last element using array index
+             string eventName = request.Url.Segments[request.Url.Segments.Length - 1];
            var trigger = _triggerManager.Triggers.FirstOrDefault(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
               if (trigger.Equals(default((string, DateTime?, TriggerSource))))
             {
@@ -279,7 +280,7 @@ public class ApiRequestHandler
 
                     try
                     {
-                         triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
+                          triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
                     }
                      catch (Exception ex)
                     {
