@@ -200,9 +200,8 @@ public class WebServer
 
             // Calculate prayer times using PrayTime class
             var prayTime = new PrayTime();
-            string[] prayerTimes = prayTime.getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
-
-            // Create an anonymous object to hold the prayer times
+             string[] prayerTimes = prayTime.getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZoneOffset);
+          // Create an anonymous object to hold the prayer times
             var prayerTimesObject = new
             {
                 Fajr = prayerTimes[0],
@@ -222,7 +221,6 @@ public class WebServer
             response.ContentType = "application/json";
             response.ContentLength64 = buffer.Length;
             response.OutputStream.Write(buffer, 0, buffer.Length);
-
         }
         catch (Exception ex)
         {

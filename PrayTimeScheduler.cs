@@ -1,4 +1,4 @@
-//Be Naame Khoda
+      //Be Naame Khoda
 //FileName: PrayTimeScheduler.cs
 
 using System;
@@ -20,57 +20,53 @@ public class PrayTimeScheduler
         _timer.AutoReset = false; // تایمر فقط یک بار فعال می‌شود
 
         // اولین بار زمان‌های شرعی را محاسبه و تنظیم کنید
-        SetPrayTimes();
+        SetNextPrayTime();
     }
 
     private void OnTimerElapsed(object sender, ElapsedEventArgs e)
     {
         // زمان شرعی بعدی را تنظیم کنید
-        SetPrayTimes();
+        SetNextPrayTime();
     }
 
-    private void SetPrayTimes()
+    private void SetNextPrayTime()
     {
+          // تاریخ و زمان فعلی (با توجه به زمان‌زون اوقات شرعی)
         DateTime now = DateTime.Now;
-        int year = now.Year;
-        int month = now.Month;
-        int day = now.Day;
+        var timeZoneOffset = Settings.GetTimeZoneOffset();
+         TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
+        TimeZoneInfo prayTimeZone = TimeZoneInfo.CreateCustomTimeZone(
+        "PrayTimeZone",
+        TimeSpan.FromHours(timeZoneOffset),
+        "PrayTimeZone",
+        "PrayTimeZone");
+         DateTime convertedNow =  TimeZoneInfo.ConvertTime(now, systemTimeZone, prayTimeZone);
+        int year = convertedNow.Year;
+        int month = convertedNow.Month;
+        int day = convertedNow.Day;
 
-
-
+        // استفاده از تنظیمات کاربر
+        double latitude = Settings.Latitude;
+        double longitude = Settings.Longitude;
+        
         // محاسبه زمان‌های شرعی برای امروز
-        string[] prayerTimes = new PrayTime().getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
-
-        // Display prayer times
-        Console.WriteLine("Prayer Times for Today:");
-        Console.WriteLine($"Fajr: {prayerTimes[0]}");
-        Console.WriteLine($"Sunrise: {prayerTimes[1]}");
-        Console.WriteLine($"Dhuhr: {prayerTimes[2]}");
-        Console.WriteLine($"Asr: {prayerTimes[3]}");
-        Console.WriteLine($"Sunset: {prayerTimes[4]}");
-        Console.WriteLine($"Maghrib: {prayerTimes[5]}");
-        Console.WriteLine($"Isha: {prayerTimes[6]}");
+        string[] prayerTimes = _prayTime.getPrayerTimes(year, month, day, latitude, longitude, (int)timeZoneOffset);
 
         // زمان‌های شرعی به ترتیب: فجر، طلوع آفتاب، ظهر، عصر، غروب آفتاب، مغرب، عشاء
-        DateTime fajrTime = ParseTime(prayerTimes[0]);
-        DateTime sunriseTime = ParseTime(prayerTimes[1]);
-        DateTime dhuhrTime = ParseTime(prayerTimes[2]);
-        DateTime asrTime = ParseTime(prayerTimes[3]);
-        DateTime sunsetTime = ParseTime(prayerTimes[4]);
-        DateTime maghribTime = ParseTime(prayerTimes[5]);
-        DateTime ishaTime = ParseTime(prayerTimes[6]);
-
-        SetTrigger("azan_sobh", fajrTime);
-        SetTrigger("azan_zohr", dhuhrTime);
-        SetTrigger("azan_maghreb", maghribTime);
+        DateTime fajrTime = ParseTime(prayerTimes[0], convertedNow);
+        DateTime sunriseTime = ParseTime(prayerTimes[1], convertedNow);
+        DateTime dhuhrTime = ParseTime(prayerTimes[2], convertedNow);
+        DateTime asrTime = ParseTime(prayerTimes[3], convertedNow);
+        DateTime sunsetTime = ParseTime(prayerTimes[4], convertedNow);
+        DateTime maghribTime = ParseTime(prayerTimes[5], convertedNow);
+        DateTime ishaTime = ParseTime(prayerTimes[6], convertedNow);
 
         // زمان فعلی (با توجه به زمان‌زون اوقات شرعی)
-        DateTime currentTime = now;
+         DateTime currentTime = convertedNow;
 
         // بررسی زمان شرعی بعدی
         DateTime nextPrayTime = DateTime.MaxValue;
         string nextPrayName = "";
-        string nextTriggerName = "";
 
         // بررسی فجر
         if (currentTime < fajrTime && fajrTime < nextPrayTime)
@@ -118,66 +114,4 @@ public class PrayTimeScheduler
         if (currentTime < ishaTime && ishaTime < nextPrayTime)
         {
             nextPrayTime = ishaTime;
-            nextPrayName = "Isha";
-        }
-
-        // اگر زمان شرعی بعدی پیدا نشد، برای فردا فجر تنظیم کنید
-        if (nextPrayTime == DateTime.MaxValue)
-        {
-            nextPrayTime = fajrTime.AddDays(1);
-            nextPrayName = "Fajr";
-        }
-
-        // تنظیم Trigger
-        SetTrigger("NextPrayTime", nextPrayTime);
-
-        // تنظیم تایمر برای فعال شدن در زمان شرعی بعدی
-        double timeUntilNextPray = (nextPrayTime - currentTime).TotalMilliseconds;
-        _timer.Interval = timeUntilNextPray;
-        _timer.Start();
-
-        // چاپ اطلاعات برای بررسی
-        Logger.LogMessage($"Next prayer: {nextPrayName} at {nextPrayTime}");
-    }
-
-    private void SetTrigger(string eventName, DateTime triggerTime)
-    {
-        ActiveTriggers.AddTrigger(eventName, triggerTime, TriggerSource.Systematic);
-        Logger.LogMessage($"CurrentTrigger set to: {eventName} at {triggerTime}");
-    }
-
-    private DateTime ParseTime(string time)
-    {
-        // تبدیل زمان از رشته به DateTime
-        DateTime now = ConvertToPrayTimeZone(DateTime.Now);
-        try
-        {
-            DateTime parsedTime = DateTime.ParseExact(time, "HH:mm:ss", null);
-            if (parsedTime < now)
-            {
-                // اگر زمان گذشته باشد، برای فردا تنظیم کنید
-                parsedTime = parsedTime.AddDays(1);
-            }
-            return parsedTime;
-        }
-        catch (FormatException)
-        {
-            // اگر فرمت زمان نادرست باشد، زمان پیش‌فرض برگردانید
-            Logger.LogMessage($"Error parsing time: {time}");
-            return now.AddHours(1); // زمان پیش‌فرض: ۱ ساعت بعد
-        }
-    }
-
-    private DateTime ConvertToPrayTimeZone(DateTime dateTime)
-    {
-        // تبدیل زمان سیستم به زمان‌زون اوقات شرعی (UTC+3.5)
-        TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
-        TimeZoneInfo prayTimeZone = TimeZoneInfo.CreateCustomTimeZone(
-            "PrayTimeZone",
-            TimeSpan.FromHours(Settings.TimeZone),
-            "PrayTimeZone",
-            "PrayTimeZone");
-
-        return TimeZoneInfo.ConvertTime(dateTime, systemTimeZone, prayTimeZone);
-    }
-}
+    

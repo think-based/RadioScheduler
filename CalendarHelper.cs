@@ -36,25 +36,14 @@ public static class CalendarHelper
         }
     }
 
-       public static DateTime ConvertToLocalTimeZone(DateTime dateTime, double timeZone, string region)
+    public static DateTime ConvertToLocalTimeZone(DateTime dateTime, string region)
     {
-        // Convert system time to the local time zone based on settings
+         // Convert system time to the local time zone based on settings
         TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
-       TimeZoneInfo targetTimeZone = TimeZoneInfo.CreateCustomTimeZone(
-            "PrayTimeZone",
-            TimeSpan.FromHours(timeZone),
-            "PrayTimeZone",
-            "PrayTimeZone");
+        TimeZoneInfo targetTimeZone = TimeZoneInfo.FindSystemTimeZoneById(Settings.TimeZoneId);
 
-        try
-        {
-            return TimeZoneInfo.ConvertTime(dateTime, systemTimeZone, targetTimeZone);
-        }
-        catch (TimeZoneNotFoundException)
-        {
-             Logger.LogMessage($"Invalid time zone with value {timeZone}.");
-            return dateTime;
-        }
+
+        return TimeZoneInfo.ConvertTime(dateTime, systemTimeZone, targetTimeZone);
     }
 }
     
