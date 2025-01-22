@@ -82,16 +82,14 @@ public class ApiRequestHandler
     {
         try
         {
-            string eventName = request.Url.Segments.Last();
-            var trigger = _triggerManager.Triggers.FirstOrDefault(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
-
-            if (trigger.Equals(default((string, DateTime?, TriggerSource))))
+             string eventName = request.Url.Segments[request.Url.Segments.Length - 1]; //Access last element using array index
+           var trigger = _triggerManager.Triggers.FirstOrDefault(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
+              if (trigger.Equals(default((string, DateTime?, TriggerSource))))
             {
                 response.StatusCode = (int)HttpStatusCode.NotFound;
                 return;
             }
-
-            var triggerObj = new
+             var triggerObj = new
             {
                 triggerEvent = trigger.Event,
                 time = trigger.Time,
@@ -179,7 +177,7 @@ public class ApiRequestHandler
 
                     try
                     {
-                         triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
+                          triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
                     }
                     catch (Exception ex)
                     {
@@ -275,12 +273,13 @@ public class ApiRequestHandler
                         return;
                     }
                 }
-                else if (DateTime.TryParse(data.time.ToString(), out parsedTime))
+                 else if (DateTime.TryParse(data.time.ToString(), out parsedTime))
                 {
                      parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local);
-                     try
+
+                    try
                     {
-                          triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
+                         triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
                     }
                      catch (Exception ex)
                     {
@@ -368,7 +367,7 @@ public class ApiRequestHandler
             WriteStringResponse(response, message);
         }
     }
-     /// <summary>
+    /// <summary>
     /// Writes the string message to the response body
     /// </summary>
     /// <param name="response"></param>
