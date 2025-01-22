@@ -95,8 +95,9 @@ namespace RadioSchedulerService
                 // Set application settings
                 Settings.Latitude = appSettings.Latitude;
                 Settings.Longitude = appSettings.Longitude;
-                Settings.TimeZoneId = appSettings.TimeZoneId; // Set the TimeZoneId
-                 Settings.TimeZoneOffset = appSettings.TimeZoneOffset; // Set the TimeZoneOffset
+                Settings.TimeZoneId = appSettings.TimeZoneId;
+                Settings.TimeZoneOffset = appSettings.TimeZoneOffset;
+                  Settings.Region = appSettings.Region;
                 Settings.TimerIntervalInMinutes = appSettings.TimerIntervalInMinutes;
                 Settings.AmplifierEnabled = appSettings.AmplifierEnabled;
                 Settings.AmplifierApiUrl = appSettings.AmplifierApiUrl;
