@@ -6,7 +6,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json;
-using RadioSchedulerService;
+using System.Linq;
 using static ActiveTriggers;
 
 public class ApiRequestHandler
@@ -149,47 +149,9 @@ public class ApiRequestHandler
             if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
             {
                  DateTime parsedTime;
-               if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+               if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeLocal, out parsedTime))
                 {
-                     TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
-                     TimeZoneInfo targetTimeZone = TimeZoneInfo.CreateCustomTimeZone(
-                     "ApplicationTimeZone",
-                     TimeSpan.FromHours(Settings.TimeZone),
-                     "ApplicationTimeZone",
-                     "ApplicationTimeZone");
-                   try{
-                        triggerTime = TimeZoneInfo.ConvertTime(parsedTime, parsedTime.Kind == DateTimeKind.Utc ? TimeZoneInfo.Utc : systemTimeZone, targetTimeZone);
-                    }
-                   catch (Exception ex)
-                    {
-                        response.StatusCode = (int)HttpStatusCode.BadRequest;
-                        message =  $"Time zone Conversion error,  {ex.Message}";
-                        response.StatusDescription = message;
-                         WriteStringResponse(response, message);
-                        return;
-                    }
-
-                 }
-                else if (DateTime.TryParse(data.time.ToString(), out parsedTime))
-                 {
-                      parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local);
-                     TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
-                      TimeZoneInfo targetTimeZone = TimeZoneInfo.CreateCustomTimeZone(
-                      "ApplicationTimeZone",
-                      TimeSpan.FromHours(Settings.TimeZone),
-                      "ApplicationTimeZone",
-                       "ApplicationTimeZone");
-                     try{
-                          triggerTime = TimeZoneInfo.ConvertTime(parsedTime, systemTimeZone, targetTimeZone);
-                    }
-                     catch (Exception ex)
-                    {
-                          response.StatusCode = (int)HttpStatusCode.BadRequest;
-                        message =  $"Time zone Conversion error,  {ex.Message}";
-                         response.StatusDescription = message;
-                           WriteStringResponse(response, message);
-                         return;
-                     }
+                    triggerTime = parsedTime;
 
                 }
                 else
@@ -385,7 +347,7 @@ public class ApiRequestHandler
         /// </summary>
         /// <param name="response"></param>
         /// <param name="message"></param>
-   protected void WriteStringResponse(HttpListenerResponse response, string message)
+   public void WriteStringResponse(HttpListenerResponse response, string message)
         {
              byte[] buffer = Encoding.UTF8.GetBytes(message);
             response.ContentType = "text/plain";

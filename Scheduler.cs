@@ -50,8 +50,8 @@ public class Scheduler
     {
         DateTime now = DateTime.Now;
         DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now, Settings.TimeZone, "US");
-        List<ScheduleItem> dueItems = GetDueScheduleItems(convertedNow);
-        foreach (var item in dueItems)
+        List<ScheduleItem> scheduleItems = _configManager.ScheduleItems;
+        foreach (var item in scheduleItems)
         {
             ProcessScheduleItem(item, convertedNow);
         }
@@ -139,59 +139,63 @@ public class Scheduler
         item.Status = ScheduleStatus.Playing;
         item.LastPlayTime = now;
     }
-     private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now)
+    private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now)
     {
-          foreach (var trigger in _triggerManager.Triggers)
-        {
-            if (!string.IsNullOrEmpty(item.Trigger) && item.Trigger.Equals(trigger.Event, StringComparison.OrdinalIgnoreCase))
-            {
-                if (item.TriggerTime != trigger.Time)
-                {
-                    item.TriggerTime = trigger.Time;
-                     if (item.TriggerType == TriggerTypes.Immediate)
-                    {
-                        item.NextOccurrence = trigger.Time.Value;
-                    }
-                    else if (item.TriggerType == TriggerTypes.Delayed)
-                    {
-                        if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
-                        {
-                            item.NextOccurrence = trigger.Time.Value.Add(delay);
-                        }
-                        else
-                        {
-                            Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
-                            item.NextOccurrence = DateTime.MaxValue;
-                        }
-                    }
-                    else if (item.TriggerType == TriggerTypes.Timed)
-                    {
-                        item.NextOccurrence = trigger.Time.Value.Add(-item.TotalDuration);
-                    }
+        var trigger = ActiveTriggers.GetTrigger(item.Trigger);
 
+        if (!trigger.HasValue)
+        {
+            if (item.NextOccurrence >= now)
+            {
+                item.NextOccurrence = DateTime.MinValue;
+                Logger.LogMessage($"Trigger '{item.Trigger}' has gone away!");
+            }
+            return;
+        }
+
+        if (item.TriggerTime != trigger.Value.Time)
+        {
+            item.TriggerTime = trigger.Value.Time;
+            if (item.TriggerType == TriggerTypes.Immediate)
+            {
+                item.NextOccurrence = trigger.Value.Time.Value;
+            }
+            else if (item.TriggerType == TriggerTypes.Delayed)
+            {
+                if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
+                {
+                    item.NextOccurrence = trigger.Value.Time.Value.Add(delay);
                 }
                 else
                 {
-                     if (item.TriggerType == TriggerTypes.Immediate || item.TriggerType == TriggerTypes.Timed)
-                    {
-                        item.NextOccurrence = trigger.Time.Value;
-                    }
-                     else if (item.TriggerType == TriggerTypes.Delayed)
-                    {
-                         if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
-                        {
-                           item.NextOccurrence = trigger.Time.Value.Add(delay);
-                         }
-                         else
-                         {
-                            Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
-                             item.NextOccurrence = DateTime.MaxValue;
-                         }
-                     }
+                    Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for schedule item '{item.Name}'.");
+                    item.NextOccurrence = DateTime.MinValue;
                 }
-                break;
             }
-       }
+            else if (item.TriggerType == TriggerTypes.Timed)
+            {
+                item.NextOccurrence = trigger.Value.Time.Value.Add(-item.TotalDuration);
+            }
+        }
+        else
+        {
+            if (item.TriggerType == TriggerTypes.Immediate || item.TriggerType == TriggerTypes.Timed)
+            {
+                item.NextOccurrence = trigger.Value.Time.Value;
+            }
+            else if (item.TriggerType == TriggerTypes.Delayed)
+            {
+                if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
+                {
+                    item.NextOccurrence = trigger.Value.Time.Value.Add(delay);
+                }
+                else
+                {
+                    Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
+                    item.NextOccurrence = DateTime.MinValue;
+                }
+            }
+        }
     }
     private void OnConflictOccurred(object conflictData)
     {

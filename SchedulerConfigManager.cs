@@ -10,6 +10,7 @@ using static Enums;
 using NAudio.Wave;
 using RadioScheduler.Entities;
 using System.Speech.Synthesis;
+using System.Linq;
 
 public class SchedulerConfigManager : ISchedulerConfigManager
 {
@@ -41,7 +42,6 @@ public class SchedulerConfigManager : ISchedulerConfigManager
     {
         try
         {
-
             if (File.Exists(_configFilePath))
             {
                 string json = File.ReadAllText(_configFilePath);
@@ -72,10 +72,28 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                             }
 
                         }
+                        // Process FilePathItems
+                        foreach (var filePathItem in item.FilePaths)
+                        {
+                            if (Directory.Exists(filePathItem.Path) && filePathItem.FolderPlayMode == "Single")
+                            {
+                                var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3").OrderBy(f => f).ToList();
+                                if (audioFiles.Any())
+                                {
+                                    var random = new Random();
+                                    int randomIndex = random.Next(audioFiles.Count);
+                                    filePathItem.Path = audioFiles[randomIndex];
+                                    filePathItem.FolderPlayMode = null; // Clear the FolderPlayMode
+                                }
+                                else
+                                {
+                                    Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and 'Single' play mode for  schedule item  '{item.Name}'.");
+
+                                }
+                            }
+                        }
                         item.TotalDuration = CalculateTotalDuration(item.FilePaths);
-
                         ScheduleItems.Add(item);
-
                     }
                     catch (ArgumentException ex)
                     {
@@ -91,8 +109,6 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                     }
                 }
 
-
-
                 Logger.LogMessage($"Loaded {ScheduleItems.Count} items from {_configFilePath}.");
                 ConfigReloaded?.Invoke();
             }
@@ -105,7 +121,6 @@ public class SchedulerConfigManager : ISchedulerConfigManager
         {
             Logger.LogMessage($"Error reloading schedule config: {ex.Message}");
         }
-
     }
     /// <summary>
     /// Handles the timer tick event to check for configuration file changes.
@@ -144,14 +159,17 @@ public class SchedulerConfigManager : ISchedulerConfigManager
             if (!string.IsNullOrEmpty(filePathItem.Text)) // Handle TTS
             {
                 filePathItem.Duration = CalculateTtsDuration(filePathItem.Text, ttsEngine);
+                totalDuration += filePathItem.Duration;
             }
-            else if (File.Exists(filePathItem.Path)) // Handle audio file
+            else if (File.Exists(filePathItem.Path)) // Handle single file
             {
                 try
                 {
                     using (var reader = new AudioFileReader(filePathItem.Path))
                     {
                         totalDuration += reader.TotalTime;
+                        filePathItem.Duration = reader.TotalTime;
+
                     }
                 }
                 catch (Exception ex)
@@ -159,9 +177,9 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                     Logger.LogMessage($"Error calculating duration for file {filePathItem.Path}: {ex.Message}");
                 }
             }
-            else if (Directory.Exists(filePathItem.Path)) // Handle folder
+            else if (Directory.Exists(filePathItem.Path)) // Handle folder (shouldn't occur now but leaving this for other cases)
             {
-                var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3");
+                var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3").OrderBy(f => f).ToList();
                 foreach (var audioFile in audioFiles)
                 {
                     try
@@ -177,8 +195,6 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                     }
                 }
             }
-
-            totalDuration += filePathItem.Duration;
         }
 
         ttsEngine.Dispose(); // Clean up TTS engine

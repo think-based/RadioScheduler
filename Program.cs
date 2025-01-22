@@ -19,7 +19,8 @@ namespace RadioSchedulerService
         public Program()
         {
             _cancellationTokenSource = new CancellationTokenSource();
-
+            // Load settings from the configuration file
+            LoadSettingsFromConfig();
             // Create concrete implementations
             IAudioPlayer audioPlayer = new AudioPlayer();
             ISchedulerConfigManager configManager = new SchedulerConfigManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf"));
@@ -37,14 +38,10 @@ namespace RadioSchedulerService
         {
             try
             {
-                // Load settings from the configuration file
-                LoadSettingsFromConfig();
+
 
                 // Start the WebServer
                 _webServer.Start();
-
-                // Display prayer times in the console
-                DisplayPrayerTimes();
 
                 // Handle Ctrl+C to gracefully stop the application
                 Console.CancelKeyPress += OnConsoleCancelKeyPress;
@@ -113,28 +110,6 @@ namespace RadioSchedulerService
                 Logger.LogMessage($"Error loading settings from config: {ex.Message}");
                 throw;
             }
-        }
-
-        private void DisplayPrayerTimes()
-        {
-            // Get current date and time
-            DateTime now = DateTime.Now;
-            int year = now.Year;
-            int month = now.Month;
-            int day = now.Day;
-
-            // Calculate prayer times for today
-            string[] prayerTimes = new PrayTime().getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZone);
-
-            // Display prayer times
-            Console.WriteLine("Prayer Times for Today:");
-            Console.WriteLine($"Fajr: {prayerTimes[0]}");
-            Console.WriteLine($"Sunrise: {prayerTimes[1]}");
-            Console.WriteLine($"Dhuhr: {prayerTimes[2]}");
-            Console.WriteLine($"Asr: {prayerTimes[3]}");
-            Console.WriteLine($"Sunset: {prayerTimes[4]}");
-            Console.WriteLine($"Maghrib: {prayerTimes[5]}");
-            Console.WriteLine($"Isha: {prayerTimes[6]}");
         }
 
         static async Task Main(string[] args)
