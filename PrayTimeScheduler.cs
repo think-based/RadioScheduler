@@ -55,6 +55,11 @@ public class PrayTimeScheduler
         DateTime maghribTime = ParseTime(prayerTimes[5]);
         DateTime ishaTime = ParseTime(prayerTimes[6]);
 
+        SetCurrentTrigger("EVENT_AZAN_SOBH", fajrTime);
+        SetCurrentTrigger("EVENT_AZAN_ZOHR", dhuhrTime);
+        SetCurrentTrigger("EVENT_AZAN_MAGHREB", maghribTime);
+
+        
         // زمان فعلی (با توجه به زمان‌زون اوقات شرعی)
         DateTime currentTime = now;
 
@@ -119,7 +124,7 @@ public class PrayTimeScheduler
         }
 
         // تنظیم CurrentTrigger
-        SetCurrentTrigger(nextPrayName, nextPrayTime);
+        SetCurrentTrigger("EVENT_NEXT_PRAYER", nextPrayTime);
 
         // تنظیم تایمر برای فعال شدن در زمان شرعی بعدی
         double timeUntilNextPray = (nextPrayTime - currentTime).TotalMilliseconds;
