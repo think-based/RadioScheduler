@@ -1,4 +1,4 @@
-// Be Naame Khoda
+      // Be Naame Khoda
 // FileName: ScheduleItem.cs
 
 using RadioScheduler.Entities;
@@ -29,6 +29,8 @@ public class ScheduleItem
     public DateTime? LastPlayTime { get; set; }
     public DateTime? TriggerTime { get; set; }
 
+    // Add the optional Priority property with a default value of Low
+   public Enums.Priority Priority { get; set; } = Enums.Priority.Low;
 
     public void Validate()
     {
@@ -69,3 +71,4 @@ public class ScheduleItem
         }
     }
 }
+    
