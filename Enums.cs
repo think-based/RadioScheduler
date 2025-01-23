@@ -1,5 +1,5 @@
-﻿//Be Naame Khoda
-//FileName: Enums.cs
+      // Be Naame Khoda
+// FileName: Enums.cs
 
 using System;
 
@@ -24,6 +24,7 @@ public static class Enums
         Delayed,
         Timed
     }
+
     public enum ScheduleStatus
     {
         Played,
@@ -32,6 +33,15 @@ public static class Enums
         EventWaiting,
         Canceled
     }
+
+    // Add a new enum for Priority levels
+    public enum Priority
+    {
+        Low = 1,
+        Medium = 2,
+        High = 3
+    }
+
     public static T ParseEnum<T>(string value, string enumName) where T : struct, Enum
     {
         if (string.IsNullOrEmpty(value))
@@ -50,3 +60,4 @@ public static class Enums
 
     }
 }
+    
