@@ -1,4 +1,4 @@
-// Be Naame Khoda
+      // Be Naame Khoda
 // FileName: AudioPlayer.cs
 
 using NAudio.Wave;
@@ -11,7 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using RadioScheduler.Entities;
 using static Enums;
-using System.Diagnostics; // Reference the Enums namespace
+using System.Diagnostics;
 
 public class AudioPlayer : IAudioPlayer
 {
@@ -20,22 +20,22 @@ public class AudioPlayer : IAudioPlayer
     private List<string> _currentPlaylist;
     private int _currentIndex;
     private SpeechSynthesizer _ttsPlayer;
-    private readonly object _lock = new object(); // Lock for thread safety
+    private readonly object _lock = new object();
 
-    private Queue<ScheduleItem> _playlistQueue = new Queue<ScheduleItem>(); // Updated to use ScheduleItem
+    private Queue<ScheduleItem> _playlistQueue = new Queue<ScheduleItem>();
     private Task _playbackTask;
     private CancellationTokenSource _playbackCancellationTokenSource;
-    private ScheduleItem _scheduleItem=null;
-    private readonly ISchedulerConfigManager _configManager; // Add a reference to SchedulerConfigManager
+    private ScheduleItem _scheduleItem = null;
+    private readonly ISchedulerConfigManager _configManager;
 
     public bool IsPlaying { get; private set; }
     public string CurrentFile { get; private set; }
 
-    public event Action<ScheduleItem> PlaylistFinished; // Updated to pass ScheduleItem
-    public event Action PlaylistStoped; 
+    public event Action<ScheduleItem> PlaylistFinished;
+    public event Action PlaylistStoped;
 
 
-    public AudioPlayer(ISchedulerConfigManager configManager) // Inject SchedulerConfigManager via constructor
+    public AudioPlayer(ISchedulerConfigManager configManager)
     {
         _configManager = configManager ?? throw new ArgumentNullException(nameof(configManager));
 
@@ -50,26 +50,20 @@ public class AudioPlayer : IAudioPlayer
         _playbackTask = Task.Run(() => PlaybackLoop(_playbackCancellationTokenSource.Token));
     }
 
-    /// <summary>
-    /// Plays the provided schedule item.
-    /// </summary>
-    public void Play(ScheduleItem item) // Updated to accept ScheduleItem
+    public void Play(ScheduleItem item)
     {
         _scheduleItem = item;
         lock (_lock)
         {
-            _playlistQueue.Enqueue(item); // Add the new schedule item to the queue
+            _playlistQueue.Enqueue(item);
         }
     }
 
-    /// <summary>
-    /// Stops the current playback and cleans up resources.
-    /// </summary>
     public void Stop()
     {
         lock (_lock)
         {
-            _playlistQueue.Clear(); // Clear the playlist queue
+            _playlistQueue.Clear();
 
             if (_audioPlayerWaveOut != null)
             {
@@ -89,16 +83,12 @@ public class AudioPlayer : IAudioPlayer
                 _ttsPlayer.SpeakAsyncCancelAll();
             }
 
-            // Clear the current playlist and reset state
             _currentPlaylist = null;
             IsPlaying = false;
             CurrentFile = null;
             if (_scheduleItem != null && _scheduleItem.Status == ScheduleStatus.Playing)
             {
-                // Update the status of the current item
-                
                 _scheduleItem.Status = ScheduleStatus.Stopped;
-                // Trigger the PlaylistStoped event
                 PlaylistStoped?.Invoke();
                 Logger.LogMessage($"Playlist Stoped: {_scheduleItem.Name}. Status updated to Stoped.");
                 Debug.Print($"Playlist Stoped: {_scheduleItem.Name}. Status updated to Stoped.");
@@ -108,9 +98,6 @@ public class AudioPlayer : IAudioPlayer
         }
     }
 
-    /// <summary>
-    /// Main playback loop to process the playlist queue.
-    /// </summary>
     private async Task PlaybackLoop(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
@@ -121,7 +108,7 @@ public class AudioPlayer : IAudioPlayer
             {
                 if (_playlistQueue.Count > 0)
                 {
-                    nextItem = _playlistQueue.Dequeue(); // Get the next schedule item from the queue
+                    nextItem = _playlistQueue.Dequeue();
                 }
             }
 
@@ -130,23 +117,18 @@ public class AudioPlayer : IAudioPlayer
                 await PlayPlaylist(nextItem, cancellationToken);
             }
 
-            await Task.Delay(100, cancellationToken); // Small delay to avoid busy-waiting
+            await Task.Delay(100, cancellationToken);
         }
     }
 
-    /// <summary>
-    /// Plays a single schedule item.
-    /// </summary>
     private async Task PlayPlaylist(ScheduleItem item, CancellationToken cancellationToken)
     {
         lock (_lock)
         {
-            Stop(); // Stop any ongoing playback
+            Stop();
 
-            // Expand file paths (including TTS items)
             var expandedFilePaths = ExpandFilePaths(item.FilePaths);
 
-            // Check if the playlist is empty
             if (expandedFilePaths == null || expandedFilePaths.Count == 0)
             {
                 Logger.LogMessage("Playlist is null or empty.");
@@ -155,78 +137,63 @@ public class AudioPlayer : IAudioPlayer
 
             Logger.LogMessage($"Starting new playlist: {item.Name}");
 
-            // Initialize the new playlist
             _currentPlaylist = expandedFilePaths;
-            _currentIndex = 0; // Reset the index
+            _currentIndex = 0;
         }
         _scheduleItem.Status = ScheduleStatus.Playing;
 
-        // Start playing the first file
         PlayNextFile();
     }
 
-    /// <summary>
-    /// Plays the next file in the playlist.
-    /// </summary>
     private void PlayNextFile()
     {
         lock (_lock)
         {
-            // Check if _currentPlaylist is null or empty
             if (_currentPlaylist == null || _currentPlaylist.Count == 0)
             {
                 Logger.LogMessage("Playlist is null or empty. Stopping playback.");
                 IsPlaying = false;
                 CurrentFile = null;
 
-                // Get the current item from the queue
                 var currentItem = _playlistQueue.Count > 0 ? _playlistQueue.Peek() : null;
-                OnPlaylistFinished(); // Notify that the playlist has finished
+                OnPlaylistFinished();
                 return;
             }
 
-            // Check if _currentIndex is within bounds
             if (_currentIndex < 0 || _currentIndex >= _currentPlaylist.Count)
             {
                 Logger.LogMessage("Playlist index is out of bounds. Stopping playback.");
                 IsPlaying = false;
                 CurrentFile = null;
 
-                // Get the current item from the queue
                 var currentItem = _playlistQueue.Count > 0 ? _playlistQueue.Peek() : null;
-                OnPlaylistFinished(); // Notify that the playlist has finished
+                OnPlaylistFinished();
                 return;
             }
 
             string nextFile = _currentPlaylist[_currentIndex];
 
-            // Handle TTS
             if (nextFile.StartsWith("TTS:"))
             {
-                string text = nextFile.Substring(4); // Extract text after "TTS:"
+                string text = nextFile.Substring(4);
                 Logger.LogMessage($"Playing TTS: {text}");
 
-                // Ensure _ttsPlayer is initialized
                 if (_ttsPlayer == null)
                 {
                     Logger.LogMessage("TTS player is not initialized.");
                     return;
                 }
 
-                // Stop any ongoing TTS playback
                 _ttsPlayer.SpeakAsyncCancelAll();
 
-                // Play the TTS
                 _ttsPlayer.SpeakAsync(text);
                 IsPlaying = true;
                 CurrentFile = "TTS";
             }
-            // Handle audio file
             else if (File.Exists(nextFile))
             {
                 try
                 {
-                    // Dispose of the previous audio file and player if the file has changed
                     if (_currentAudioFile != null && _currentAudioFile.FileName != nextFile)
                     {
                         _currentAudioFile.Dispose();
@@ -239,13 +206,11 @@ public class AudioPlayer : IAudioPlayer
                         _audioPlayerWaveOut = null;
                     }
 
-                    // Initialize new audio file (if necessary) and player
                     if (_currentAudioFile == null)
                     {
                         _currentAudioFile = new AudioFileReader(nextFile);
                     }
 
-                    // Ensure _audioPlayerWaveOut is initialized
                     if (_audioPlayerWaveOut == null)
                     {
                         _audioPlayerWaveOut = new WaveOutEvent();
@@ -268,14 +233,10 @@ public class AudioPlayer : IAudioPlayer
                 Logger.LogMessage($"File not found: {nextFile}");
             }
 
-            // Increment the index for the next file
             _currentIndex++;
         }
     }
 
-    /// <summary>
-    /// Handles the PlaybackStopped event for audio files.
-    /// </summary>
     private void OnPlaybackStopped(object sender, StoppedEventArgs e)
     {
         lock (_lock)
@@ -283,7 +244,6 @@ public class AudioPlayer : IAudioPlayer
             IsPlaying = false;
             CurrentFile = null;
 
-            // Clean up resources
             if (_currentAudioFile != null)
             {
                 _currentAudioFile.Dispose();
@@ -296,14 +256,10 @@ public class AudioPlayer : IAudioPlayer
                 _audioPlayerWaveOut = null;
             }
 
-            // Play the next file in the playlist
             PlayNextFile();
         }
     }
 
-    /// <summary>
-    /// Handles the SpeakCompleted event for TTS.
-    /// </summary>
     private void OnTtsCompleted(object sender, SpeakCompletedEventArgs e)
     {
         lock (_lock)
@@ -311,36 +267,26 @@ public class AudioPlayer : IAudioPlayer
             IsPlaying = false;
             CurrentFile = null;
 
-            // Play the next file in the playlist
             PlayNextFile();
         }
     }
 
-    /// <summary>
-    /// Called when the playlist finishes or is stopped.
-    /// </summary>
     private void OnPlaylistFinished()
     {
         lock (_lock)
         {
-            if (_scheduleItem != null &&  _scheduleItem.Status == ScheduleStatus.Playing)
+            if (_scheduleItem != null && _scheduleItem.Status == ScheduleStatus.Playing)
             {
-                // Update the status of the current item
-                _scheduleItem.Status = ScheduleStatus.Played; // Use ScheduleStatus enum
+                _scheduleItem.Status = ScheduleStatus.Played;
                 Logger.LogMessage($"Playlist finished: {_scheduleItem.Name}. Status updated to Played.");
 
-                // Reload the schedule item in the configuration manager
                 _configManager.ReloadScheduleItem(_scheduleItem.ItemId);
-                // Trigger the PlaylistFinished event
                 PlaylistFinished?.Invoke(_scheduleItem);
             }
 
         }
     }
 
-    /// <summary>
-    /// Expands file paths and folders into a flat list of playable items.
-    /// </summary>
     public List<string> ExpandFilePaths(List<FilePathItem> filePathItems)
     {
         var expandedPaths = new List<string>();
@@ -353,11 +299,11 @@ public class AudioPlayer : IAudioPlayer
 
         foreach (var item in filePathItems)
         {
-            if (!string.IsNullOrEmpty(item.Text)) // Handle TTS
+            if (!string.IsNullOrEmpty(item.Text))
             {
                 expandedPaths.Add($"TTS:{item.Text}");
             }
-            else if (Directory.Exists(item.Path)) // Handle folder
+            else if (Directory.Exists(item.Path))
             {
                 var audioFiles = Directory.GetFiles(item.Path, "*.mp3")
                                           .OrderBy(f => f)
@@ -373,7 +319,7 @@ public class AudioPlayer : IAudioPlayer
                     expandedPaths.AddRange(audioFiles);
                 }
             }
-            else if (File.Exists(item.Path)) // Handle single file
+            else if (File.Exists(item.Path))
             {
                 expandedPaths.Add(item.Path);
             }
@@ -385,4 +331,17 @@ public class AudioPlayer : IAudioPlayer
 
         return expandedPaths;
     }
+
+    public ScheduleItem GetCurrentScheduledItem()
+    {
+        lock (_lock)
+        {
+            if (_scheduleItem != null && _scheduleItem.Status == ScheduleStatus.Playing)
+            {
+                return _scheduleItem;
+            }
+            return null;
+        }
+    }
 }
+    
