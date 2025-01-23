@@ -16,7 +16,7 @@ public class InstantPlayManager
     private string _currentAudioFile; // Track the current audio file being played
     private bool _folderExists = true; // Track if the folder exists to avoid repetitive checks
 
-    public InstantPlayManager(string instantPlayFolderPath, ISchedulerConfigManager configManager) // Add configManager parameter
+    public InstantPlayManager(string instantPlayFolderPath, ISchedulerConfigManager configManager)
     {
         _instantPlayFolderPath = instantPlayFolderPath;
         _audioPlayer = new AudioPlayer(configManager); // Pass configManager to AudioPlayer
@@ -70,8 +70,20 @@ public class InstantPlayManager
             _currentAudioFile = audioFiles[0];
             Logger.LogMessage($"Playing file: {Path.GetFileName(_currentAudioFile)}");
 
+            // Create a ScheduleItem with the file path
+            var scheduleItem = new ScheduleItem
+            {
+                Name = "Instant Play", // Set a name for the schedule item
+                FilePaths = new List<FilePathItem>
+                {
+                    new FilePathItem { Path = _currentAudioFile }
+                },
+                Type = ScheduleType.NonPeriodic, // Set the type as NonPeriodic
+                TriggerType = TriggerTypes.Immediate // Set the trigger type
+            };
+
             // Play the file
-            _audioPlayer.Play(new List<FilePathItem> { new FilePathItem { Path = _currentAudioFile } });
+            _audioPlayer.Play(scheduleItem);
         }
         catch (Exception ex)
         {
