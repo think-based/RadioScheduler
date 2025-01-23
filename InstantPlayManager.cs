@@ -16,10 +16,10 @@ public class InstantPlayManager
     private string _currentAudioFile; // Track the current audio file being played
     private bool _folderExists = true; // Track if the folder exists to avoid repetitive checks
 
-    public InstantPlayManager(string instantPlayFolderPath)
+    public InstantPlayManager(string instantPlayFolderPath, ISchedulerConfigManager configManager) // Add configManager parameter
     {
         _instantPlayFolderPath = instantPlayFolderPath;
-        _audioPlayer = new AudioPlayer();
+        _audioPlayer = new AudioPlayer(configManager); // Pass configManager to AudioPlayer
 
         // Subscribe to the PlaylistFinished event
         _audioPlayer.PlaylistFinished += OnPlaylistFinished;
@@ -83,7 +83,7 @@ public class InstantPlayManager
         }
     }
 
-    private void OnPlaylistFinished()
+    private void OnPlaylistFinished(ScheduleItem item)
     {
         try
         {
