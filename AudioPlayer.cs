@@ -10,6 +10,7 @@ using System.Speech.Synthesis;
 using System.Threading;
 using System.Threading.Tasks;
 using RadioScheduler.Entities;
+using static Enums; // Reference the Enums namespace
 
 public class AudioPlayer : IAudioPlayer
 {
@@ -306,7 +307,7 @@ public class AudioPlayer : IAudioPlayer
                 // Update the status of the current item
                 if (currentItem != null)
                 {
-                    currentItem.Status = ScheduleStatus.Played;
+                    currentItem.Status = ScheduleStatus.Played; // Use ScheduleStatus enum
                     Logger.LogMessage($"Playlist finished: {currentItem.Name}. Status updated to Played.");
                 }
             }
@@ -362,39 +363,5 @@ public class AudioPlayer : IAudioPlayer
         }
 
         return expandedPaths;
-    }
-
-    /// <summary>
-    /// Calculates the total duration of the playlist.
-    /// </summary>
-    public TimeSpan CalculateTotalDuration(List<FilePathItem> filePathItems)
-    {
-        var expandedFilePaths = ExpandFilePaths(filePathItems);
-        TimeSpan totalDuration = TimeSpan.Zero;
-
-        foreach (var file in expandedFilePaths)
-        {
-            if (file.StartsWith("TTS:")) // Estimate TTS duration
-            {
-                string text = file.Substring(4);
-                totalDuration += TimeSpan.FromSeconds(text.Length / 10.0);
-            }
-            else if (File.Exists(file)) // Calculate audio file duration
-            {
-                try
-                {
-                    using (var reader = new AudioFileReader(file))
-                    {
-                        totalDuration += reader.TotalTime;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogMessage($"Error calculating duration for file {file}: {ex.Message}");
-                }
-            }
-        }
-
-        return totalDuration;
     }
 }
