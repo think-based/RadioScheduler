@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Timers;
 using NAudio.Wave;
@@ -14,7 +13,6 @@ public class Scheduler
     private readonly IAudioPlayer _audioPlayer;
     private readonly ISchedulerConfigManager _configManager;
     private readonly IScheduleCalculatorFactory _scheduleCalculatorFactory;
-    private readonly ITriggerManager _triggerManager;
     private Timer _checkTimer; // Single timer to check schedules every second
 
     public Scheduler(IAudioPlayer audioPlayer, ISchedulerConfigManager configManager, IScheduleCalculatorFactory scheduleCalculatorFactory, ITriggerManager triggerManager)
@@ -22,7 +20,6 @@ public class Scheduler
         _audioPlayer = audioPlayer;
         _configManager = configManager;
         _scheduleCalculatorFactory = scheduleCalculatorFactory;
-        _triggerManager = triggerManager;
         // Set up the single timer to check schedules every second
         _checkTimer = new Timer(1000); // 1-second interval
         _checkTimer.Elapsed += OnCheckTimerElapsed;
