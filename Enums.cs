@@ -31,7 +31,7 @@ public static class Enums
         TimeWaiting,
         Playing,
         EventWaiting,
-        Stoped,
+        Stopped,
         Canceled
     }
 

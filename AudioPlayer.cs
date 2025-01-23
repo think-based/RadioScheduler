@@ -10,7 +10,8 @@ using System.Speech.Synthesis;
 using System.Threading;
 using System.Threading.Tasks;
 using RadioScheduler.Entities;
-using static Enums; // Reference the Enums namespace
+using static Enums;
+using System.Diagnostics; // Reference the Enums namespace
 
 public class AudioPlayer : IAudioPlayer
 {
@@ -92,13 +93,16 @@ public class AudioPlayer : IAudioPlayer
             _currentPlaylist = null;
             IsPlaying = false;
             CurrentFile = null;
-            if (_scheduleItem != null)
+            if (_scheduleItem != null && _scheduleItem.Status == ScheduleStatus.Playing)
             {
                 // Update the status of the current item
-                _scheduleItem.Status = ScheduleStatus.Stoped;
+                
+                _scheduleItem.Status = ScheduleStatus.Stopped;
                 // Trigger the PlaylistStoped event
                 PlaylistStoped?.Invoke();
                 Logger.LogMessage($"Playlist Stoped: {_scheduleItem.Name}. Status updated to Stoped.");
+                Debug.Print($"Playlist Stoped: {_scheduleItem.Name}. Status updated to Stoped.");
+
             }
 
         }
@@ -155,6 +159,7 @@ public class AudioPlayer : IAudioPlayer
             _currentPlaylist = expandedFilePaths;
             _currentIndex = 0; // Reset the index
         }
+        _scheduleItem.Status = ScheduleStatus.Playing;
 
         // Start playing the first file
         PlayNextFile();
@@ -318,7 +323,7 @@ public class AudioPlayer : IAudioPlayer
     {
         lock (_lock)
         {
-            if (_scheduleItem != null)
+            if (_scheduleItem != null &&  _scheduleItem.Status == ScheduleStatus.Playing)
             {
                 // Update the status of the current item
                 _scheduleItem.Status = ScheduleStatus.Played; // Use ScheduleStatus enum

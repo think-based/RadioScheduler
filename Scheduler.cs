@@ -128,12 +128,9 @@ public class Scheduler
         // Log the event to the application log
         Logger.LogMessage($"Starting playback for schedule: {item.Name}");
 
-        // Stop the current playlist (if any)
-        _audioPlayer.Stop();
 
         // Start the new playlist
         _audioPlayer.Play(item); // Pass the entire ScheduleItem
-        item.Status = ScheduleStatus.Playing;
         item.LastPlayTime = now;
     }
     private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now)
@@ -222,7 +219,7 @@ public class Scheduler
            DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now,  Settings.Region);
            // Return a copy of the list to avoid modifying the original
          return _configManager.ScheduleItems
-              .Where(item => item.NextOccurrence >= convertedNow)
+              .Where(item => item.EndTime >= convertedNow)
              .OrderBy(item => item.NextOccurrence)
             .Take(30)
              .ToList();
