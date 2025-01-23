@@ -84,6 +84,9 @@ public class AudioPlayer : IAudioPlayer
             _currentPlaylist = null;
             IsPlaying = false;
             CurrentFile = null;
+
+            // Notify that the playlist has finished
+            OnPlaylistFinished();
         }
     }
 
@@ -156,7 +159,7 @@ public class AudioPlayer : IAudioPlayer
                 Logger.LogMessage("Playlist is null or empty. Stopping playback.");
                 IsPlaying = false;
                 CurrentFile = null;
-                PlaylistFinished?.Invoke();
+                OnPlaylistFinished(); // Notify that the playlist has finished
                 return;
             }
 
@@ -166,7 +169,7 @@ public class AudioPlayer : IAudioPlayer
                 Logger.LogMessage("Playlist index is out of bounds. Stopping playback.");
                 IsPlaying = false;
                 CurrentFile = null;
-                PlaylistFinished?.Invoke();
+                OnPlaylistFinished(); // Notify that the playlist has finished
                 return;
             }
 
@@ -285,6 +288,31 @@ public class AudioPlayer : IAudioPlayer
 
             // Play the next file in the playlist
             PlayNextFile();
+        }
+    }
+
+    /// <summary>
+    /// Called when the playlist finishes or is stopped.
+    /// </summary>
+    private void OnPlaylistFinished()
+    {
+        lock (_lock)
+        {
+            if (_playlistQueue.Count > 0)
+            {
+                // Get the current item from the queue
+                var currentItem = _playlistQueue.Peek();
+
+                // Update the status of the current item
+                if (currentItem != null)
+                {
+                    currentItem.Status = ScheduleStatus.Played;
+                    Logger.LogMessage($"Playlist finished: {currentItem.Name}. Status updated to Played.");
+                }
+            }
+
+            // Trigger the PlaylistFinished event
+            PlaylistFinished?.Invoke();
         }
     }
 
