@@ -117,32 +117,15 @@ public class Scheduler
 
         if (currentPlayingItem != null)
         {
-            if (item.Priority >= currentPlayingItem.Priority)
-            {
-                _audioPlayer.Stop();
-                Logger.LogMessage($"Conflict: Stopping {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) to play {item.Name} (Priority: {item.Priority})");
-                _audioPlayer.Play(item); // Start the new item immediately after stopping the old one.
-                item.LastPlayTime = now; //Setting the last play time should be done right after calling _audioPlayer.Play(item); and it should only occur once
-
-            }
-            else
-            {
-                Logger.LogMessage($"Conflict: Ignoring {item.Name} (Priority: {item.Priority}) because {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) is playing and has higher priority.");
-                _configManager.ReloadScheduleItem(item.ItemId);
-                OnConflictOccurred(item); //Re-add onConflictOccurred method
-
-                return;
-            }
-        }
-        else // no conflict
-        {
-            Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Playing playlist: {item.Name}");
-            Logger.LogMessage($"Starting playback for schedule: {item.Name}");
-
-            _audioPlayer.Play(item);
-            item.LastPlayTime = now; //Setting the last play time should be done right after calling _audioPlayer.Play(item); and it should only occur once
+            OnConflictOccurred(item, currentPlayingItem, now);  // Pass currentPlayingItem and now
+            return;
         }
 
+        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Playing playlist: {item.Name}");
+        Logger.LogMessage($"Starting playback for schedule: {item.Name}");
+
+        _audioPlayer.Play(item);
+        item.LastPlayTime = now;
     }
     private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now)
     {
@@ -202,19 +185,22 @@ public class Scheduler
         }
 
     }
-    private void OnConflictOccurred(object conflictData)
+    private void OnConflictOccurred(ScheduleItem newItem, ScheduleItem currentPlayingItem, DateTime now)
     {
-        if (conflictData is ScheduleItem item)
+        if (newItem.Priority >= currentPlayingItem.Priority)
         {
-            string conflictMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Conflict: Playlist '{item.Name}' scheduled but another playlist is already playing.";
-            Logger.LogMessage(conflictMessage);
-            Console.WriteLine(conflictMessage);
+            _audioPlayer.Stop();
+            Logger.LogMessage($"Conflict: Stopping {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) to play {newItem.Name} (Priority: {newItem.Priority})");
+            _audioPlayer.Play(newItem);
+            newItem.LastPlayTime = now; //Setting the last play time should be done right after calling _audioPlayer.Play(newItem); and it should only occur once
         }
         else
         {
-            Logger.LogMessage($"Conflict detected, but no data was provided");
-            Console.WriteLine("Conflict detected, but no data was provided");
+            Logger.LogMessage($"Conflict: Ignoring {newItem.Name} (Priority: {newItem.Priority}) because {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) is playing and has higher priority.");
+            _configManager.ReloadScheduleItem(newItem.ItemId);
+
         }
+
     }
     private DateTime TruncateDateTimeToSeconds(DateTime dateTime)
     {
