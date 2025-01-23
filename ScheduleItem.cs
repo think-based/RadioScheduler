@@ -22,15 +22,23 @@ public class ScheduleItem
     public CalendarTypes CalendarType { get; set; }
     public string Region { get; set; }
     public TriggerTypes TriggerType { get; set; }
-    public string DelayTime { get; set; } // Changed to string
+    public string DelayTime { get; set; }
     public DateTime NextOccurrence { get; set; }
     public TimeSpan TotalDuration { get; set; }
     public ScheduleStatus Status { get; set; }
     public DateTime? LastPlayTime { get; set; }
     public DateTime? TriggerTime { get; set; }
+    public Enums.Priority? Priority { get; set; }
 
-    // Make Priority nullable
-   public Enums.Priority? Priority { get; set; }
+    // Add the EndTime property
+    public DateTime EndTime
+    {
+        get
+        {
+            return NextOccurrence.Add(TotalDuration);
+        }
+    }
+
 
     public void Validate()
     {
