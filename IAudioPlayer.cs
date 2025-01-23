@@ -6,8 +6,9 @@ using RadioScheduler.Entities;
 
 public interface IAudioPlayer
 {
-    void Play(ScheduleItem item); // Updated to accept ScheduleItem
+    void Play(ScheduleItem item);
     void Stop();
     bool IsPlaying { get; }
+    ScheduleItem GetCurrentScheduledItem(); // Add this line
 }
     
