@@ -55,44 +55,7 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                 {
                     try
                     {
-                        // Convert string values to enums with error handling
-                        item.Type = Enums.ParseEnum<ScheduleType>(item.Type.ToString(), "ScheduleType");
-                        item.CalendarType = Enums.ParseEnum<CalendarTypes>(item.CalendarType.ToString(), "CalendarTypes");
-                        item.TriggerType = Enums.ParseEnum<TriggerTypes>(item.TriggerType.ToString(), "TriggerTypes");
-
-                        item.Status = ScheduleStatus.TimeWaiting; // Initial status
-                        item.LastPlayTime = null;
-                        item.Validate();
-                        if (item.TriggerType == TriggerTypes.Delayed && !string.IsNullOrEmpty(item.DelayTime))
-                        {
-                            if (!TimeSpan.TryParse(item.DelayTime, out _))
-                            {
-                                Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'. Setting to 00:00:00.");
-                                item.DelayTime = "00:00:00";
-                            }
-
-                        }
-                        // Process FilePathItems
-                        foreach (var filePathItem in item.FilePaths)
-                        {
-                            if (Directory.Exists(filePathItem.Path) && filePathItem.FolderPlayMode == "Single")
-                            {
-                                var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3").OrderBy(f => f).ToList();
-                                if (audioFiles.Any())
-                                {
-                                    var random = new Random();
-                                    int randomIndex = random.Next(audioFiles.Count);
-                                    filePathItem.Path = audioFiles[randomIndex];
-                                    filePathItem.FolderPlayMode = null; // Clear the FolderPlayMode
-                                }
-                                else
-                                {
-                                    Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and 'Single' play mode for  schedule item  '{item.Name}'.");
-
-                                }
-                            }
-                        }
-                        item.TotalDuration = CalculateTotalDuration(item.FilePaths);
+                        ProcessScheduleItem(item);
                         ScheduleItems.Add(item);
                     }
                     catch (ArgumentException ex)
@@ -122,6 +85,74 @@ public class SchedulerConfigManager : ISchedulerConfigManager
             Logger.LogMessage($"Error reloading schedule config: {ex.Message}");
         }
     }
+
+    public void ReloadScheduleItem(int itemId)
+    {
+        try
+        {
+            if (File.Exists(_configFilePath))
+            {
+                string json = File.ReadAllText(_configFilePath);
+                var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
+
+                // Find the item with the matching ItemId
+                var newItem = newItems.FirstOrDefault(i => i.ItemId == itemId);
+
+                if (newItem != null)
+                {
+                    try
+                    {
+                        // Process the item (validate, calculate duration, etc.)
+                        ProcessScheduleItem(newItem);
+
+                        // Find the existing item in ScheduleItems
+                        var existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
+
+                        if (existingItemIndex >= 0)
+                        {
+                            // Replace the existing item with the new one
+                            ScheduleItems[existingItemIndex] = newItem;
+                            Logger.LogMessage($"Reloaded item with ItemId: {itemId}");
+                        }
+                        else
+                        {
+                            // If the item doesn't exist, add it
+                            ScheduleItems.Add(newItem);
+                            Logger.LogMessage($"Added new item with ItemId: {itemId}");
+                        }
+
+                        ConfigReloaded?.Invoke(); // Notify that the config has been reloaded
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        Logger.LogMessage($"Error loading schedule item: {ex.Message}");
+                    }
+                    catch (JsonSerializationException ex)
+                    {
+                        Logger.LogMessage($"Error deserializing schedule item: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogMessage($"Error processing schedule item: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    Logger.LogMessage($"Item with ItemId {itemId} not found in config file.");
+                }
+            }
+            else
+            {
+                Logger.LogMessage($"Config file not found: {_configFilePath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error reloading schedule item: {ex.Message}");
+        }
+    }
+
+
     /// <summary>
     /// Handles the timer tick event to check for configuration file changes.
     /// </summary>
@@ -149,6 +180,49 @@ public class SchedulerConfigManager : ISchedulerConfigManager
     /// <summary>
     /// Calculates the total duration of a playlist.
     /// </summary>
+
+     private void ProcessScheduleItem(ScheduleItem item)
+    {
+           // Convert string values to enums with error handling
+                item.Type = Enums.ParseEnum<ScheduleType>(item.Type.ToString(), "ScheduleType");
+                item.CalendarType = Enums.ParseEnum<CalendarTypes>(item.CalendarType.ToString(), "CalendarTypes");
+                item.TriggerType = Enums.ParseEnum<TriggerTypes>(item.TriggerType.ToString(), "TriggerTypes");
+
+                item.Status = ScheduleStatus.TimeWaiting; // Initial status
+                item.LastPlayTime = null;
+                item.Validate();
+                if (item.TriggerType == TriggerTypes.Delayed && !string.IsNullOrEmpty(item.DelayTime))
+                {
+                    if (!TimeSpan.TryParse(item.DelayTime, out _))
+                    {
+                        Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'. Setting to 00:00:00.");
+                        item.DelayTime = "00:00:00";
+                    }
+
+                }
+                // Process FilePathItems
+                foreach (var filePathItem in item.FilePaths)
+                {
+                    if (Directory.Exists(filePathItem.Path) && filePathItem.FolderPlayMode == "Single")
+                    {
+                        var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3").OrderBy(f => f).ToList();
+                        if (audioFiles.Any())
+                        {
+                            var random = new Random();
+                            int randomIndex = random.Next(audioFiles.Count);
+                            filePathItem.Path = audioFiles[randomIndex];
+                            filePathItem.FolderPlayMode = null; // Clear the FolderPlayMode
+                        }
+                        else
+                        {
+                            Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and 'Single' play mode for  schedule item  '{item.Name}'.");
+
+                        }
+                    }
+                }
+                item.TotalDuration = CalculateTotalDuration(item.FilePaths);
+    }
+
     private TimeSpan CalculateTotalDuration(List<FilePathItem> filePaths)
     {
         TimeSpan totalDuration = TimeSpan.Zero;
