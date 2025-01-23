@@ -24,13 +24,15 @@ public class AudioPlayer : IAudioPlayer
     private Queue<ScheduleItem> _playlistQueue = new Queue<ScheduleItem>(); // Updated to use ScheduleItem
     private Task _playbackTask;
     private CancellationTokenSource _playbackCancellationTokenSource;
-
+    private ScheduleItem _scheduleItem=null;
     private readonly ISchedulerConfigManager _configManager; // Add a reference to SchedulerConfigManager
 
     public bool IsPlaying { get; private set; }
     public string CurrentFile { get; private set; }
 
     public event Action<ScheduleItem> PlaylistFinished; // Updated to pass ScheduleItem
+    public event Action PlaylistStoped; 
+
 
     public AudioPlayer(ISchedulerConfigManager configManager) // Inject SchedulerConfigManager via constructor
     {
@@ -52,6 +54,7 @@ public class AudioPlayer : IAudioPlayer
     /// </summary>
     public void Play(ScheduleItem item) // Updated to accept ScheduleItem
     {
+        _scheduleItem = item;
         lock (_lock)
         {
             _playlistQueue.Enqueue(item); // Add the new schedule item to the queue
@@ -89,9 +92,15 @@ public class AudioPlayer : IAudioPlayer
             _currentPlaylist = null;
             IsPlaying = false;
             CurrentFile = null;
+            if (_scheduleItem != null)
+            {
+                // Update the status of the current item
+                _scheduleItem.Status = ScheduleStatus.Stoped;
+                // Trigger the PlaylistStoped event
+                PlaylistStoped?.Invoke();
+                Logger.LogMessage($"Playlist Stoped: {_scheduleItem.Name}. Status updated to Stoped.");
+            }
 
-            // Notify that the playlist has finished
-            OnPlaylistFinished(null); // Pass null if no item is available
         }
     }
 
@@ -167,7 +176,7 @@ public class AudioPlayer : IAudioPlayer
 
                 // Get the current item from the queue
                 var currentItem = _playlistQueue.Count > 0 ? _playlistQueue.Peek() : null;
-                OnPlaylistFinished(currentItem); // Notify that the playlist has finished
+                OnPlaylistFinished(); // Notify that the playlist has finished
                 return;
             }
 
@@ -180,7 +189,7 @@ public class AudioPlayer : IAudioPlayer
 
                 // Get the current item from the queue
                 var currentItem = _playlistQueue.Count > 0 ? _playlistQueue.Peek() : null;
-                OnPlaylistFinished(currentItem); // Notify that the playlist has finished
+                OnPlaylistFinished(); // Notify that the playlist has finished
                 return;
             }
 
@@ -305,22 +314,22 @@ public class AudioPlayer : IAudioPlayer
     /// <summary>
     /// Called when the playlist finishes or is stopped.
     /// </summary>
-    private void OnPlaylistFinished(ScheduleItem item)
+    private void OnPlaylistFinished()
     {
         lock (_lock)
         {
-            if (item != null)
+            if (_scheduleItem != null)
             {
                 // Update the status of the current item
-                item.Status = ScheduleStatus.Played; // Use ScheduleStatus enum
-                Logger.LogMessage($"Playlist finished: {item.Name}. Status updated to Played.");
+                _scheduleItem.Status = ScheduleStatus.Played; // Use ScheduleStatus enum
+                Logger.LogMessage($"Playlist finished: {_scheduleItem.Name}. Status updated to Played.");
 
                 // Reload the schedule item in the configuration manager
-                _configManager.ReloadScheduleItem(item.ItemId);
+                _configManager.ReloadScheduleItem(_scheduleItem.ItemId);
+                // Trigger the PlaylistFinished event
+                PlaylistFinished?.Invoke(_scheduleItem);
             }
 
-            // Trigger the PlaylistFinished event
-            PlaylistFinished?.Invoke(item);
         }
     }
 
