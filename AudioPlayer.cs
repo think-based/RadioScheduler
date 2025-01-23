@@ -1,5 +1,6 @@
-      //Be Naame Khoda
-//FileName: AudioPlayer.cs
+// Be Naame Khoda
+// FileName: AudioPlayer.cs
+
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ public class AudioPlayer : IAudioPlayer
     private SpeechSynthesizer _ttsPlayer;
     private readonly object _lock = new object(); // Lock for thread safety
 
-    private Queue<List<FilePathItem>> _playlistQueue = new Queue<List<FilePathItem>>();
+    private Queue<ScheduleItem> _playlistQueue = new Queue<ScheduleItem>(); // Updated to use ScheduleItem
     private Task _playbackTask;
     private CancellationTokenSource _playbackCancellationTokenSource;
 
@@ -42,13 +43,13 @@ public class AudioPlayer : IAudioPlayer
     }
 
     /// <summary>
-    /// Plays the provided list of file paths or TTS text.
+    /// Plays the provided schedule item.
     /// </summary>
-    public void Play(List<FilePathItem> filePathItems)
+    public void Play(ScheduleItem item) // Updated to accept ScheduleItem
     {
         lock (_lock)
         {
-            _playlistQueue.Enqueue(filePathItems); // Add the new playlist to the queue
+            _playlistQueue.Enqueue(item); // Add the new schedule item to the queue
         }
     }
 
@@ -93,19 +94,19 @@ public class AudioPlayer : IAudioPlayer
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            List<FilePathItem> nextPlaylist = null;
+            ScheduleItem nextItem = null;
 
             lock (_lock)
             {
                 if (_playlistQueue.Count > 0)
                 {
-                    nextPlaylist = _playlistQueue.Dequeue(); // Get the next playlist from the queue
+                    nextItem = _playlistQueue.Dequeue(); // Get the next schedule item from the queue
                 }
             }
 
-            if (nextPlaylist != null)
+            if (nextItem != null)
             {
-                await PlayPlaylist(nextPlaylist, cancellationToken);
+                await PlayPlaylist(nextItem, cancellationToken);
             }
 
             await Task.Delay(100, cancellationToken); // Small delay to avoid busy-waiting
@@ -113,16 +114,16 @@ public class AudioPlayer : IAudioPlayer
     }
 
     /// <summary>
-    /// Plays a single playlist.
+    /// Plays a single schedule item.
     /// </summary>
-    private async Task PlayPlaylist(List<FilePathItem> filePathItems, CancellationToken cancellationToken)
+    private async Task PlayPlaylist(ScheduleItem item, CancellationToken cancellationToken)
     {
         lock (_lock)
         {
             Stop(); // Stop any ongoing playback
 
             // Expand file paths (including TTS items)
-            var expandedFilePaths = ExpandFilePaths(filePathItems);
+            var expandedFilePaths = ExpandFilePaths(item.FilePaths);
 
             // Check if the playlist is empty
             if (expandedFilePaths == null || expandedFilePaths.Count == 0)
@@ -131,7 +132,7 @@ public class AudioPlayer : IAudioPlayer
                 return;
             }
 
-            Logger.LogMessage($"Starting new playlist: {string.Join(", ", expandedFilePaths)}");
+            Logger.LogMessage($"Starting new playlist: {item.Name}");
 
             // Initialize the new playlist
             _currentPlaylist = expandedFilePaths;
@@ -369,4 +370,3 @@ public class AudioPlayer : IAudioPlayer
         return totalDuration;
     }
 }
-    
