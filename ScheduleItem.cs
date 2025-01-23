@@ -29,8 +29,8 @@ public class ScheduleItem
     public DateTime? LastPlayTime { get; set; }
     public DateTime? TriggerTime { get; set; }
 
-    // Add the optional Priority property with a default value of Low
-   public Enums.Priority Priority { get; set; } = Enums.Priority.Low;
+    // Make Priority nullable
+   public Enums.Priority? Priority { get; set; }
 
     public void Validate()
     {
