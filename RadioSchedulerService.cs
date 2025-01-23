@@ -21,12 +21,11 @@ namespace RadioSchedulerService
 
         protected override void OnStart(string[] args)
         {
-             // Create concrete implementations
-            IAudioPlayer audioPlayer = new AudioPlayer();
+            // Create concrete implementations
             ISchedulerConfigManager configManager = new SchedulerConfigManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf"));
+            IAudioPlayer audioPlayer = new AudioPlayer(configManager); // Pass configManager to AudioPlayer
             IScheduleCalculatorFactory scheduleCalculatorFactory = new ScheduleCalculatorFactory();
             ITriggerManager triggerManager = new ActiveTriggersManager();
-
 
             _scheduler = new Scheduler(audioPlayer, configManager, scheduleCalculatorFactory, triggerManager);
             _webServer = new WebServer(_scheduler);

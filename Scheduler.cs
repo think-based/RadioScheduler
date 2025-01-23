@@ -121,6 +121,7 @@ public class Scheduler
             OnConflictOccurred(item);
             _audioPlayer.Stop(); // Stop the current playback
         }
+
         // Log the playlist name and time to the Visual Studio console
         Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Playing playlist: {item.Name}");
 
@@ -131,11 +132,11 @@ public class Scheduler
         _audioPlayer.Stop();
 
         // Start the new playlist
-        _audioPlayer.Play(item.FilePaths);
+        _audioPlayer.Play(item); // Pass the entire ScheduleItem
         item.Status = ScheduleStatus.Playing;
         item.LastPlayTime = now;
     }
-     private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now)
+    private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now)
     {
           var trigger = ActiveTriggers.GetTrigger(item.Trigger);
           if(!trigger.HasValue) {

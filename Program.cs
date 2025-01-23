@@ -20,20 +20,19 @@ namespace RadioSchedulerService
         {
             _cancellationTokenSource = new CancellationTokenSource();
 
-             // Load settings from the configuration file before doing anything
-             LoadSettingsFromConfig();
+            // Load settings from the configuration file before doing anything
+            LoadSettingsFromConfig();
 
             // Create concrete implementations
-            IAudioPlayer audioPlayer = new AudioPlayer();
             ISchedulerConfigManager configManager = new SchedulerConfigManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio.conf"));
+            IAudioPlayer audioPlayer = new AudioPlayer(configManager); // Pass configManager to AudioPlayer
             IScheduleCalculatorFactory scheduleCalculatorFactory = new ScheduleCalculatorFactory();
             ITriggerManager triggerManager = new ActiveTriggersManager();
 
-
             _scheduler = new Scheduler(audioPlayer, configManager, scheduleCalculatorFactory, triggerManager);
-            _instantPlayManager = new InstantPlayManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InstantPlay"));
+            _instantPlayManager = new InstantPlayManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InstantPlay"), configManager); // Pass configManager to InstantPlayManager
             _prayTimeScheduler = new PrayTimeScheduler();
-             _webServer = new WebServer(_scheduler);
+            _webServer = new WebServer(_scheduler);
         }
 
         public async Task RunAsync()
