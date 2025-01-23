@@ -1,6 +1,7 @@
-      //Be Naame Khoda
+//Be Naame Khoda
 //FileName: Scheduler.cs
-
+//TODO : 1- single mode : ranadom , que
+//TODO : 2- web play list files &/ reload schedual item button / high light current play
 using System;
 using System.Collections.Generic;
 using System.Linq;
