@@ -12,12 +12,7 @@ public class ScheduleItem
     public string Name { get; set; }
     public ScheduleType Type { get; set; }
     public List<FilePathItem> FilePaths { get; set; }
-    public string Second { get; set; }
-    public string Minute { get; set; }
-    public string Hour { get; set; }
-    public string DayOfMonth { get; set; }
-    public string Month { get; set; }
-    public string DayOfWeek { get; set; }
+    public string CronExpression { get; set; } // Use cron expresion to handle time instead of separated properties
     public string Trigger { get; set; }
     public CalendarTypes CalendarType { get; set; }
     public string Region { get; set; }
@@ -47,9 +42,9 @@ public class ScheduleItem
             throw new ArgumentException("Trigger should not be set for Periodic items.");
         }
 
-        if (Type == ScheduleType.NonPeriodic && (Second != null || Minute != null || Hour != null ))
+        if (Type == ScheduleType.NonPeriodic && !string.IsNullOrEmpty(CronExpression))
         {
-            throw new ArgumentException("Periodic fields (Second, Minute, Hour, DayOfMonth, Month, DayOfWeek) should not be set for NonPeriodic items.");
+            throw new ArgumentException("CronExpression should not be set for NonPeriodic items.");
         }
         if (TriggerType != TriggerTypes.Delayed && !string.IsNullOrEmpty(DelayTime))
         {
@@ -71,6 +66,17 @@ public class ScheduleItem
         if (FilePaths == null || FilePaths.Count == 0)
         {
             throw new ArgumentException("FilePaths cannot be null or empty.");
+        }
+
+        if (Type == ScheduleType.Periodic) {
+              try
+            {
+                CrontabSchedule.Parse(CronExpression); // This will throw an exception if the cron expression is invalid
+            }
+             catch (CrontabException ex)
+            {
+                  throw new ArgumentException($"Invalid Cron Expression: {ex.Message}");
+             }
         }
 
         foreach (var filePathItem in FilePaths)
