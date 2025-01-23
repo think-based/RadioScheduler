@@ -40,7 +40,7 @@ let applicationTimeZone = 0;
 function fetchTimeZone() {
     $.get('/api/timezone')
         .done(function (data) {
-            applicationTimeZone = data.TimeZone;
+            applicationTimeZone = data.TimeZoneOffset;
          })
         .fail(function (error) {
            showError('Error fetching time zone.');
@@ -221,7 +221,7 @@ function fetchTriggers() {
             //Show the table
             $('#events-list-content').show();
               data.forEach(item => {
-                   const formattedTime = item.time ? convertUtcToLocalTime(item.time) : null;
+                   const formattedTime = formatDate(item.time);
                   const row = `
                     <tr>
                         <td>${item.triggerEvent}</td>
@@ -294,8 +294,9 @@ function editTrigger(triggerEventName) {
  * Opens the new trigger modal
  */
 function openNewTriggerModal() {
-    const now = new Date();
-     const year = String(now.getFullYear());
+	const now = new Date();
+	//now.setTime(now.getTime() - applicationTimeZone * 60000);
+    const year = String(now.getFullYear());
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     const hours = String(now.getHours()).padStart(2, '0');
@@ -449,15 +450,18 @@ function pad(num) {
 function convertLocalTimeToUtc(timeString) {
     if(!timeString) return null;
     const localTime = new Date(timeString);
-    const utcTime = new Date(localTime.getTime() - (localTime.getTimezoneOffset() * 60000));
-       const formattedUtcTime = utcTime.toISOString().slice(0, 19); // Remove milliseconds and Z
-    return formattedUtcTime;
+    return localTime.toISOString().slice(0, 19);
 }
 
-function convertUtcToLocalTime(timeString){
-    if(!timeString) return null;
-       const utcTime = new Date(timeString);
-       const localTime = new Date(utcTime.getTime() + (utcTime.getTimezoneOffset() * 60000) );
-       return localTime.toLocaleTimeString('en-US', { hour12: false ,hour: '2-digit', minute: '2-digit'});
+function formatDate(timeString) {
+  var date = new Date(timeString);
+  var hours = date.getHours();
+  var minutes = date.getMinutes();
+  var ampm = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // the hour '0' should be '12'
+  minutes = minutes < 10 ? '0'+minutes : minutes;
+  var strTime = hours + ':' + minutes + ' ' + ampm;
+  return (date.getMonth()+1) + "/" + date.getDate() + "/" + date.getFullYear() + "  " + strTime;
 }
-    
+ 
