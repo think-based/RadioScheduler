@@ -1,6 +1,7 @@
-      //Be Naame Khoda
+//Be Naame Khoda
 //FileName: Scheduler.cs
-
+//TODO: Schedule List FIX
+//TODO: TimeNow in global function
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -243,17 +244,12 @@ public class Scheduler
               .Where(item => TruncateDateTimeToSeconds(item.NextOccurrence) <= TruncateDateTimeToSeconds(now))
             .ToList();
     }
-    private DateTime GetNextOccurrence(ScheduleItem item, DateTime now)
-    {
-        var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
-          return calculator.GetNextOccurrence(item,now);
-    }
     private string CalculateTimeToPlay(DateTime nextOccurrence , DateTime now)
     {
           if (nextOccurrence == DateTime.MinValue)
                return "N/A";
 
-            var timeDiff = nextOccurrence.ToUniversalTime() - now.ToUniversalTime();
+            var timeDiff = nextOccurrence - now;
 
              if (timeDiff <= TimeSpan.Zero) {
                 return "Playing or Due";

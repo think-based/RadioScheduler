@@ -18,7 +18,7 @@ public class WebServer
     public WebServer(Scheduler scheduler)
     {
          var triggerManager = new ActiveTriggersManager();
-        _apiHandler = new ApiRequestHandler(triggerManager);
+        _apiHandler = new ApiRequestHandler(triggerManager, scheduler);
         _scheduler = scheduler;
         _listener = new HttpListener();
         _listener.Prefixes.Add("http://localhost:8080/");
@@ -96,7 +96,7 @@ public class WebServer
             // API endpoint to fetch schedule list
             else if (path == "/api/schedule-list")
             {
-                ServeScheduleList(response);
+                _apiHandler.ServeScheduleList(response);
             }
            // API endpoint to fetch prayer times
             else if (path == "/api/prayertimes")
@@ -149,41 +149,7 @@ public class WebServer
         {
             response.OutputStream.Close();
         }
-    }
-    private void ServeScheduleList(HttpListenerResponse response)
-    {
-         try
-        {
-            // Fetch the list of scheduled items directly from the Scheduler
-            var scheduleItems = _scheduler.GetScheduledItems();
-
-            // Create a JSON response with all required fields
-            var responseData = scheduleItems.Select(item => new
-            {
-                Name = item.Name,
-                StartTime = item.NextOccurrence.ToString("yyyy-MM-dd HH:mm:ss"),
-                EndTime = item.NextOccurrence.Add(item.TotalDuration).ToString("yyyy-MM-dd HH:mm:ss"),
-                TotalDuration = item.TotalDuration.TotalMilliseconds, // Keep milliseconds here!
-                LastPlayTime = item.LastPlayTime != null ? item.LastPlayTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
-                TriggerTime = item.TriggerTime != null ? item.TriggerTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
-                Status = item.Status.ToString()
-            });
-
-            // Serialize the response to JSON
-            string jsonResponse = JsonConvert.SerializeObject(responseData);
-
-            // Send the response
-            byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
-            response.ContentType = "application/json";
-            response.ContentLength64 = buffer.Length;
-            response.OutputStream.Write(buffer, 0, buffer.Length);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogMessage($"Error serving schedule list: {ex.Message}");
-            response.StatusCode = (int)HttpStatusCode.InternalServerError;
-        }
-    }
+    }   
      /// <summary>
     /// Serves the prayer times as a JSON response.
     /// </summary>
