@@ -4,17 +4,20 @@
 using RadioScheduler.Entities;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using NAudio.Wave;
+using System.Speech.Synthesis;
+using System.Linq;
+
 using static Enums;
 
 public class ScheduleItem
 {
-     // Define a new internal class to represent playlist items
+    // Define a new internal class to represent playlist items
     internal class PlayListItem
     {
         public string Path { get; set; }
         public double Duration { get; set; } // Duration in milliseconds
-
-
     }
     public int ItemId { get; set; }
     public string Name { get; set; }
@@ -87,6 +90,74 @@ public class ScheduleItem
         foreach (var filePathItem in FilePaths)
         {
             filePathItem.Validate();
+        }
+    }
+
+    internal void CalculateIndividualItemDuration()
+    {
+        var ttsEngine = new SpeechSynthesizer(); // Initialize TTS engine
+        var tempPlaylist = new List<PlayListItem>();
+         foreach (var playListItem in this.PlayList)
+        {
+             if (playListItem.Path.StartsWith("TTS:"))
+             {
+                 string text = playListItem.Path.Substring(4);
+                 var duration = CalculateTtsDuration(text, ttsEngine);
+                  tempPlaylist.Add(new PlayListItem {Path = playListItem.Path , Duration = duration.TotalMilliseconds});
+             }
+             else if (File.Exists(playListItem.Path))
+            {
+                 try
+                {
+                    using (var reader = new AudioFileReader(playListItem.Path))
+                    {
+                           tempPlaylist.Add(new PlayListItem {Path = playListItem.Path, Duration = reader.TotalTime.TotalMilliseconds});
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogMessage($"Error calculating duration for file {playListItem.Path}: {ex.Message}");
+                     tempPlaylist.Add(new PlayListItem {Path = playListItem.Path, Duration = 0});
+
+                }
+            }
+        }
+         this.PlayList = tempPlaylist; // Assign the new playList that has duration information for each item
+         ttsEngine.Dispose();
+     }
+
+
+     internal TimeSpan CalculateTotalDuration()
+    {
+        TimeSpan totalDuration = TimeSpan.Zero;
+        foreach (var item in this.PlayList)
+        {
+            totalDuration += TimeSpan.FromMilliseconds(item.Duration);
+        }
+        return totalDuration;
+    }
+
+     private TimeSpan CalculateTtsDuration(string text, SpeechSynthesizer ttsEngine)
+    {
+        try
+        {
+            var prompt = new PromptBuilder();
+            prompt.AppendText(text);
+
+            var ttsStream = new MemoryStream();
+            ttsEngine.SetOutputToWaveStream(ttsStream);
+            ttsEngine.Speak(prompt);
+
+            ttsStream.Position = 0;
+            using (var reader = new WaveFileReader(ttsStream))
+            {
+                return reader.TotalTime;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error calculating TTS duration: {ex.Message}");
+            return TimeSpan.FromSeconds(text.Length / 10.0);
         }
     }
 }
