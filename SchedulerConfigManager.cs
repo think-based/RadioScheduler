@@ -1,4 +1,4 @@
-//Be Naame Khoda
+      //Be Naame Khoda
 //FileName: SchedulerConfigManager.cs
 
 using System;
@@ -7,6 +7,9 @@ using System.Timers;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using static Enums;
+using NAudio.Wave;
+using RadioScheduler.Entities;
+using System.Speech.Synthesis;
 using System.Linq;
 
 public class SchedulerConfigManager : ISchedulerConfigManager
@@ -117,7 +120,7 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                     {
                         Logger.LogMessage($"Error deserializing schedule item: {ex.Message}");
                     }
-                     catch (Exception ex)
+                    catch (Exception ex)
                     {
                         Logger.LogMessage($"Error processing schedule item: {ex.Message}");
                     }
@@ -158,15 +161,13 @@ public class SchedulerConfigManager : ISchedulerConfigManager
         return FileHashHelper.CalculateFileHash(_configFilePath);
     }
 
-
-     private void ProcessScheduleItem(ScheduleItem item)
+    public void ProcessScheduleItem(ScheduleItem item) // Made this public
     {
         // Convert string values to enums with error handling
         item.Type = Enums.ParseEnum<ScheduleType>(item.Type.ToString(), "ScheduleType");
         item.CalendarType = Enums.ParseEnum<CalendarTypes>(item.CalendarType.ToString(), "CalendarTypes");
         item.TriggerType = Enums.ParseEnum<TriggerTypes>(item.TriggerType.ToString(), "TriggerTypes");
-
-         if (!item.Priority.HasValue)
+        if (!item.Priority.HasValue)
         {
             item.Priority = Priority.Low;
         }
@@ -189,30 +190,28 @@ public class SchedulerConfigManager : ISchedulerConfigManager
 
         }
 
-         item.PlayList.Clear();
 
-
-        foreach (var filePathItem in item.FilePaths)
+        item.PlayList.Clear();
+          foreach (var filePathItem in item.FilePaths)
         {
             if (!string.IsNullOrEmpty(filePathItem.Text))
             {
-                item.PlayList.Add(new ScheduleItem.PlayListItem {Path = $"TTS:{filePathItem.Text}"});
-
+                 item.PlayList.Add(new ScheduleItem.PlayListItem {Path = $"TTS:{filePathItem.Text}"});
             }
             else if (File.Exists(filePathItem.Path))
             {
                 item.PlayList.Add(new ScheduleItem.PlayListItem {Path = filePathItem.Path});
             }
-            else if (Directory.Exists(filePathItem.Path))
+           else if (Directory.Exists(filePathItem.Path))
             {
-                 var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3").OrderBy(f => f).ToList();
-                  if(audioFiles.Count == 0)
+                var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3").OrderBy(f => f).ToList();
+                 if(audioFiles.Count == 0)
                     {
-                       Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and schedule item '{item.Name}'");
+                         Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and schedule item '{item.Name}'");
                     }
                 if (filePathItem.FolderPlayMode == "Random")
                 {
-                      if(audioFiles.Any())
+                     if(audioFiles.Any())
                      {
                         var random = new Random();
                        item.PlayList.Add(new ScheduleItem.PlayListItem {Path = audioFiles[random.Next(audioFiles.Count)]});
@@ -232,8 +231,9 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                         int nextIndex = (lastPlayedIndex + 1) % audioFiles.Count;
 
                         item.PlayList.Add(new ScheduleItem.PlayListItem {Path = audioFiles[nextIndex]});
-                        filePathItem.LastPlayedFile = audioFiles[nextIndex];
+                          filePathItem.LastPlayedFile = audioFiles[nextIndex];
                      }
+
                 }
                   else
                 {
@@ -241,16 +241,11 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                     {
                          item.PlayList.Add(new ScheduleItem.PlayListItem {Path = audioFile});
                     }
-                }
+                 }
             }
-
         }
-
-        item.CalculateIndividualItemDuration(); // Calculate each playlist item duration
-        item.TotalDuration = item.CalculateTotalDuration(); // Calculate the total duration
-
+          item.CalculateIndividualItemDuration();
+           item.TotalDuration = item.CalculateTotalDuration();
     }
-
-
 }
     
