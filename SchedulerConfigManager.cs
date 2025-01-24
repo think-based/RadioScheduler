@@ -7,9 +7,6 @@ using System.Timers;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using static Enums;
-using NAudio.Wave;
-using RadioScheduler.Entities;
-using System.Speech.Synthesis;
 using System.Linq;
 
 public class SchedulerConfigManager : ISchedulerConfigManager
