@@ -116,7 +116,7 @@ public class ApiRequestHandler
     /// Serves the schedule list
     /// </summary>
     /// <param name="response">The HTTP response object.</param>
-     public void ServeScheduleList(HttpListenerResponse response)
+    public void ServeScheduleList(HttpListenerResponse response)
     {
          try
         {
@@ -124,7 +124,7 @@ public class ApiRequestHandler
             var scheduleItems = _scheduler.GetScheduledItems();
 
             // Create a JSON response with all required fields
-           var responseData = scheduleItems.Select(item => new
+            var responseData = scheduleItems.Select(item => new
             {
                 ItemId = item.ItemId,
                 Name = item.Name,
@@ -133,14 +133,12 @@ public class ApiRequestHandler
                 TotalDuration = item.TotalDuration.TotalMilliseconds,
                 LastPlayTime = item.LastPlayTime != null ? item.LastPlayTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
                 TriggerTime = item.TriggerTime != null ? item.TriggerTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
-                 Status = item.Status.ToString(),
-                 TimeToPlay = item.TimeToPlay,
-                 PlayList = item.PlayList.Select(x=> new {Path = x.Path}).ToList(),
+                Status = item.Status.ToString(),
+                TimeToPlay = item.TimeToPlay,
+                PlayList = item.PlayList.Select(x=> new {Path = x.Path}).ToList(),
                 CurrentPlayingIndex = item.CurrentPlayingIndex
 
-           });
-
-
+            });
             // Serialize the response to JSON
             string jsonResponse = JsonConvert.SerializeObject(responseData);
 
