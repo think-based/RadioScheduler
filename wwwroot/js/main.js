@@ -167,7 +167,7 @@ function initializeScheduleListPage() {
 
             data.forEach(item => {
                 const row = `
-                    <tr>
+                    <tr class="${item.Status === 'Playing' ? 'table-primary' : ''}">
                         <td>${item.Name}</td>
                         <td>${formatDateTime(item.StartTime)}</td>
                         <td>${formatDateTime(item.EndTime)}</td>
@@ -175,6 +175,11 @@ function initializeScheduleListPage() {
                         <td>${formatDateTime(item.LastPlayTime)}</td>
                          <td>${item.TriggerTime && item.TriggerTime !== "N/A" ? formatDateTime(item.TriggerTime) : 'N/A'}</td>
                         <td>${item.Status}</td>
+                          <td>${calculateTimeToPlay(item.StartTime)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-secondary" onclick="showPlayList('${item.Name}')">Playlist</button>
+                             <button class="btn btn-sm btn-primary" onclick="reloadItem('${item.Name}')">Reload</button>
+                        </td>
                     </tr>
                 `;
                 scheduleListBody.append(row);
@@ -187,6 +192,124 @@ function initializeScheduleListPage() {
             hideLoadingSpinner();
         });
 }
+/**
+ * Opens the playlist modal for a specific schedule item.
+ * @param {string} scheduleItemName - The name of the schedule item.
+ */
+function showPlayList(scheduleItemName) {
+    showLoadingSpinner();
+    $.get('/api/schedule-list')
+        .done(function (data) {
+           const selectedItem = data.find(item => item.Name === scheduleItemName);
+           if(selectedItem) {
+                  const playlistItemsBody = $('#playlist-items');
+                    playlistItemsBody.empty();
+                    // Show the playlist modal
+                     $('#playlist-modal').modal('show');
+
+                       if(selectedItem.hasOwnProperty('playlist') && selectedItem.playlist.length>0) {
+                           selectedItem.playlist.forEach((playlistItem,index )=> {
+                            const listItem = `<li class="list-group-item ${index === selectedItem.CurrentPlayingIndex ? 'list-group-item-primary' : ''}">
+                                                    ${playlistItem.Path}
+                                                </li>`;
+                            playlistItemsBody.append(listItem);
+                           });
+
+                       }
+                      else {
+                           playlistItemsBody.append(`<li class="list-group-item" >No items found in playlist</li>`);
+                       }
+           }
+        })
+        .fail(function (error) {
+           showError(`Error fetching playlist for  "${scheduleItemName}".`);
+        })
+        .always(function () {
+             hideLoadingSpinner();
+        });
+}
+/**
+ * Reloads a specific schedule item.
+ * @param {string} scheduleItemName - The name of the schedule item.
+ */
+function reloadItem(scheduleItemName) {
+    showLoadingSpinner();
+    $.get('/api/schedule-list')
+        .done(function (data) {
+             const selectedItem = data.find(item => item.Name === scheduleItemName);
+              if(selectedItem){
+                    $.ajax({
+                        url: '/api/schedule-list',
+                        type: 'POST',
+                        contentType: 'application/json',
+                       data: JSON.stringify({ itemId: selectedItem.ItemId}),
+                        success: function (result) {
+                             initializeScheduleListPage();
+                            alert("Schedule item reloaded successfully!");
+                        },
+                        error: function (error) {
+                              showError(`Error reloading schedule item  "${scheduleItemName}".`);
+                        }
+                    });
+                }
+
+        })
+           .fail(function (error) {
+           showError(`Error reloading schedule item "${scheduleItemName}".`);
+            })
+         .always(function () {
+              hideLoadingSpinner();
+        });
+
+
+}
+  /**
+ * Calculates and returns the remaining time until the given start time.
+ * @param {string} startTime - The start time in the format "YYYY-MM-DD HH:mm:ss"
+ * @returns {string} - The remaining time until the start time, in a human-readable format.
+ */
+function calculateTimeToPlay(startTime) {
+    if (!startTime || startTime === "N/A") {
+        return 'N/A';
+    }
+      try {
+        const now = new Date();
+        const start = new Date(startTime);
+         const timeDiff = start.getTime() - now.getTime();
+           if (timeDiff <= 0) {
+               return "Playing or Due";
+          }
+
+        const seconds = Math.floor(timeDiff / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+          const remainingHours = hours % 24;
+        const remainingMinutes = minutes % 60;
+        const remainingSeconds = seconds % 60;
+
+
+       if (days > 0) {
+            return `${days}d ${remainingHours}h ${remainingMinutes}m ${remainingSeconds}s`;
+          } else if(remainingHours > 0) {
+               return `${remainingHours}h ${remainingMinutes}m ${remainingSeconds}s`;
+          }
+          else if(remainingMinutes > 0) {
+             return `${remainingMinutes}m ${remainingSeconds}s`;
+          }
+           else if(remainingSeconds > 0) {
+               return `${remainingSeconds}s`;
+           }
+           else {
+              return "Due";
+          }
+
+        } catch(e) {
+        return "N/A";
+      }
+
+}
+
 
 /**
  * Initializes the triggers page.
@@ -464,4 +587,4 @@ function formatDate(timeString) {
   var strTime = hours + ':' + minutes + ' ' + ampm;
   return (date.getMonth()+1) + "/" + date.getDate() + "/" + date.getFullYear() + "  " + strTime;
 }
- 
+    
