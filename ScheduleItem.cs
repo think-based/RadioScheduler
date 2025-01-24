@@ -49,14 +49,15 @@ public class ScheduleItem
             return NextOccurrence.Add(TotalDuration);
         }
     }
-
-    // New internal property for the playlist
+     // New internal property for the playlist
     internal List<PlayListItem> PlayList { get; set; } = new List<PlayListItem>();
-
-     // New internal property for current playing index in playlist for "Que"
+    // New internal property for current playing index in playlist for "Que"
     internal int CurrentPlayingIndex { get; set; } = -1;
-     // New internal property for time to play string
+    // New internal property for time to play string
     public string TimeToPlay { get; set; } = "N/A";
+
+    // New Property for Disable
+    public bool Disabled { get; set; }
 
 
     public void Validate()
