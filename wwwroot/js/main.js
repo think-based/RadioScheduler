@@ -175,10 +175,10 @@ function initializeScheduleListPage() {
                         <td>${formatDateTime(item.LastPlayTime)}</td>
                          <td>${item.TriggerTime && item.TriggerTime !== "N/A" ? formatDateTime(item.TriggerTime) : 'N/A'}</td>
                         <td>${item.Status}</td>
-                          <td>${calculateTimeToPlay(item.StartTime)}</td>
+                          <td>${item.TimeToPlay}</td>
                         <td>
                             <button class="btn btn-sm btn-secondary" onclick="showPlayList('${item.Name}')">Playlist</button>
-                             <button class="btn btn-sm btn-primary" onclick="reloadItem('${item.Name}')">Reload</button>
+                             <button class="btn btn-sm btn-primary" onclick="reloadItem('${item.ItemId}')">Reload</button>
                         </td>
                     </tr>
                 `;
@@ -201,14 +201,15 @@ function showPlayList(scheduleItemName) {
     $.get('/api/schedule-list')
         .done(function (data) {
            const selectedItem = data.find(item => item.Name === scheduleItemName);
-           if(selectedItem) {
-                  const playlistItemsBody = $('#playlist-items');
+            if(selectedItem) {
+                    const playlistItemsBody = $('#playlist-items');
                     playlistItemsBody.empty();
-                    // Show the playlist modal
+                     // Show the playlist modal
                      $('#playlist-modal').modal('show');
 
-                       if(selectedItem.hasOwnProperty('playlist') && selectedItem.playlist.length>0) {
-                           selectedItem.playlist.forEach((playlistItem,index )=> {
+                      if(selectedItem.hasOwnProperty('playList') && selectedItem.playList.length>0) {
+
+                           selectedItem.playList.forEach((playlistItem,index )=> {
                             const listItem = `<li class="list-group-item ${index === selectedItem.CurrentPlayingIndex ? 'list-group-item-primary' : ''}">
                                                     ${playlistItem.Path}
                                                 </li>`;
@@ -230,32 +231,22 @@ function showPlayList(scheduleItemName) {
 }
 /**
  * Reloads a specific schedule item.
- * @param {string} scheduleItemName - The name of the schedule item.
+ * @param {string} itemId - The ItemId of the schedule item.
  */
-function reloadItem(scheduleItemName) {
+function reloadItem(itemId) {
     showLoadingSpinner();
-    $.get('/api/schedule-list')
-        .done(function (data) {
-             const selectedItem = data.find(item => item.Name === scheduleItemName);
-              if(selectedItem){
-                    $.ajax({
-                        url: '/api/schedule-list',
-                        type: 'POST',
-                        contentType: 'application/json',
-                       data: JSON.stringify({ itemId: selectedItem.ItemId}),
-                        success: function (result) {
-                             initializeScheduleListPage();
-                            alert("Schedule item reloaded successfully!");
-                        },
-                        error: function (error) {
-                              showError(`Error reloading schedule item  "${scheduleItemName}".`);
-                        }
-                    });
+           $.ajax({
+                url: '/api/schedule-list',
+                type: 'POST',
+                contentType: 'application/json',
+               data: JSON.stringify({ itemId: itemId}),
+                success: function (result) {
+                     initializeScheduleListPage();
+                    alert("Schedule item reloaded successfully!");
+                },
+                error: function (error) {
+                      showError(`Error reloading schedule item with ID "${itemId}".`);
                 }
-
-        })
-           .fail(function (error) {
-           showError(`Error reloading schedule item "${scheduleItemName}".`);
             })
          .always(function () {
               hideLoadingSpinner();
