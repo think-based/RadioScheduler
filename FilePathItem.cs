@@ -11,8 +11,6 @@ namespace RadioScheduler.Entities
         public string Path { get; set; }
         public string FolderPlayMode { get; set; }
         public string Text { get; set; }
-        public TimeSpan Duration { get; set; }
-        // Add the new property
         public string LastPlayedFile { get; set; }
 
         /// <summary>
@@ -20,7 +18,7 @@ namespace RadioScheduler.Entities
         /// </summary>
         public void Validate()
         {
-            if (string.IsNullOrEmpty(Path) && string.IsNullOrEmpty(Text))
+             if (string.IsNullOrEmpty(Path) && string.IsNullOrEmpty(Text))
             {
                 throw new ArgumentException("Either Path or Text must be provided.");
             }
