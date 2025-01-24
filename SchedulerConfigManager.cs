@@ -17,14 +17,14 @@ public class SchedulerConfigManager : ISchedulerConfigManager
     private string _configFilePath;
     private string _currentFileHash;
     private Timer _configCheckTimer;
-    public event Action ConfigReloaded; // Event to notify when config is reloaded
+    public event Action ConfigReloaded;
 
     public List<ScheduleItem> ScheduleItems { get; private set; } = new List<ScheduleItem>();
 
     public SchedulerConfigManager(string configFilePath)
     {
         _configFilePath = configFilePath;
-        _configCheckTimer = new Timer(60000); // 1-minute interval
+        _configCheckTimer = new Timer(60000);
         _configCheckTimer.Elapsed += OnConfigFileCheckTimerElapsed;
         _configCheckTimer.AutoReset = true;
         _configCheckTimer.Enabled = true;
@@ -34,10 +34,6 @@ public class SchedulerConfigManager : ISchedulerConfigManager
         ConfigReloaded?.Invoke();
     }
 
-
-    /// <summary>
-    /// Reloads the schedule configuration from the audio.conf file.
-    /// </summary>
     public void ReloadScheduleConfig()
     {
         try
@@ -47,10 +43,8 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                 string json = File.ReadAllText(_configFilePath);
                 var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
 
-                // Clear existing schedule items
                 ScheduleItems.Clear();
 
-                // Add and validate new schedule items
                 foreach (var item in newItems)
                 {
                     try
@@ -62,13 +56,13 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                     {
                         Logger.LogMessage($"Error loading schedule item: {ex.Message}");
                     }
-                    catch (JsonSerializationException ex)
+                     catch (JsonSerializationException ex)
                     {
                         Logger.LogMessage($"Error deserializing schedule item: {ex.Message}");
                     }
                     catch (Exception ex)
                     {
-                        Logger.LogMessage($"Error general exception loading schedule item: {ex.Message}");
+                       Logger.LogMessage($"Error general exception loading schedule item: {ex.Message}");
                     }
                 }
 
@@ -86,7 +80,7 @@ public class SchedulerConfigManager : ISchedulerConfigManager
         }
     }
 
-    public void ReloadScheduleItem(int itemId)
+   public void ReloadScheduleItem(int itemId)
     {
         try
         {
@@ -95,33 +89,28 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                 string json = File.ReadAllText(_configFilePath);
                 var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
 
-                // Find the item with the matching ItemId
                 var newItem = newItems.FirstOrDefault(i => i.ItemId == itemId);
 
                 if (newItem != null)
                 {
                     try
                     {
-                        // Process the item (validate, calculate duration, etc.)
                         ProcessScheduleItem(newItem);
 
-                        // Find the existing item in ScheduleItems
                         var existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
 
                         if (existingItemIndex >= 0)
                         {
-                            // Replace the existing item with the new one
                             ScheduleItems[existingItemIndex] = newItem;
                             Logger.LogMessage($"Reloaded item with ItemId: {itemId}");
                         }
                         else
                         {
-                            // If the item doesn't exist, add it
-                            ScheduleItems.Add(newItem);
-                            Logger.LogMessage($"Added new item with ItemId: {itemId}");
+                             ScheduleItems.Add(newItem);
+                             Logger.LogMessage($"Added new item with ItemId: {itemId}");
                         }
 
-                        ConfigReloaded?.Invoke(); // Notify that the config has been reloaded
+                         ConfigReloaded?.Invoke();
                     }
                     catch (ArgumentException ex)
                     {
@@ -136,7 +125,7 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                         Logger.LogMessage($"Error processing schedule item: {ex.Message}");
                     }
                 }
-                else
+                 else
                 {
                     Logger.LogMessage($"Item with ItemId {itemId} not found in config file.");
                 }
@@ -152,10 +141,6 @@ public class SchedulerConfigManager : ISchedulerConfigManager
         }
     }
 
-
-    /// <summary>
-    /// Handles the timer tick event to check for configuration file changes.
-    /// </summary>
     private void OnConfigFileCheckTimerElapsed(object sender, ElapsedEventArgs e)
     {
         var newFileHash = CalculateConfigHash();
@@ -168,43 +153,36 @@ public class SchedulerConfigManager : ISchedulerConfigManager
 
         }
     }
-    /// <summary>
-    /// Calculates the hash of the audio config file.
-    /// </summary>
+
     private string CalculateConfigHash()
     {
         if (!File.Exists(_configFilePath))
             return "";
         return FileHashHelper.CalculateFileHash(_configFilePath);
     }
-    /// <summary>
-    /// Calculates the total duration of a playlist.
-    /// </summary>
 
-    private void ProcessScheduleItem(ScheduleItem item)
+   private void ProcessScheduleItem(ScheduleItem item)
     {
         // Convert string values to enums with error handling
         item.Type = Enums.ParseEnum<ScheduleType>(item.Type.ToString(), "ScheduleType");
         item.CalendarType = Enums.ParseEnum<CalendarTypes>(item.CalendarType.ToString(), "CalendarTypes");
         item.TriggerType = Enums.ParseEnum<TriggerTypes>(item.TriggerType.ToString(), "TriggerTypes");
 
-
-        //Handle the Priority, set default if not present
-        if (!item.Priority.HasValue)
+          if (!item.Priority.HasValue)
         {
-            item.Priority = Priority.Low; // Set default priority if null
+            item.Priority = Priority.Low;
         }
-        else if (!Enum.IsDefined(typeof(Priority), item.Priority.Value))
+         else if (!Enum.IsDefined(typeof(Priority), item.Priority.Value))
         {
-            item.Priority = Priority.Low; //Set default priority is the parsed value is not valid.
-            Logger.LogMessage($"Priority {item.Priority.Value} from ItemId '{item.ItemId}' is invalid. Setting it to Low");
+            item.Priority = Priority.Low;
+             Logger.LogMessage($"Priority {item.Priority.Value} from ItemId '{item.ItemId}' is invalid. Setting it to Low");
         }
 
 
-        item.Status = ScheduleStatus.TimeWaiting; // Initial status
+        item.Status = ScheduleStatus.TimeWaiting;
         item.LastPlayTime = null;
         item.Validate();
-        if (item.TriggerType == TriggerTypes.Delayed && !string.IsNullOrEmpty(item.DelayTime))
+         if (item.TriggerType == TriggerTypes.Delayed && !string.IsNullOrEmpty(item.DelayTime))
         {
             if (!TimeSpan.TryParse(item.DelayTime, out _))
             {
@@ -213,111 +191,118 @@ public class SchedulerConfigManager : ISchedulerConfigManager
             }
 
         }
-        // Process FilePathItems
-        foreach (var filePathItem in item.FilePaths)
+
+           item.PlayList.Clear();
+
+             foreach (var filePathItem in item.FilePaths)
         {
-            if (Directory.Exists(filePathItem.Path) && filePathItem.FolderPlayMode == "Single")
+            if (!string.IsNullOrEmpty(filePathItem.Text))
             {
-                var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3").OrderBy(f => f).ToList();
-                if (audioFiles.Any())
+                 item.PlayList.Add($"TTS:{filePathItem.Text}");
+            }
+            else if (File.Exists(filePathItem.Path))
+            {
+                 item.PlayList.Add(filePathItem.Path);
+            }
+            else if (Directory.Exists(filePathItem.Path))
+            {
+                 var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3").OrderBy(f => f).ToList();
+                  if(audioFiles.Count == 0)
+                    {
+                         Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and schedule item '{item.Name}'");
+                    }
+                if (filePathItem.FolderPlayMode == "Random")
                 {
-                    var random = new Random();
-                    int randomIndex = random.Next(audioFiles.Count);
-                    filePathItem.Path = audioFiles[randomIndex];
-                    filePathItem.FolderPlayMode = null; // Clear the FolderPlayMode
-                }
-                else
-                {
-                    Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and 'Single' play mode for  schedule item  '{item.Name}'.");
+                   if(audioFiles.Any())
+                    {
+                        var random = new Random();
+                        item.PlayList.Add(audioFiles[random.Next(audioFiles.Count)]);
+                    }
 
                 }
+                else if (filePathItem.FolderPlayMode == "Que")
+                {
+                     if (audioFiles.Count > 0)
+                    {
+                         int lastPlayedIndex = -1;
+
+                        if (!string.IsNullOrEmpty(filePathItem.LastPlayedFile))
+                        {
+                             lastPlayedIndex = audioFiles.IndexOf(filePathItem.LastPlayedFile);
+                        }
+                        int nextIndex = (lastPlayedIndex + 1) % audioFiles.Count;
+
+                        item.PlayList.Add(audioFiles[nextIndex]);
+                        filePathItem.LastPlayedFile = audioFiles[nextIndex]; // Store last played file in FilePathItem
+
+                    }
+
+                }
+                  else
+                {
+                   item.PlayList.AddRange(audioFiles);
+                 }
             }
+
         }
-        item.TotalDuration = CalculateTotalDuration(item.FilePaths);
+          item.TotalDuration = CalculateTotalDuration(item.PlayList);
     }
 
-    private TimeSpan CalculateTotalDuration(List<FilePathItem> filePaths)
+    private TimeSpan CalculateTotalDuration(List<string> playList)
     {
         TimeSpan totalDuration = TimeSpan.Zero;
-        var ttsEngine = new SpeechSynthesizer(); // Initialize TTS engine
+        var ttsEngine = new SpeechSynthesizer();
 
-        foreach (var filePathItem in filePaths)
+          foreach (var item in playList)
         {
-            if (!string.IsNullOrEmpty(filePathItem.Text)) // Handle TTS
+            if (item.StartsWith("TTS:"))
             {
-                filePathItem.Duration = CalculateTtsDuration(filePathItem.Text, ttsEngine);
-                totalDuration += filePathItem.Duration;
+                 string text = item.Substring(4);
+                 totalDuration += CalculateTtsDuration(text, ttsEngine);
+
             }
-            else if (File.Exists(filePathItem.Path)) // Handle single file
+             else if (File.Exists(item))
             {
-                try
+                 try
                 {
-                    using (var reader = new AudioFileReader(filePathItem.Path))
+                    using (var reader = new AudioFileReader(item))
                     {
                         totalDuration += reader.TotalTime;
-                        filePathItem.Duration = reader.TotalTime;
-
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogMessage($"Error calculating duration for file {filePathItem.Path}: {ex.Message}");
+                    Logger.LogMessage($"Error calculating duration for file {item}: {ex.Message}");
                 }
             }
-            else if (Directory.Exists(filePathItem.Path)) // Handle folder (shouldn't occur now but leaving this for other cases)
-            {
-                var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3").OrderBy(f => f).ToList();
-                foreach (var audioFile in audioFiles)
-                {
-                    try
-                    {
-                        using (var reader = new AudioFileReader(audioFile))
-                        {
-                            totalDuration += reader.TotalTime;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogMessage($"Error calculating duration for file {audioFile}: {ex.Message}");
-                    }
-                }
-            }
+
         }
 
-        ttsEngine.Dispose(); // Clean up TTS engine
+        ttsEngine.Dispose();
         return totalDuration;
     }
 
-    /// <summary>
-    /// Calculates the exact duration of TTS playback using the SpeechSynthesizer.
-    /// </summary>
-    /// <param name="text">The TTS text.</param>
-    /// <param name="ttsEngine">The TTS engine.</param>
-    /// <returns>The duration of the TTS playback.</returns>
     private TimeSpan CalculateTtsDuration(string text, SpeechSynthesizer ttsEngine)
     {
         try
         {
-            // Use the TTS engine to get the exact duration
             var prompt = new PromptBuilder();
             prompt.AppendText(text);
 
-            // Measure the duration
             var ttsStream = new MemoryStream();
             ttsEngine.SetOutputToWaveStream(ttsStream);
             ttsEngine.Speak(prompt);
 
-            // Calculate duration based on the audio stream
-            ttsStream.Position = 0; // Reset stream position
+            ttsStream.Position = 0;
             using (var reader = new WaveFileReader(ttsStream))
             {
-                return reader.TotalTime; // Exact duration of the TTS audio
+                return reader.TotalTime;
             }
         }
         catch (Exception ex)
         {
             Logger.LogMessage($"Error calculating TTS duration: {ex.Message}");
-            return TimeSpan.FromSeconds(text.Length / 10.0); // Fallback to estimation
+            return TimeSpan.FromSeconds(text.Length / 10.0);
         }
     }
 }
