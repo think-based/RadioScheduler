@@ -1,4 +1,4 @@
-// Be Naame Khoda
+      // Be Naame Khoda
 // FileName: InstantPlayManager.cs
 
 using RadioScheduler.Entities;
@@ -13,20 +13,18 @@ public class InstantPlayManager
     private Timer _instantPlayTimer;
     private AudioPlayer _audioPlayer;
     private string _instantPlayFolderPath;
-    private bool _isProcessing = false; // Flag to prevent re-entrancy
-    private string _currentAudioFile; // Track the current audio file being played
-    private bool _folderExists = true; // Track if the folder exists to avoid repetitive checks
+    private bool _isProcessing = false;
+    private string _currentAudioFile;
+    private bool _folderExists = true;
 
     public InstantPlayManager(string instantPlayFolderPath, ISchedulerConfigManager configManager)
     {
         _instantPlayFolderPath = instantPlayFolderPath;
-        _audioPlayer = new AudioPlayer(configManager); // Pass configManager to AudioPlayer
+        _audioPlayer = new AudioPlayer(configManager);
 
-        // Subscribe to the PlaylistFinished event
         _audioPlayer.PlaylistFinished += OnPlaylistFinished;
 
-        // Initialize the timer
-        _instantPlayTimer = new Timer(1000); // Check every second
+        _instantPlayTimer = new Timer(1000);
         _instantPlayTimer.Elapsed += OnInstantPlayTimerElapsed;
         _instantPlayTimer.AutoReset = true;
         _instantPlayTimer.Enabled = true;
@@ -34,62 +32,52 @@ public class InstantPlayManager
 
     private void OnInstantPlayTimerElapsed(object sender, ElapsedEventArgs e)
     {
-        // Prevent re-entrancy
         if (_isProcessing) return;
         _isProcessing = true;
 
-        // Stop the timer while processing the file
         _instantPlayTimer.Stop();
 
         try
         {
-            // Check if the folder exists
             if (!Directory.Exists(_instantPlayFolderPath))
             {
-                _folderExists = false; // Update flag to avoid repetitive checks
+                _folderExists = false;
                 _isProcessing = false;
-                _instantPlayTimer.Start(); // Restart the timer
-                return; // Folder not found, skip processing
+                _instantPlayTimer.Start();
+                return;
             }
             else if (!_folderExists)
             {
-                _folderExists = true; // Update flag to avoid repetitive checks
+                _folderExists = true;
             }
 
-            // Get all audio files in the folder
             var audioFiles = Directory.GetFiles(_instantPlayFolderPath, "*.mp3");
 
             if (audioFiles.Length == 0)
             {
-                _currentAudioFile = null; // Reset to avoid repetitive checks
+                _currentAudioFile = null;
                 _isProcessing = false;
-                _instantPlayTimer.Start(); // Restart the timer
-                return; // No files to play
+                _instantPlayTimer.Start();
+                return;
             }
 
-            // Play the first audio file found
             _currentAudioFile = audioFiles[0];
             Logger.LogMessage($"Playing file: {Path.GetFileName(_currentAudioFile)}");
 
-            // Create a ScheduleItem with the file path
+            // Create a ScheduleItem with the file path in the PlayList property
             var scheduleItem = new ScheduleItem
             {
-                Name = "Instant Play", // Set a name for the schedule item
-                FilePaths = new List<FilePathItem>
-                {
-                    new FilePathItem { Path = _currentAudioFile }
-                },
-                Type = ScheduleType.NonPeriodic, // Set the type as NonPeriodic
-                TriggerType = TriggerTypes.Immediate // Set the trigger type
+                Name = "Instant Play",
+                PlayList = new List<string> { _currentAudioFile }, // Add the file to the PlayList
+                Type = ScheduleType.NonPeriodic,
+                TriggerType = TriggerTypes.Immediate
             };
 
-            // Play the file
             _audioPlayer.Play(scheduleItem);
         }
         catch (Exception ex)
         {
             Logger.LogMessage($"Error: {ex.Message}");
-            // Restart the timer in case of an error
             _isProcessing = false;
             _instantPlayTimer.Start();
             Logger.LogMessage("Timer restarted after error.");
@@ -100,7 +88,6 @@ public class InstantPlayManager
     {
         try
         {
-            // Delete the file after playback
             if (!string.IsNullOrEmpty(_currentAudioFile) && File.Exists(_currentAudioFile))
             {
                 File.Delete(_currentAudioFile);
@@ -113,9 +100,9 @@ public class InstantPlayManager
         }
         finally
         {
-            // Restart the timer after playback and file deletion are complete
             _isProcessing = false;
             _instantPlayTimer.Start();
         }
     }
 }
+    
