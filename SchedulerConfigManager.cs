@@ -175,6 +175,8 @@ public class SchedulerConfigManager : ISchedulerConfigManager
         }
 
         item.Status = ScheduleStatus.TimeWaiting;
+        item.CurrentPlayingIndex = -1;
+
         item.Validate();
          if (item.TriggerType == TriggerTypes.Delayed && !string.IsNullOrEmpty(item.DelayTime))
         {
