@@ -64,14 +64,28 @@ public class InstantPlayManager
             _currentAudioFile = audioFiles[0];
             Logger.LogMessage($"Playing file: {Path.GetFileName(_currentAudioFile)}");
 
-            // Create a ScheduleItem with the file path in the PlayList property
-            var scheduleItem = new ScheduleItem
+            // Create a ScheduleItem and populate PlayList with the file and its duration
+             var scheduleItem = new ScheduleItem
             {
                 Name = "Instant Play",
-                PlayList = new List<string> { _currentAudioFile }, // Add the file to the PlayList
                 Type = ScheduleType.NonPeriodic,
-                TriggerType = TriggerTypes.Immediate
-            };
+                TriggerType = TriggerTypes.Immediate,
+                   PlayList = new List<ScheduleItem.PlayListItem>()
+             };
+
+           try
+           {
+                 using (var reader = new AudioFileReader(_currentAudioFile))
+                {
+                      scheduleItem.PlayList.Add(new ScheduleItem.PlayListItem {Path = _currentAudioFile, Duration = reader.TotalTime.TotalMilliseconds});
+                 }
+            }
+           catch (Exception ex)
+             {
+                   Logger.LogMessage($"Error calculating duration for file {_currentAudioFile}: {ex.Message}");
+                  scheduleItem.PlayList.Add(new ScheduleItem.PlayListItem {Path = _currentAudioFile, Duration = 0});
+              }
+
 
             _audioPlayer.Play(scheduleItem);
         }
