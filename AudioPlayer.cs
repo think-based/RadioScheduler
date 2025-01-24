@@ -89,10 +89,11 @@ public class AudioPlayer : IAudioPlayer
             if (_scheduleItem != null && _scheduleItem.Status == ScheduleStatus.Playing)
             {
                 _scheduleItem.Status = ScheduleStatus.Stopped;
+                // Reset the current playing index since the playlist is stopped
+                _scheduleItem.CurrentPlayingIndex = -1;
                 PlaylistStoped?.Invoke();
                 Logger.LogMessage($"Playlist Stoped: {_scheduleItem.Name}. Status updated to Stoped.");
                 Debug.Print($"Playlist Stoped: {_scheduleItem.Name}. Status updated to Stoped.");
-
             }
 
         }
@@ -121,7 +122,7 @@ public class AudioPlayer : IAudioPlayer
         }
     }
 
-   private async Task PlayAudioList(ScheduleItem item, CancellationToken cancellationToken)
+    private async Task PlayAudioList(ScheduleItem item, CancellationToken cancellationToken)
     {
         lock (_lock)
         {
@@ -129,13 +130,11 @@ public class AudioPlayer : IAudioPlayer
 
             if (item.PlayList == null || item.PlayList.Count == 0)
             {
-               Logger.LogMessage("Playlist is null or empty.");
+                Logger.LogMessage("Playlist is null or empty.");
                 return;
             }
 
-
             Logger.LogMessage($"Starting new playlist: {item.Name}");
-
 
             _currentPlaylist = item.PlayList;
             _currentIndex = 0;
@@ -149,22 +148,28 @@ public class AudioPlayer : IAudioPlayer
     {
         lock (_lock)
         {
-            if (_currentPlaylist == null || _currentPlaylist.Count == 0)
+           if (_currentPlaylist == null || _currentPlaylist.Count == 0)
             {
                 Logger.LogMessage("Playlist is null or empty. Stopping playback.");
                 IsPlaying = false;
                 CurrentFile = null;
+                if(_scheduleItem != null)
+                   _scheduleItem.CurrentPlayingIndex = -1;
+
 
                 var currentItem = _playlistQueue.Count > 0 ? _playlistQueue.Peek() : null;
                 OnPlaylistFinished();
                 return;
             }
 
+
             if (_currentIndex < 0 || _currentIndex >= _currentPlaylist.Count)
             {
-                Logger.LogMessage("Playlist index is out of bounds. Stopping playback.");
+                 Logger.LogMessage("Playlist index is out of bounds. Stopping playback.");
                 IsPlaying = false;
                 CurrentFile = null;
+                 if(_scheduleItem != null)
+                    _scheduleItem.CurrentPlayingIndex = -1;
 
                 var currentItem = _playlistQueue.Count > 0 ? _playlistQueue.Peek() : null;
                 OnPlaylistFinished();
@@ -174,7 +179,9 @@ public class AudioPlayer : IAudioPlayer
             var nextPlayListItem = _currentPlaylist[_currentIndex];
             string nextFile = nextPlayListItem.Path;
 
-
+            // Store the current playing index in item
+            if (_scheduleItem != null)
+                _scheduleItem.CurrentPlayingIndex = _currentIndex;
 
             if (nextFile.StartsWith("TTS:"))
             {
@@ -191,7 +198,7 @@ public class AudioPlayer : IAudioPlayer
 
                 _ttsPlayer.SpeakAsync(text);
                 IsPlaying = true;
-                CurrentFile = "TTS";
+                 CurrentFile = "TTS";
             }
             else if (File.Exists(nextFile))
             {
@@ -224,18 +231,17 @@ public class AudioPlayer : IAudioPlayer
                     _audioPlayerWaveOut.Play();
 
                     IsPlaying = true;
-                    CurrentFile = nextFile;
+                     CurrentFile = nextFile;
                 }
                 catch (Exception ex)
                 {
                     Logger.LogMessage($"Error playing file {nextFile}: {ex.Message}");
                 }
             }
-            else
+             else
             {
-                Logger.LogMessage($"File not found: {nextFile}");
+                 Logger.LogMessage($"File not found: {nextFile}");
             }
-
 
             _currentIndex++;
         }
@@ -283,7 +289,8 @@ public class AudioPlayer : IAudioPlayer
             {
                 _scheduleItem.Status = ScheduleStatus.Played;
                 Logger.LogMessage($"Playlist finished: {_scheduleItem.Name}. Status updated to Played.");
-
+                // Reset the current playing index since the playlist is completed
+                _scheduleItem.CurrentPlayingIndex = -1;
                 _configManager.ProcessScheduleItem(_scheduleItem);
                 // Trigger the PlaylistFinished event
                 PlaylistFinished?.Invoke(_scheduleItem);
@@ -291,6 +298,7 @@ public class AudioPlayer : IAudioPlayer
 
         }
     }
+
 
     public ScheduleItem GetCurrentScheduledItem()
     {
