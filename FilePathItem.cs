@@ -1,4 +1,4 @@
-// Be Naame Khoda
+      // Be Naame Khoda
 // FileName: FilePathItem.cs
 
 using System;
@@ -8,10 +8,10 @@ namespace RadioScheduler.Entities
 {
     public class FilePathItem
     {
-        public string Path { get; set; } // Path to the file or folder
-        public string FolderPlayMode { get; set; } // Play mode for folders (e.g., "All" or "Single")
-        public string Text { get; set; } // Text for TTS (optional)
-        public TimeSpan Duration { get; set; } // Duration of the file or TTS
+        public string Path { get; set; }
+        public string FolderPlayMode { get; set; }
+        public string Text { get; set; }
+        public TimeSpan Duration { get; set; }
 
         /// <summary>
         /// Validates the FilePathItem.
@@ -27,6 +27,10 @@ namespace RadioScheduler.Entities
             {
                 throw new ArgumentException("FolderPlayMode must be set for folders.");
             }
+             if (!string.IsNullOrEmpty(Path) && Directory.Exists(Path) && ! (FolderPlayMode == "All" || FolderPlayMode == "Random" || FolderPlayMode == "Que" ) )
+            {
+                throw new ArgumentException("FolderPlayMode must be  'All' or 'Random' or 'Que' for folders.");
+            }
 
             if (!string.IsNullOrEmpty(Path) && !Directory.Exists(Path) && !File.Exists(Path))
             {
@@ -35,3 +39,4 @@ namespace RadioScheduler.Entities
         }
     }
 }
+    
