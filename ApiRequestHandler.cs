@@ -8,14 +8,16 @@ using System.Text;
 using Newtonsoft.Json;
 using RadioSchedulerService;
 using static ActiveTriggers;
-using System.Linq; // Added missing using directive
+using System.Linq;
 
 public class ApiRequestHandler
 {
     private readonly ITriggerManager _triggerManager;
-    public ApiRequestHandler(ITriggerManager triggerManager)
+      private readonly Scheduler _scheduler;
+    public ApiRequestHandler(ITriggerManager triggerManager, Scheduler scheduler =null)
     {
         _triggerManager = triggerManager;
+         _scheduler = scheduler;
     }
 
     public void ServeTimezone(HttpListenerResponse response)
@@ -110,14 +112,59 @@ public class ApiRequestHandler
             WriteStringResponse(response, $"Error serving trigger by name: {ex.Message}");
         }
     }
-    /// <summary>
+   /// <summary>
+    /// Serves the schedule list
+    /// </summary>
+    /// <param name="response">The HTTP response object.</param>
+     public void ServeScheduleList(HttpListenerResponse response)
+    {
+         try
+        {
+            // Fetch the list of scheduled items directly from the Scheduler
+            var scheduleItems = _scheduler.GetScheduledItems();
+
+            // Create a JSON response with all required fields
+           var responseData = scheduleItems.Select(item => new
+            {
+                ItemId = item.ItemId,
+                Name = item.Name,
+                StartTime = item.NextOccurrence.ToString("yyyy-MM-dd HH:mm:ss"),
+                EndTime = item.NextOccurrence.Add(item.TotalDuration).ToString("yyyy-MM-dd HH:mm:ss"),
+                TotalDuration = item.TotalDuration.TotalMilliseconds,
+                LastPlayTime = item.LastPlayTime != null ? item.LastPlayTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
+                TriggerTime = item.TriggerTime != null ? item.TriggerTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
+                 Status = item.Status.ToString(),
+                 TimeToPlay = item.TimeToPlay,
+                 PlayList = item.PlayList.Select(x=> new {Path = x.Path}).ToList(),
+                CurrentPlayingIndex = item.CurrentPlayingIndex
+
+           });
+
+
+            // Serialize the response to JSON
+            string jsonResponse = JsonConvert.SerializeObject(responseData);
+
+            // Send the response
+            byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
+            response.ContentType = "application/json";
+            response.ContentLength64 = buffer.Length;
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error serving schedule list: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            WriteStringResponse(response,$"Error serving schedule list: {ex.Message}");
+        }
+    }
+      /// <summary>
     /// Adds a manual trigger
     /// </summary>
     /// <param name="request">The HTTP request object.</param>
     /// <param name="response">The HTTP response object.</param>
     public void AddTrigger(HttpListenerRequest request, HttpListenerResponse response)
     {
-        string message = "";
+          string message = "";
         try
         {
             string requestBody;
@@ -152,7 +199,7 @@ public class ApiRequestHandler
             if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
             {
                 DateTime parsedTime;
-                if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+               if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
                 {
                       if(parsedTime.Kind != DateTimeKind.Utc) {
                            parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local); // If not already local, then set it local
@@ -368,6 +415,7 @@ public class ApiRequestHandler
             WriteStringResponse(response, message);
         }
     }
+
     /// <summary>
     /// Writes the string message to the response body
     /// </summary>
