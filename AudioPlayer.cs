@@ -285,12 +285,12 @@ public class AudioPlayer : IAudioPlayer
                 Logger.LogMessage($"Playlist finished: {_scheduleItem.Name}. Status updated to Played.");
 
                 _configManager.ReloadScheduleItem(_scheduleItem.ItemId);
+                // Trigger the PlaylistFinished event
                 PlaylistFinished?.Invoke(_scheduleItem);
             }
 
         }
     }
-
 
     public ScheduleItem GetCurrentScheduledItem()
     {
