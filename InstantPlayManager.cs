@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Timers;
 using static Enums;
+using NAudio.Wave;
 
 public class InstantPlayManager
 {
@@ -65,29 +66,31 @@ public class InstantPlayManager
             Logger.LogMessage($"Playing file: {Path.GetFileName(_currentAudioFile)}");
 
             // Create a ScheduleItem and populate PlayList with the file and its duration
-             var scheduleItem = new ScheduleItem
+            var scheduleItem = new ScheduleItem
             {
                 Name = "Instant Play",
                 Type = ScheduleType.NonPeriodic,
                 TriggerType = TriggerTypes.Immediate,
-                   PlayList = new List<ScheduleItem.PlayListItem>()
-             };
-
-           try
-           {
+               PlayList = new List<ScheduleItem.PlayListItem>()
+            };
+               try
+            {
                  using (var reader = new AudioFileReader(_currentAudioFile))
-                {
-                      scheduleItem.PlayList.Add(new ScheduleItem.PlayListItem {Path = _currentAudioFile, Duration = reader.TotalTime.TotalMilliseconds});
+                 {
+                      scheduleItem.PlayList.Add(new ScheduleItem.PlayListItem { Path = _currentAudioFile, Duration = reader.TotalTime.TotalMilliseconds });
                  }
+
             }
            catch (Exception ex)
              {
-                   Logger.LogMessage($"Error calculating duration for file {_currentAudioFile}: {ex.Message}");
-                  scheduleItem.PlayList.Add(new ScheduleItem.PlayListItem {Path = _currentAudioFile, Duration = 0});
-              }
+                 Logger.LogMessage($"Error calculating duration for file {_currentAudioFile}: {ex.Message}");
+                 scheduleItem.PlayList.Add(new ScheduleItem.PlayListItem { Path = _currentAudioFile, Duration = 0 });
+            }
 
 
-            _audioPlayer.Play(scheduleItem);
+           // Calculate total duration from the playlist
+             scheduleItem.TotalDuration = scheduleItem.CalculateTotalDuration();
+           _audioPlayer.Play(scheduleItem);
         }
         catch (Exception ex)
         {
