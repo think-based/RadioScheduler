@@ -208,7 +208,6 @@ function showPlayList(scheduleItemName) {
                      $('#playlist-modal').modal('show');
 
                       if(selectedItem.hasOwnProperty('playList') && selectedItem.playList.length>0) {
-
                            selectedItem.playList.forEach((playlistItem,index )=> {
                             const listItem = `<li class="list-group-item ${index === selectedItem.CurrentPlayingIndex ? 'list-group-item-primary' : ''}">
                                                     ${playlistItem.Path}
@@ -272,10 +271,11 @@ function calculateTimeToPlay(startTime) {
           }
 
         const seconds = Math.floor(timeDiff / 1000);
-        const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
         const days = Math.floor(hours / 24);
-          const remainingHours = hours % 24;
+        const minutes = Math.floor((seconds % 3600) / 60);
+
+        const remainingHours = hours % 24;
         const remainingMinutes = minutes % 60;
         const remainingSeconds = seconds % 60;
 
