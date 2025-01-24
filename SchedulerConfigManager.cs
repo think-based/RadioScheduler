@@ -83,8 +83,9 @@ public class SchedulerConfigManager : ISchedulerConfigManager
         }
     }
 
-   public void ReloadScheduleItem(int itemId)
+    public void ReloadScheduleItem(int itemId)
     {
+        int existingItemIndex = -1; // Declare outside the try block
         try
         {
             if (File.Exists(_configFilePath))
@@ -99,22 +100,20 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                     try
                     {
                         // Skip disabled items
-                         if (newItem.Disabled)
-                         {
+                        if (newItem.Disabled)
+                        {
                             Logger.LogMessage($"Skipping disabled item: {newItem.Name} (ItemID: {newItem.ItemId})");
-                            var existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
+                            existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
                             if (existingItemIndex >= 0)
                             {
-                              ScheduleItems.RemoveAt(existingItemIndex);
+                                ScheduleItems.RemoveAt(existingItemIndex);
                             }
-                           ConfigReloaded?.Invoke();
-                           return;
-                         }
-
+                            ConfigReloaded?.Invoke();
+                            return;
+                        }
 
                         ProcessScheduleItem(newItem);
-
-                        var existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
+                        existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
 
                         if (existingItemIndex >= 0)
                         {
@@ -123,11 +122,11 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                         }
                         else
                         {
-                             ScheduleItems.Add(newItem);
-                             Logger.LogMessage($"Added new item with ItemId: {itemId}");
+                            ScheduleItems.Add(newItem);
+                            Logger.LogMessage($"Added new item with ItemId: {itemId}");
                         }
 
-                         ConfigReloaded?.Invoke();
+                        ConfigReloaded?.Invoke();
                     }
                     catch (ArgumentException ex)
                     {
@@ -142,7 +141,7 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                         Logger.LogMessage($"Error processing schedule item: {ex.Message}");
                     }
                 }
-                 else
+                else
                 {
                     Logger.LogMessage($"Item with ItemId {itemId} not found in config file.");
                 }
