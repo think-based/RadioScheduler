@@ -114,30 +114,30 @@ public class AudioPlayer : IAudioPlayer
 
             if (nextItem != null)
             {
-                await PlayPlaylist(nextItem, cancellationToken);
+                await PlayAudioList(nextItem, cancellationToken);
             }
 
             await Task.Delay(100, cancellationToken);
         }
     }
 
-    private async Task PlayPlaylist(ScheduleItem item, CancellationToken cancellationToken)
+   private async Task PlayAudioList(ScheduleItem item, CancellationToken cancellationToken)
     {
         lock (_lock)
         {
             Stop();
 
-            var expandedFilePaths = ExpandFilePaths(item.FilePaths);
-
-            if (expandedFilePaths == null || expandedFilePaths.Count == 0)
+            if (item.PlayList == null || item.PlayList.Count == 0)
             {
-                Logger.LogMessage("Playlist is null or empty.");
+               Logger.LogMessage("Playlist is null or empty.");
                 return;
             }
 
+
             Logger.LogMessage($"Starting new playlist: {item.Name}");
 
-            _currentPlaylist = expandedFilePaths;
+
+            _currentPlaylist = item.PlayList;
             _currentIndex = 0;
         }
         _scheduleItem.Status = ScheduleStatus.Playing;
@@ -289,9 +289,9 @@ public class AudioPlayer : IAudioPlayer
 
     public List<string> ExpandFilePaths(List<FilePathItem> filePathItems)
     {
-        var expandedPaths = new List<string>();
+         var expandedPaths = new List<string>();
 
-        if (filePathItems == null || filePathItems.Count == 0)
+         if (filePathItems == null || filePathItems.Count == 0)
         {
             Logger.LogMessage("No file paths provided.");
             return expandedPaths;
