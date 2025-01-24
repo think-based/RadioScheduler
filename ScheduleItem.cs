@@ -55,6 +55,9 @@ public class ScheduleItem
 
      // New internal property for current playing index in playlist for "Que"
     internal int CurrentPlayingIndex { get; set; } = -1;
+     // New internal property for time to play string
+    public string TimeToPlay { get; set; } = "N/A";
+
 
     public void Validate()
     {
