@@ -39,6 +39,9 @@ public class ScheduleItem
         }
     }
 
+    // New internal property for the playlist
+    internal List<string> PlayList { get; set; } = new List<string>();
+
 
     public void Validate()
     {
