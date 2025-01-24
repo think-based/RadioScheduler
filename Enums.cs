@@ -42,6 +42,23 @@ public static class Enums
         Medium = 2,
         High = 3
     }
+     // Add a new enum for FolderPlayMode
+    public enum FolderPlayMode
+    {
+         /// <summary>
+        /// Plays all MP3 files in the folder.
+        /// </summary>
+        All,
+         /// <summary>
+        /// Plays a single random MP3 file from the folder.
+        /// </summary>
+        Random,
+        /// <summary>
+        /// Plays a single MP3 file from the folder in queue order.
+        /// </summary>
+        Que
+    }
+
 
     public static T ParseEnum<T>(string value, string enumName) where T : struct, Enum
     {
