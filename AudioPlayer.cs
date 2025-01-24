@@ -5,11 +5,9 @@ using NAudio.Wave;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Speech.Synthesis;
 using System.Threading;
 using System.Threading.Tasks;
-using RadioScheduler.Entities;
 using static Enums;
 using System.Diagnostics;
 
@@ -289,8 +287,6 @@ public class AudioPlayer : IAudioPlayer
             {
                 _scheduleItem.Status = ScheduleStatus.Played;
                 Logger.LogMessage($"Playlist finished: {_scheduleItem.Name}. Status updated to Played.");
-                // Reset the current playing index since the playlist is completed
-                _scheduleItem.CurrentPlayingIndex = -1;
                 _configManager.ProcessScheduleItem(_scheduleItem);
                 // Trigger the PlaylistFinished event
                 PlaylistFinished?.Invoke(_scheduleItem);
