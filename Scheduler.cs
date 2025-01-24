@@ -111,7 +111,7 @@ public class Scheduler
 
         item.Status = ScheduleStatus.EventWaiting;
     }
-    private void HandleScheduledPlayback(ScheduleItem item, DateTime now)
+     private void HandleScheduledPlayback(ScheduleItem item, DateTime now)
     {
         ScheduleItem currentPlayingItem = _audioPlayer.GetCurrentScheduledItem();
 
@@ -173,34 +173,34 @@ public class Scheduler
                     item.NextOccurrence = DateTime.MinValue;
                 }
             }
-            else if (item.TriggerType == TriggerTypes.Timed)
+             else if (item.TriggerType == TriggerTypes.Timed)
             {
-                item.NextOccurrence = trigger.Value.Time.Value.Add(-item.TotalDuration);
+                 item.NextOccurrence = trigger.Value.Time.Value.Add(-item.TotalDuration);
             }
 
         }
         else
         {
-             if (item.TriggerType == TriggerTypes.Immediate || item.TriggerType == TriggerTypes.Timed)
+            if (item.TriggerType == TriggerTypes.Immediate || item.TriggerType == TriggerTypes.Timed)
             {
-                  item.NextOccurrence = trigger.Value.Time.Value;
+                 item.NextOccurrence = trigger.Value.Time.Value;
             }
              else if (item.TriggerType == TriggerTypes.Delayed)
             {
-                 if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
+                if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
                 {
                     item.NextOccurrence = trigger.Value.Time.Value.Add(delay);
-                }
+                 }
                  else
                 {
-                    Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
-                    item.NextOccurrence = DateTime.MinValue;
-                 }
-           }
-        }
+                   Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
+                   item.NextOccurrence = DateTime.MinValue;
+                }
+            }
+         }
 
     }
-   private void OnConflictOccurred(object conflictData)
+     private void OnConflictOccurred(object conflictData)
     {
         if (conflictData is ScheduleItem item)
         {
@@ -219,28 +219,34 @@ public class Scheduler
         return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second);
     }
 
-     public List<ScheduleItem> GetScheduledItems()
+    public List<ScheduleItem> GetScheduledItems()
     {
         DateTime now = DateTime.Now;
-        DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now, Settings.Region);
-         // Get the list of scheduled items from the configuration
+        TimeZoneInfo targetTimeZone = TimeZoneInfo.FindSystemTimeZoneById(Settings.TimeZoneId);
+        DateTime convertedNow = TimeZoneInfo.ConvertTime(now, TimeZoneInfo.Local, targetTimeZone);
+
+
+        // Get the list of scheduled items from the configuration
         var items = _configManager.ScheduleItems
             .Where(item => item.EndTime >= convertedNow)
             .OrderBy(item => item.NextOccurrence)
             .Take(30)
             .ToList();
-           foreach(var item in items)
+
+         foreach(var item in items)
             {
-                 item.TimeToPlay = CalculateTimeToPlay(item.NextOccurrence, convertedNow);
+                item.TimeToPlay = CalculateTimeToPlay(item.NextOccurrence, convertedNow);
             }
 
-           return items;
 
+           return items;
     }
-    private List<ScheduleItem> GetDueScheduleItems(DateTime now)
+     private List<ScheduleItem> GetDueScheduleItems(DateTime now)
     {
-         return _configManager.ScheduleItems
-              .Where(item => TruncateDateTimeToSeconds(item.NextOccurrence) <= TruncateDateTimeToSeconds(now))
+         DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now, Settings.Region);
+
+        return _configManager.ScheduleItems
+             .Where(item => TruncateDateTimeToSeconds(item.NextOccurrence) <= TruncateDateTimeToSeconds(convertedNow))
             .ToList();
     }
     private DateTime GetNextOccurrence(ScheduleItem item, DateTime now)
@@ -252,16 +258,17 @@ public class Scheduler
     {
           if (nextOccurrence == DateTime.MinValue)
                return "N/A";
+          TimeZoneInfo targetTimeZone = TimeZoneInfo.FindSystemTimeZoneById(Settings.TimeZoneId);
+          DateTime convertedNextOccurrence = TimeZoneInfo.ConvertTime(nextOccurrence, TimeZoneInfo.Local, targetTimeZone);
 
-            var timeDiff = nextOccurrence.ToUniversalTime() - now.ToUniversalTime();
 
-             if (timeDiff <= TimeSpan.Zero) {
+            var timeDiff = convertedNextOccurrence - now;
+
+            if (timeDiff <= TimeSpan.Zero) {
                 return "Playing or Due";
             }
 
-        const double secondsInDay = 60 * 60 * 24;
-
-          if (timeDiff.TotalDays >= 1) {
+           if (timeDiff.TotalDays >= 1) {
 
            return $"{(int)timeDiff.TotalDays}d {timeDiff.Hours}h {timeDiff.Minutes}m {timeDiff.Seconds}s";
 
