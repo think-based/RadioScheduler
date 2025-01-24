@@ -12,6 +12,8 @@ namespace RadioScheduler.Entities
         public string FolderPlayMode { get; set; }
         public string Text { get; set; }
         public TimeSpan Duration { get; set; }
+        // Add the new property
+        public string LastPlayedFile { get; set; }
 
         /// <summary>
         /// Validates the FilePathItem.
