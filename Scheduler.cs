@@ -1,6 +1,6 @@
-//Be Naame Khoda
+      //Be Naame Khoda
 //FileName: Scheduler.cs
-//TODO : 2- web play list files &/ reload schedual item button / high light current play
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -117,15 +117,30 @@ public class Scheduler
 
         if (currentPlayingItem != null)
         {
-            OnConflictOccurred(item, currentPlayingItem, now);  // Pass currentPlayingItem and now
-            return;
+            if (item.Priority >= currentPlayingItem.Priority)
+            {
+                _audioPlayer.Stop();
+                Logger.LogMessage($"Conflict: Stopping {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) to play {item.Name} (Priority: {item.Priority})");
+                _audioPlayer.Play(item);
+                item.LastPlayTime = now;
+
+            }
+            else
+            {
+                Logger.LogMessage($"Conflict: Ignoring {item.Name} (Priority: {item.Priority}) because {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) is playing and has higher priority.");
+                _configManager.ReloadScheduleItem(item.ItemId);
+                OnConflictOccurred(item);
+                return;
+            }
         }
+        else
+        {
+            Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Playing playlist: {item.Name}");
+            Logger.LogMessage($"Starting playback for schedule: {item.Name}");
 
-        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Playing playlist: {item.Name}");
-        Logger.LogMessage($"Starting playback for schedule: {item.Name}");
-
-        _audioPlayer.Play(item);
-        item.LastPlayTime = now;
+            _audioPlayer.Play(item);
+            item.LastPlayTime = now;
+        }
     }
     private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now)
     {
@@ -166,67 +181,99 @@ public class Scheduler
         }
         else
         {
-            if (item.TriggerType == TriggerTypes.Immediate || item.TriggerType == TriggerTypes.Timed)
+             if (item.TriggerType == TriggerTypes.Immediate || item.TriggerType == TriggerTypes.Timed)
             {
-                item.NextOccurrence = trigger.Value.Time.Value;
+                  item.NextOccurrence = trigger.Value.Time.Value;
             }
-            else if (item.TriggerType == TriggerTypes.Delayed)
+             else if (item.TriggerType == TriggerTypes.Delayed)
             {
-                if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
+                 if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
                 {
                     item.NextOccurrence = trigger.Value.Time.Value.Add(delay);
                 }
-                else
+                 else
                 {
                     Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
                     item.NextOccurrence = DateTime.MinValue;
-                }
-            }
+                 }
+           }
         }
 
     }
-    private void OnConflictOccurred(ScheduleItem newItem, ScheduleItem currentPlayingItem, DateTime now)
+   private void OnConflictOccurred(object conflictData)
     {
-        if (newItem.Priority >= currentPlayingItem.Priority)
+        if (conflictData is ScheduleItem item)
         {
-            _audioPlayer.Stop();
-            Logger.LogMessage($"Conflict: Stopping {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) to play {newItem.Name} (Priority: {newItem.Priority})");
-            _audioPlayer.Play(newItem);
-            newItem.LastPlayTime = now; //Setting the last play time should be done right after calling _audioPlayer.Play(newItem); and it should only occur once
+            string conflictMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Conflict: Playlist '{item.Name}' scheduled but another playlist is already playing.";
+            Logger.LogMessage(conflictMessage);
+            Console.WriteLine(conflictMessage);
         }
         else
         {
-            Logger.LogMessage($"Conflict: Ignoring {newItem.Name} (Priority: {newItem.Priority}) because {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) is playing and has higher priority.");
-            _configManager.ReloadScheduleItem(newItem.ItemId);
-
+            Logger.LogMessage($"Conflict detected, but no data was provided");
+            Console.WriteLine("Conflict detected, but no data was provided");
         }
-
     }
     private DateTime TruncateDateTimeToSeconds(DateTime dateTime)
     {
         return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second);
     }
 
-    public List<ScheduleItem> GetScheduledItems()
+     public List<ScheduleItem> GetScheduledItems()
     {
         DateTime now = DateTime.Now;
         DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now, Settings.Region);
-        return _configManager.ScheduleItems
-             .Where(item => item.EndTime >= convertedNow)
+         // Get the list of scheduled items from the configuration
+        var items = _configManager.ScheduleItems
+            .Where(item => item.EndTime >= convertedNow)
             .OrderBy(item => item.NextOccurrence)
-           .Take(30)
+            .Take(30)
             .ToList();
+           foreach(var item in items)
+            {
+                 item.TimeToPlay = CalculateTimeToPlay(item.NextOccurrence, convertedNow);
+            }
+
+           return items;
+
     }
     private List<ScheduleItem> GetDueScheduleItems(DateTime now)
     {
-        return _configManager.ScheduleItems
-             .Where(item => TruncateDateTimeToSeconds(item.NextOccurrence) <= TruncateDateTimeToSeconds(now))
-             .ToList();
+         return _configManager.ScheduleItems
+              .Where(item => TruncateDateTimeToSeconds(item.NextOccurrence) <= TruncateDateTimeToSeconds(now))
+            .ToList();
     }
     private DateTime GetNextOccurrence(ScheduleItem item, DateTime now)
     {
         var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
-        return calculator.GetNextOccurrence(item, now);
+          return calculator.GetNextOccurrence(item,now);
     }
+    private string CalculateTimeToPlay(DateTime nextOccurrence , DateTime now)
+    {
+          if (nextOccurrence == DateTime.MinValue)
+               return "N/A";
+
+            var timeDiff = nextOccurrence.ToUniversalTime() - now.ToUniversalTime();
+
+             if (timeDiff <= TimeSpan.Zero) {
+                return "Playing or Due";
+            }
+
+        const double secondsInDay = 60 * 60 * 24;
+
+          if (timeDiff.TotalDays >= 1) {
+
+           return $"{(int)timeDiff.TotalDays}d {timeDiff.Hours}h {timeDiff.Minutes}m {timeDiff.Seconds}s";
+
+        }
+         else  if (timeDiff.TotalHours >= 1) {
+          return  $"{timeDiff.Hours}h {timeDiff.Minutes}m {timeDiff.Seconds}s";
+         }
+          else if (timeDiff.TotalMinutes >= 1) {
+               return  $"{timeDiff.Minutes}m {timeDiff.Seconds}s";
+          }
+        else
+          return  $"{timeDiff.Seconds}s";
+      }
 }
     
