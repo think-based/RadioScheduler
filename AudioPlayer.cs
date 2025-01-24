@@ -17,7 +17,7 @@ public class AudioPlayer : IAudioPlayer
 {
     private WaveOutEvent _audioPlayerWaveOut;
     private AudioFileReader _currentAudioFile;
-    private List<string> _currentPlaylist;
+    private List<ScheduleItem.PlayListItem> _currentPlaylist;
     private int _currentIndex;
     private SpeechSynthesizer _ttsPlayer;
     private readonly object _lock = new object();
@@ -171,7 +171,10 @@ public class AudioPlayer : IAudioPlayer
                 return;
             }
 
-            string nextFile = _currentPlaylist[_currentIndex];
+            var nextPlayListItem = _currentPlaylist[_currentIndex];
+            string nextFile = nextPlayListItem.Path;
+
+
 
             if (nextFile.StartsWith("TTS:"))
             {
@@ -233,6 +236,7 @@ public class AudioPlayer : IAudioPlayer
                 Logger.LogMessage($"File not found: {nextFile}");
             }
 
+
             _currentIndex++;
         }
     }
@@ -287,50 +291,6 @@ public class AudioPlayer : IAudioPlayer
         }
     }
 
-    public List<string> ExpandFilePaths(List<FilePathItem> filePathItems)
-    {
-         var expandedPaths = new List<string>();
-
-         if (filePathItems == null || filePathItems.Count == 0)
-        {
-            Logger.LogMessage("No file paths provided.");
-            return expandedPaths;
-        }
-
-        foreach (var item in filePathItems)
-        {
-            if (!string.IsNullOrEmpty(item.Text))
-            {
-                expandedPaths.Add($"TTS:{item.Text}");
-            }
-            else if (Directory.Exists(item.Path))
-            {
-                var audioFiles = Directory.GetFiles(item.Path, "*.mp3")
-                                          .OrderBy(f => f)
-                                          .ToList();
-
-                if (item.FolderPlayMode == "Single" && audioFiles.Any())
-                {
-                    var random = new Random();
-                    expandedPaths.Add(audioFiles[random.Next(audioFiles.Count)]);
-                }
-                else
-                {
-                    expandedPaths.AddRange(audioFiles);
-                }
-            }
-            else if (File.Exists(item.Path))
-            {
-                expandedPaths.Add(item.Path);
-            }
-            else
-            {
-                Logger.LogMessage($"File or folder not found: {item.Path}");
-            }
-        }
-
-        return expandedPaths;
-    }
 
     public ScheduleItem GetCurrentScheduledItem()
     {
