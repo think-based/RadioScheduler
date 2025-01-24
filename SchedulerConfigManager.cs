@@ -60,9 +60,9 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                     {
                         Logger.LogMessage($"Error deserializing schedule item: {ex.Message}");
                     }
-                     catch (Exception ex)
+                    catch (Exception ex)
                     {
-                       Logger.LogMessage($"Error general exception loading schedule item: {ex.Message}");
+                        Logger.LogMessage($"Error general exception loading schedule item: {ex.Message}");
                     }
                 }
 
@@ -120,7 +120,7 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                     {
                         Logger.LogMessage($"Error deserializing schedule item: {ex.Message}");
                     }
-                    catch (Exception ex)
+                     catch (Exception ex)
                     {
                         Logger.LogMessage($"Error processing schedule item: {ex.Message}");
                     }
@@ -162,22 +162,22 @@ public class SchedulerConfigManager : ISchedulerConfigManager
     }
 
 
-    private void ProcessScheduleItem(ScheduleItem item)
+     private void ProcessScheduleItem(ScheduleItem item)
     {
         // Convert string values to enums with error handling
         item.Type = Enums.ParseEnum<ScheduleType>(item.Type.ToString(), "ScheduleType");
         item.CalendarType = Enums.ParseEnum<CalendarTypes>(item.CalendarType.ToString(), "CalendarTypes");
         item.TriggerType = Enums.ParseEnum<TriggerTypes>(item.TriggerType.ToString(), "TriggerTypes");
-        if (!item.Priority.HasValue)
-        {
-            item.Priority = Priority.Low;
-        }
-         else if (!Enum.IsDefined(typeof(Priority), item.Priority.Value))
-        {
-            item.Priority = Priority.Low;
-             Logger.LogMessage($"Priority {item.Priority.Value} from ItemId '{item.ItemId}' is invalid. Setting it to Low");
-        }
 
+         if (!item.Priority.HasValue)
+        {
+            item.Priority = Priority.Low;
+        }
+        else if (!Enum.IsDefined(typeof(Priority), item.Priority.Value))
+        {
+            item.Priority = Priority.Low;
+            Logger.LogMessage($"Priority {item.Priority.Value} from ItemId '{item.ItemId}' is invalid. Setting it to Low");
+        }
 
         item.Status = ScheduleStatus.TimeWaiting;
         item.LastPlayTime = null;
@@ -192,68 +192,41 @@ public class SchedulerConfigManager : ISchedulerConfigManager
 
         }
 
-
-           item.PlayList.Clear();
+         item.PlayList.Clear();
 
 
         foreach (var filePathItem in item.FilePaths)
         {
             if (!string.IsNullOrEmpty(filePathItem.Text))
             {
-                var duration = CalculateTtsDuration(filePathItem.Text,new SpeechSynthesizer());
-                item.PlayList.Add(new ScheduleItem.PlayListItem {Path = $"TTS:{filePathItem.Text}", Duration = duration.TotalMilliseconds});
+                item.PlayList.Add(new ScheduleItem.PlayListItem {Path = $"TTS:{filePathItem.Text}"});
+
             }
             else if (File.Exists(filePathItem.Path))
             {
-                 try
-                {
-                    using (var reader = new AudioFileReader(filePathItem.Path))
-                    {
-                          item.PlayList.Add(new ScheduleItem.PlayListItem {Path = filePathItem.Path, Duration = reader.TotalTime.TotalMilliseconds});
-                    }
-                }
-                 catch (Exception ex)
-                {
-                    Logger.LogMessage($"Error calculating duration for file {filePathItem.Path}: {ex.Message}");
-                     item.PlayList.Add(new ScheduleItem.PlayListItem {Path = filePathItem.Path, Duration = 0});
-                }
-
+                item.PlayList.Add(new ScheduleItem.PlayListItem {Path = filePathItem.Path});
             }
             else if (Directory.Exists(filePathItem.Path))
             {
                  var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3").OrderBy(f => f).ToList();
                   if(audioFiles.Count == 0)
                     {
-                         Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and schedule item '{item.Name}'");
+                       Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and schedule item '{item.Name}'");
                     }
                 if (filePathItem.FolderPlayMode == "Random")
                 {
-                     if(audioFiles.Any())
+                      if(audioFiles.Any())
                      {
                         var random = new Random();
-                         var randomFile = audioFiles[random.Next(audioFiles.Count)];
-                         try
-                        {
-                            using (var reader = new AudioFileReader(randomFile))
-                            {
-                                 item.PlayList.Add(new ScheduleItem.PlayListItem {Path = randomFile, Duration = reader.TotalTime.TotalMilliseconds});
-                            }
-                         }
-                        catch (Exception ex)
-                        {
-                            Logger.LogMessage($"Error calculating duration for file {randomFile}: {ex.Message}");
-                            item.PlayList.Add(new ScheduleItem.PlayListItem {Path = randomFile, Duration = 0});
-
-                        }
-
-                      }
+                       item.PlayList.Add(new ScheduleItem.PlayListItem {Path = audioFiles[random.Next(audioFiles.Count)]});
+                     }
 
                 }
                 else if (filePathItem.FolderPlayMode == "Que")
                 {
                      if (audioFiles.Count > 0)
                     {
-                         int lastPlayedIndex = -1;
+                        int lastPlayedIndex = -1;
 
                         if (!string.IsNullOrEmpty(filePathItem.LastPlayedFile))
                         {
@@ -261,87 +234,26 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                         }
                         int nextIndex = (lastPlayedIndex + 1) % audioFiles.Count;
 
-                            var nextFile = audioFiles[nextIndex];
-
-                            try
-                            {
-                                using (var reader = new AudioFileReader(nextFile))
-                                {
-                                     item.PlayList.Add(new ScheduleItem.PlayListItem {Path = nextFile, Duration = reader.TotalTime.TotalMilliseconds});
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                 Logger.LogMessage($"Error calculating duration for file {nextFile}: {ex.Message}");
-                                 item.PlayList.Add(new ScheduleItem.PlayListItem {Path = nextFile, Duration = 0});
-                            }
-
-                         filePathItem.LastPlayedFile = nextFile;
-
-
-                    }
-
+                        item.PlayList.Add(new ScheduleItem.PlayListItem {Path = audioFiles[nextIndex]});
+                        filePathItem.LastPlayedFile = audioFiles[nextIndex];
+                     }
                 }
                   else
                 {
-                       foreach (var audioFile in audioFiles)
+                    foreach (var audioFile in audioFiles)
                     {
-                        try
-                        {
-                            using (var reader = new AudioFileReader(audioFile))
-                            {
-                                  item.PlayList.Add(new ScheduleItem.PlayListItem {Path = audioFile, Duration = reader.TotalTime.TotalMilliseconds});
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogMessage($"Error calculating duration for file {audioFile}: {ex.Message}");
-                             item.PlayList.Add(new ScheduleItem.PlayListItem {Path = audioFile, Duration = 0});
-                        }
+                         item.PlayList.Add(new ScheduleItem.PlayListItem {Path = audioFile});
                     }
                 }
             }
 
         }
 
-        item.TotalDuration = CalculateTotalDuration(item.PlayList);
+        item.CalculateIndividualItemDuration(); // Calculate each playlist item duration
+        item.TotalDuration = item.CalculateTotalDuration(); // Calculate the total duration
+
     }
 
 
-    private TimeSpan CalculateTotalDuration(List<ScheduleItem.PlayListItem> playList)
-    {
-        TimeSpan totalDuration = TimeSpan.Zero;
-        foreach (var item in playList)
-        {
-            totalDuration += TimeSpan.FromMilliseconds(item.Duration);
-        }
-
-        return totalDuration;
-    }
-
-
-     private TimeSpan CalculateTtsDuration(string text, SpeechSynthesizer ttsEngine)
-    {
-        try
-        {
-            var prompt = new PromptBuilder();
-            prompt.AppendText(text);
-
-            var ttsStream = new MemoryStream();
-            ttsEngine.SetOutputToWaveStream(ttsStream);
-            ttsEngine.Speak(prompt);
-
-            ttsStream.Position = 0;
-            using (var reader = new WaveFileReader(ttsStream))
-            {
-                return reader.TotalTime;
-            }
-        }
-        catch (Exception ex)
-        {
-             Logger.LogMessage($"Error calculating TTS duration: {ex.Message}");
-            return TimeSpan.FromSeconds(text.Length / 10.0); // Fallback to estimation
-        }
-    }
 }
     
