@@ -53,6 +53,8 @@ public class ScheduleItem
     // New internal property for the playlist
     internal List<PlayListItem> PlayList { get; set; } = new List<PlayListItem>();
 
+     // New internal property for current playing index in playlist for "Que"
+    internal int CurrentPlayingIndex { get; set; } = -1;
 
     public void Validate()
     {
@@ -92,10 +94,9 @@ public class ScheduleItem
             filePathItem.Validate();
         }
     }
-
     internal void CalculateIndividualItemDuration()
     {
-        var ttsEngine = new SpeechSynthesizer(); // Initialize TTS engine
+        var ttsEngine = new SpeechSynthesizer();
         var tempPlaylist = new List<PlayListItem>();
          foreach (var playListItem in this.PlayList)
         {
