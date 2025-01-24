@@ -44,6 +44,12 @@ public class SchedulerConfigManager : ISchedulerConfigManager
 
                 foreach (var item in newItems)
                 {
+                    // Skip disabled items
+                    if (item.Disabled)
+                    {
+                        Logger.LogMessage($"Skipping disabled item: {item.Name} (ItemID: {item.ItemId})");
+                        continue;
+                    }
                     try
                     {
                         ProcessScheduleItem(item);
@@ -92,6 +98,20 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                 {
                     try
                     {
+                        // Skip disabled items
+                         if (newItem.Disabled)
+                         {
+                            Logger.LogMessage($"Skipping disabled item: {newItem.Name} (ItemID: {newItem.ItemId})");
+                            var existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
+                            if (existingItemIndex >= 0)
+                            {
+                              ScheduleItems.RemoveAt(existingItemIndex);
+                            }
+                           ConfigReloaded?.Invoke();
+                           return;
+                         }
+
+
                         ProcessScheduleItem(newItem);
 
                         var existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
@@ -164,25 +184,25 @@ public class SchedulerConfigManager : ISchedulerConfigManager
         item.Type = Enums.ParseEnum<ScheduleType>(item.Type.ToString(), "ScheduleType");
         item.CalendarType = Enums.ParseEnum<CalendarTypes>(item.CalendarType.ToString(), "CalendarTypes");
         item.TriggerType = Enums.ParseEnum<TriggerTypes>(item.TriggerType.ToString(), "TriggerTypes");
-        if (!item.Priority.HasValue)
+         if (!item.Priority.HasValue)
         {
             item.Priority = Priority.Low;
         }
-        else if (!Enum.IsDefined(typeof(Priority), item.Priority.Value))
+         else if (!Enum.IsDefined(typeof(Priority), item.Priority.Value))
         {
             item.Priority = Priority.Low;
-            Logger.LogMessage($"Priority {item.Priority.Value} from ItemId '{item.ItemId}' is invalid. Setting it to Low");
+             Logger.LogMessage($"Priority {item.Priority.Value} from ItemId '{item.ItemId}' is invalid. Setting it to Low");
         }
 
         item.Status = ScheduleStatus.TimeWaiting;
         item.CurrentPlayingIndex = -1;
 
         item.Validate();
-         if (item.TriggerType == TriggerTypes.Delayed && !string.IsNullOrEmpty(item.DelayTime))
+        if (item.TriggerType == TriggerTypes.Delayed && !string.IsNullOrEmpty(item.DelayTime))
         {
-            if (!TimeSpan.TryParse(item.DelayTime, out _))
+             if (!TimeSpan.TryParse(item.DelayTime, out _))
             {
-                Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'. Setting to 00:00:00.");
+                 Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'. Setting to 00:00:00.");
                 item.DelayTime = "00:00:00";
             }
 
@@ -190,22 +210,22 @@ public class SchedulerConfigManager : ISchedulerConfigManager
 
 
         item.PlayList.Clear();
-          foreach (var filePathItem in item.FilePaths)
+         foreach (var filePathItem in item.FilePaths)
         {
             if (!string.IsNullOrEmpty(filePathItem.Text))
             {
                  item.PlayList.Add(new ScheduleItem.PlayListItem {Path = $"TTS:{filePathItem.Text}"});
             }
-            else if (File.Exists(filePathItem.Path))
+             else if (File.Exists(filePathItem.Path))
             {
                 item.PlayList.Add(new ScheduleItem.PlayListItem {Path = filePathItem.Path});
             }
            else if (Directory.Exists(filePathItem.Path))
             {
                 var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3").OrderBy(f => f).ToList();
-                 if(audioFiles.Count == 0)
+                  if(audioFiles.Count == 0)
                     {
-                         Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and schedule item '{item.Name}'");
+                        Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and schedule item '{item.Name}'");
                     }
                 if (filePathItem.FolderPlayMode == "Random")
                 {
@@ -216,9 +236,9 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                      }
 
                 }
-                else if (filePathItem.FolderPlayMode == "Que")
+               else if (filePathItem.FolderPlayMode == "Que")
                 {
-                     if (audioFiles.Count > 0)
+                      if (audioFiles.Count > 0)
                     {
                         int lastPlayedIndex = -1;
 
@@ -233,7 +253,7 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                      }
 
                 }
-                  else
+                 else
                 {
                     foreach (var audioFile in audioFiles)
                     {
