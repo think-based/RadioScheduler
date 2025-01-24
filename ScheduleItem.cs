@@ -8,6 +8,14 @@ using static Enums;
 
 public class ScheduleItem
 {
+     // Define a new internal class to represent playlist items
+    internal class PlayListItem
+    {
+        public string Path { get; set; }
+        public double Duration { get; set; } // Duration in milliseconds
+
+
+    }
     public int ItemId { get; set; }
     public string Name { get; set; }
     public ScheduleType Type { get; set; }
@@ -40,7 +48,7 @@ public class ScheduleItem
     }
 
     // New internal property for the playlist
-    internal List<string> PlayList { get; set; } = new List<string>();
+    internal List<PlayListItem> PlayList { get; set; } = new List<PlayListItem>();
 
 
     public void Validate()
