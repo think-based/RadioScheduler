@@ -146,7 +146,7 @@ public class PrayTimeScheduler
     private DateTime ParseTime(string time)
     {
         // تبدیل زمان از رشته به DateTime
-         DateTime now = ConvertToPrayTimeZone(DateTime.Now);
+        DateTime now = ConvertToPrayTimeZone(DateTime.Now);
         try
         {
             DateTime parsedTime = DateTime.ParseExact(time, "HH:mm:ss", null);
