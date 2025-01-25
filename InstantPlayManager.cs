@@ -70,7 +70,8 @@ public class InstantPlayManager
                 Name = "Instant Play",
                 Type = ScheduleType.NonPeriodic,
                 TriggerType = TriggerTypes.Immediate,
-                PlayList = new List<ScheduleItem.PlayListItem>() { new ScheduleItem.PlayListItem {Path = _currentAudioFile} }
+                //Ensure using forward slashes
+                PlayList = new List<ScheduleItem.PlayListItem>() { new ScheduleItem.PlayListItem {Path = _currentAudioFile.Replace('\\', '/')} }
 
             };
 
