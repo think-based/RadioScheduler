@@ -1,6 +1,5 @@
-      // Be Naame Khoda
-// FileName: WebServer.cs
-
+      //Be Naame Khoda
+//FileName: WebServer.cs
 using System;
 using System.IO;
 using System.Net;
@@ -14,10 +13,10 @@ public class WebServer
 {
     private HttpListener _listener;
     private readonly ApiRequestHandler _apiHandler;
-      private readonly Scheduler _scheduler;
+    private readonly Scheduler _scheduler;
     public WebServer(Scheduler scheduler)
     {
-         var triggerManager = new ActiveTriggersManager();
+        var triggerManager = new ActiveTriggersManager();
         _apiHandler = new ApiRequestHandler(triggerManager, scheduler);
         _scheduler = scheduler;
         _listener = new HttpListener();
@@ -48,7 +47,7 @@ public class WebServer
 
         try
         {
-             // Serve static files (CSS, JS, images)
+            // Serve static files (CSS, JS, images)
             if (path.StartsWith("/css/") || path.StartsWith("/js/") || path.StartsWith("/img/"))
             {
                 ServeStaticFile(response, path);
@@ -88,17 +87,36 @@ public class WebServer
             {
                 ServeLogContent(response);
             }
-             // API endpoint to get the timezone
+            // API endpoint to get the timezone
             else if (path == "/api/timezone")
             {
-               _apiHandler.ServeTimezone(response);
+                _apiHandler.ServeTimezone(response);
             }
             // API endpoint to fetch schedule list
             else if (path == "/api/schedule-list")
             {
-                _apiHandler.ServeScheduleList(response);
+                switch (request.HttpMethod)
+                {
+                    case "GET":
+                        _apiHandler.ServeScheduleList(response);
+                        break;
+                    case "POST":
+                        _apiHandler.ReloadScheduleItem(request, response);
+                        break;
+                    default:
+                        response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+                        break;
+                }
+
             }
-           // API endpoint to fetch prayer times
+            else if (path.StartsWith("/api/schedule-list/"))
+            {
+                if (request.HttpMethod == "GET")
+                    _apiHandler.ServePlayListByScheduleItemId(request, response);
+                else
+                    response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+            }
+            // API endpoint to fetch prayer times
             else if (path == "/api/prayertimes")
             {
                 ServePrayerTimes(request, response);
@@ -118,22 +136,22 @@ public class WebServer
                         _apiHandler.EditTrigger(request, response);
                         break;
                     case "DELETE":
-                       _apiHandler.DeleteTrigger(request, response);
+                        _apiHandler.DeleteTrigger(request, response);
                         break;
                     default:
                         response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
                         break;
                 }
             }
-             // API endpoint to fetch trigger by name
-             else if (path.StartsWith("/api/triggers/"))
+            // API endpoint to fetch trigger by name
+            else if (path.StartsWith("/api/triggers/"))
             {
                 if (request.HttpMethod == "GET")
-                   _apiHandler.ServeTriggerByName(request, response);
+                    _apiHandler.ServeTriggerByName(request, response);
                 else
                     response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
             }
-           else
+            else
             {
                 response.StatusCode = (int)HttpStatusCode.NotFound;
             }
@@ -142,15 +160,15 @@ public class WebServer
         {
             Logger.LogMessage($"Error processing request: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
-              response.StatusDescription = $"Error processing request: {ex.Message}";
-             _apiHandler.WriteStringResponse(response, response.StatusDescription);
+            response.StatusDescription = $"Error processing request: {ex.Message}";
+            _apiHandler.WriteStringResponse(response, response.StatusDescription);
         }
         finally
         {
             response.OutputStream.Close();
         }
-    }   
-     /// <summary>
+    }
+    /// <summary>
     /// Serves the prayer times as a JSON response.
     /// </summary>
     /// <param name="request">The HTTP request object.</param>
@@ -166,8 +184,8 @@ public class WebServer
 
             // Calculate prayer times using PrayTime class
             var prayTime = new PrayTime();
-             string[] prayerTimes = prayTime.getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZoneOffset);
-          // Create an anonymous object to hold the prayer times
+            string[] prayerTimes = prayTime.getPrayerTimes(year, month, day, Settings.Latitude, Settings.Longitude, (int)Settings.TimeZoneOffset);
+            // Create an anonymous object to hold the prayer times
             var prayerTimesObject = new
             {
                 Fajr = prayerTimes[0],
@@ -290,16 +308,16 @@ public class WebServer
     private string GetMimeType(string filePath)
     {
         string extension = Path.GetExtension(filePath).ToLower();
-        switch (extension)
+        var mimeTypes = new Dictionary<string, string>
         {
-            case ".css": return "text/css";
-            case ".js": return "application/javascript";
-            case ".jpg": return "image/jpeg";
-            case ".png": return "image/png";
-            case ".html": return "text/html";
-            case ".json": return "application/json";
-            default: return "text/plain";
-        }
+            { ".css", "text/css" },
+            { ".js", "application/javascript" },
+            { ".jpg", "image/jpeg" },
+            { ".png", "image/png" },
+            { ".html", "text/html" },
+            { ".json", "application/json" }
+        };
+        return mimeTypes.TryGetValue(extension, out string mimeType) ? mimeType : "text/plain";
     }
 }
     
