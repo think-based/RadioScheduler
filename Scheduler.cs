@@ -1,7 +1,5 @@
 //Be Naame Khoda
 //FileName: Scheduler.cs
-//TODO: Schedule List FIX
-//TODO: TimeNow in global function
 using System;
 using System.Collections.Generic;
 using System.Linq;
