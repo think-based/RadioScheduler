@@ -208,7 +208,7 @@ function showPlayList(scheduleItemId) {
                 if(data && data.length>0) {
                    data.forEach((playlistItem,index )=> {
                         const listItem = `<li class="list-group-item">
-                                                ${playlistItem.Path}
+                                                ${playlistItem.Path}  ${formatDuration(playlistItem.Duration)}
                                             </li>`;
                         playlistItemsBody.append(listItem);
                    });
@@ -248,53 +248,8 @@ function reloadItem(itemId) {
                   hideLoadingSpinner();
             });
         }
-  /**
- * Calculates and returns the remaining time until the given start time.
- * @param {string} startTime - The start time in the format "YYYY-MM-DD HH:mm:ss"
- * @returns {string} - The remaining time until the start time, in a human-readable format.
- */
-function calculateTimeToPlay(startTime) {
-    if (!startTime || startTime === "N/A") {
-        return 'N/A';
-    }
-      try {
-        const now = new Date();
-        const start = new Date(startTime);
-         const timeDiff = start.getTime() - now.getTime();
-           if (timeDiff <= 0) {
-               return "Playing or Due";
-          }
-
-        const seconds = Math.floor(timeDiff / 1000);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
-        const minutes = Math.floor((seconds % 3600) / 60);
-
-        const remainingHours = hours % 24;
-        const remainingMinutes = minutes % 60;
-        const remainingSeconds = seconds % 60;
 
 
-       if (days > 0) {
-            return `${days}d ${remainingHours}h ${remainingMinutes}m ${remainingSeconds}s`;
-          } else if(remainingHours > 0) {
-               return `${remainingHours}h ${remainingMinutes}m ${remainingSeconds}s`;
-          }
-          else if(remainingMinutes > 0) {
-             return `${remainingMinutes}m ${remainingSeconds}s`;
-          }
-           else if(remainingSeconds > 0) {
-               return `${remainingSeconds}s`;
-           }
-           else {
-              return "Due";
-          }
-
-        } catch(e) {
-        return "N/A";
-      }
-
-}
 /**
  * Initializes the triggers page.
  */
