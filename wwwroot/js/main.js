@@ -33,7 +33,7 @@ $(document).ready(function () {
     });
 });
 
-let applicationTimeZone = 0;
+let timeZoneOffset = 0;
 /**
  * Fetches the timezone offset from server.
  */
@@ -41,6 +41,7 @@ function fetchTimeZone() {
     $.get('/api/timezone')
         .done(function (data) {
             applicationTimeZone = data.TimeZoneOffset;
+			timeZone = data.TimeZone;
          })
         .fail(function (error) {
            showError('Error fetching time zone.');
@@ -360,7 +361,8 @@ function editTrigger(triggerEventName) {
  * Opens the new trigger modal
  */
 function openNewTriggerModal() {
-    const now = new Date();
+    const now = appTimeZoneNow();
+	
     //now.setTime(now.getTime() - applicationTimeZone * 60000);
     const year = String(now.getFullYear());
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -511,12 +513,14 @@ function pad(num) {
     return num.toString().padStart(2, '0');
 }
 
-function convertLocalTimeToUtc(timeString) {
-    if(!timeString) return null;
-    const localTime = new Date(timeString);
-    return localTime.toISOString().slice(0, 19);
+function convertToAppTimeZone(date) {
+    return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: timeZone}));   
 }
 
+function appTimeZoneNow() {
+	const date = new Date();
+    return new Date((typeof date === "string" ? new Date(date) : date).toLocaleString("en-US", {timeZone: timeZone}));   
+}
 function formatDate(timeString) {
   var date = new Date(timeString);
   var hours = date.getHours();

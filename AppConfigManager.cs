@@ -26,14 +26,14 @@ public static class AppConfigManager
             {
                 try
                 {
-                    TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
+                    TimeZoneInfo timeZone = TZConvert.GetTimeZoneInfo(settings.Application.TimeZoneId);
                     settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
                 }
                 catch (TimeZoneNotFoundException ex)
                 {
                     Logger.LogMessage($"Error finding Time Zone {settings.Application.TimeZoneId}. Defaulting to UTC. : {ex.Message}");
                     settings.Application.TimeZoneId = "UTC";
-                    TimeZoneInfo timeZone = TZConvert.GetTimeZoneInfo(settings.Application.TimeZoneId);
+                    TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
                     settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
                 }
             }
