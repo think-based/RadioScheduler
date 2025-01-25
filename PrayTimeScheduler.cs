@@ -1,10 +1,9 @@
-      //Be Naame Khoda
+//Be Naame Khoda
 //FileName: PrayTimeScheduler.cs
 
 using System;
 using System.Timers;
 using static ActiveTriggers;
-using static Enums;
 
 public class PrayTimeScheduler
 {
@@ -17,7 +16,7 @@ public class PrayTimeScheduler
         // تنظیم تایمر پویا
         _timer = new Timer();
         _timer.Elapsed += OnTimerElapsed;
-        _timer.AutoReset = false; // تایمر فقط یک بار فعال می‌شود
+        _timer.AutoReset = true; 
 
         // اولین بار زمان‌های شرعی را محاسبه و تنظیم کنید
         SetNextPrayTime();
@@ -32,7 +31,7 @@ public class PrayTimeScheduler
     private void SetNextPrayTime()
     {
         // تاریخ و زمان فعلی (با توجه به زمان‌زون اوقات شرعی)
-        DateTime now = ConvertToPrayTimeZone(DateTime.Now);
+        DateTime now = DateTime.Now;
 
         int year = now.Year;
         int month = now.Month;
@@ -61,7 +60,7 @@ public class PrayTimeScheduler
 
         
         // زمان فعلی (با توجه به زمان‌زون اوقات شرعی)
-        DateTime currentTime = now;
+        DateTime currentTime = ConvertToPrayTimeZone(now); ;
 
         // بررسی زمان شرعی بعدی
         DateTime nextPrayTime = DateTime.MaxValue;
@@ -150,7 +149,11 @@ public class PrayTimeScheduler
         try
         {
             DateTime parsedTime = DateTime.ParseExact(time, "HH:mm:ss", null);
-            if (parsedTime < now)
+            if((parsedTime - now).TotalDays >= 1)
+            {
+                parsedTime =  parsedTime.AddDays(-1);
+            }
+            else if (parsedTime < now)
             {
                 // اگر زمان گذشته باشد، برای فردا تنظیم کنید
                 parsedTime = parsedTime.AddDays(1);

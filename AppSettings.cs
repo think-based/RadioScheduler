@@ -1,5 +1,7 @@
-      //Be Naame Khoda
+//Be Naame Khoda
 //FileName: AppSettings.cs
+
+using System;
 
 public class AppSettings
 {

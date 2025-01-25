@@ -1,10 +1,10 @@
-//Be Naame Khoda
+﻿//Be Naame Khoda
 //FileName: AppConfigManager.cs
 
 using Newtonsoft.Json;
 using System;
 using System.IO;
-using System.Reflection;
+using TimeZoneConverter;
 
 public static class AppConfigManager
 {
@@ -33,7 +33,7 @@ public static class AppConfigManager
                 {
                     Logger.LogMessage($"Error finding Time Zone {settings.Application.TimeZoneId}. Defaulting to UTC. : {ex.Message}");
                     settings.Application.TimeZoneId = "UTC";
-                    TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.Application.TimeZoneId);
+                    TimeZoneInfo timeZone = TZConvert.GetTimeZoneInfo(settings.Application.TimeZoneId);
                     settings.Application.TimeZoneOffset = timeZone.BaseUtcOffset.TotalHours;
                 }
             }

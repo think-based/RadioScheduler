@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime;
+using TimeZoneConverter;
 
 public static class CalendarHelper
 {
@@ -37,14 +39,37 @@ public static class CalendarHelper
             throw new ArgumentException($"Unsupported region: {region}");
         }
     }
+    public static int GetDayOfMonth(DateTime date, string region)
+    {
+        try
+        {
+            var cultureInfo = new CultureInfo(region);
+            var calendar = cultureInfo.Calendar;
+            int DayOfMonth = calendar.GetDayOfMonth(date);
+            return DayOfMonth;
+        }
+        catch (CultureNotFoundException)
+        {
+            throw new ArgumentException($"Unsupported region: {region}");
+        }
 
-    public static DateTime ConvertToLocalTimeZone(DateTime dateTime, string region)
+    }
+    public static DateTime ConvertToAppTimeZone(DateTime dateTime)
     {
          // Convert system time to the local time zone based on settings
         TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
-        TimeZoneInfo targetTimeZone = TimeZoneInfo.FindSystemTimeZoneById(Settings.TimeZoneId);
-
+        TimeZoneInfo targetTimeZone = TZConvert.GetTimeZoneInfo(Settings.TimeZoneId);
 
         return TimeZoneInfo.ConvertTime(dateTime, systemTimeZone, targetTimeZone);
+    }
+
+    public static DateTime Now()
+    {
+        DateTime now = DateTime.Now;
+        TimeZoneInfo systemTimeZone = TimeZoneInfo.Local;
+        TimeZoneInfo targetTimeZone = TZConvert.GetTimeZoneInfo(Settings.TimeZoneId);
+
+
+        return TimeZoneInfo.ConvertTime(now, systemTimeZone, targetTimeZone);
     }
 }

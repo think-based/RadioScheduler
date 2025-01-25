@@ -44,7 +44,7 @@ public class Scheduler
     private void CheckScheduleItems()
     {
         DateTime now = DateTime.Now;
-        DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now, Settings.Region);
+        DateTime convertedNow = CalendarHelper.ConvertToAppTimeZone(now);
         List<ScheduleItem> dueItems = GetDueScheduleItems(convertedNow);
         foreach (var item in dueItems)
         {
@@ -223,8 +223,8 @@ public class Scheduler
      public List<ScheduleItem> GetScheduledItems()
     {
         DateTime now = DateTime.Now;
-        DateTime convertedNow = CalendarHelper.ConvertToLocalTimeZone(now, Settings.Region);
-         // Get the list of scheduled items from the configuration
+        DateTime convertedNow = CalendarHelper.ConvertToAppTimeZone(now);
+        // Get the list of scheduled items from the configuration
         var items = _configManager.ScheduleItems
             .Where(item => item.EndTime >= convertedNow)
             .OrderBy(item => item.NextOccurrence)
