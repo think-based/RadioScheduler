@@ -21,7 +21,7 @@ $(document).ready(function () {
         e.preventDefault();
         loadPage('schedule-list');
     });
-     $('#events-link').on('click', function (e) { // Changed to events-link
+    $('#events-link').on('click', function (e) { // Changed to events-link
         e.preventDefault();
         loadPage('triggers');
     });
@@ -177,7 +177,7 @@ function initializeScheduleListPage() {
                         <td>${item.Status}</td>
                           <td>${item.TimeToPlay}</td>
                         <td>
-                            <button class="btn btn-sm btn-secondary" onclick="showPlayList('${item.Name}')">Playlist</button>
+                            <button class="btn btn-sm btn-secondary" onclick="showPlayList('${item.ItemId}')">Playlist</button>
                              <button class="btn btn-sm btn-primary" onclick="reloadItem('${item.ItemId}')">Reload</button>
                         </td>
                     </tr>
@@ -194,35 +194,32 @@ function initializeScheduleListPage() {
 }
 /**
  * Opens the playlist modal for a specific schedule item.
- * @param {string} scheduleItemName - The name of the schedule item.
+ * @param {string} scheduleItemId - The Id of the schedule item.
  */
-function showPlayList(scheduleItemName) {
+function showPlayList(scheduleItemId) {
     showLoadingSpinner();
-    $.get('/api/schedule-list')
+      $.get(`/api/schedule-list/${scheduleItemId}`)
         .done(function (data) {
-           const selectedItem = data.find(item => item.Name === scheduleItemName);
-            if(selectedItem) {
-                    const playlistItemsBody = $('#playlist-items');
-                    playlistItemsBody.empty();
-                     // Show the playlist modal
-                     $('#playlist-modal').modal('show');
+                const playlistItemsBody = $('#playlist-items');
+                playlistItemsBody.empty();
+                 // Show the playlist modal
+                 $('#playlist-modal').modal('show');
 
-                      if(selectedItem.hasOwnProperty('playList') && selectedItem.playList.length>0) {
-                           selectedItem.playList.forEach((playlistItem,index )=> {
-                            const listItem = `<li class="list-group-item ${index === selectedItem.CurrentPlayingIndex ? 'list-group-item-primary' : ''}">
-                                                    ${playlistItem.Path}
-                                                </li>`;
-                            playlistItemsBody.append(listItem);
-                           });
+                if(data && data.length>0) {
+                   data.forEach((playlistItem,index )=> {
+                        const listItem = `<li class="list-group-item">
+                                                ${playlistItem.Path}
+                                            </li>`;
+                        playlistItemsBody.append(listItem);
+                   });
 
-                       }
-                      else {
-                           playlistItemsBody.append(`<li class="list-group-item" >No items found in playlist</li>`);
-                       }
-           }
+               }
+              else {
+                   playlistItemsBody.append(`<li class="list-group-item" >No items found in playlist</li>`);
+               }
         })
         .fail(function (error) {
-           showError(`Error fetching playlist for  "${scheduleItemName}".`);
+            showError(`Error fetching playlist for  "${scheduleItemId}".`);
         })
         .always(function () {
              hideLoadingSpinner();
@@ -247,12 +244,10 @@ function reloadItem(itemId) {
                       showError(`Error reloading schedule item with ID "${itemId}".`);
                 }
             })
-         .always(function () {
-              hideLoadingSpinner();
-        });
-
-
-}
+             .always(function () {
+                  hideLoadingSpinner();
+            });
+        }
   /**
  * Calculates and returns the remaining time until the given start time.
  * @param {string} startTime - The start time in the format "YYYY-MM-DD HH:mm:ss"
@@ -300,8 +295,6 @@ function calculateTimeToPlay(startTime) {
       }
 
 }
-
-
 /**
  * Initializes the triggers page.
  */
