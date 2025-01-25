@@ -85,6 +85,7 @@ public class SchedulerConfigManager : ISchedulerConfigManager
 
     public void ReloadScheduleItem(int itemId)
     {
+        int existingItemIndex = -1; // Declare here, outside of the inner try
         try
         {
             if (File.Exists(_configFilePath))
@@ -102,7 +103,7 @@ public class SchedulerConfigManager : ISchedulerConfigManager
                          if (newItem.Disabled)
                          {
                             Logger.LogMessage($"Skipping disabled item: {newItem.Name} (ItemID: {newItem.ItemId})");
-                            var existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
+                             existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
                             if (existingItemIndex >= 0)
                             {
                               ScheduleItems.RemoveAt(existingItemIndex);
@@ -114,7 +115,7 @@ public class SchedulerConfigManager : ISchedulerConfigManager
 
                         ProcessScheduleItem(newItem);
 
-                        var existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
+                         existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
 
                         if (existingItemIndex >= 0)
                         {
@@ -178,7 +179,7 @@ public class SchedulerConfigManager : ISchedulerConfigManager
         return FileHashHelper.CalculateFileHash(_configFilePath);
     }
 
-    public void ProcessScheduleItem(ScheduleItem item) // Made this public
+    public void ProcessScheduleItem(ScheduleItem item)
     {
         // Convert string values to enums with error handling
         item.Type = Enums.ParseEnum<ScheduleType>(item.Type.ToString(), "ScheduleType");
