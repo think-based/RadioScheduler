@@ -13,11 +13,11 @@ using System.Linq;
 public class ApiRequestHandler
 {
     private readonly ITriggerManager _triggerManager;
-      private readonly Scheduler _scheduler;
-    public ApiRequestHandler(ITriggerManager triggerManager, Scheduler scheduler =null)
+    private readonly Scheduler _scheduler;
+    public ApiRequestHandler(ITriggerManager triggerManager, Scheduler scheduler = null)
     {
         _triggerManager = triggerManager;
-         _scheduler = scheduler;
+        _scheduler = scheduler;
     }
 
     public void ServeTimezone(HttpListenerResponse response)
@@ -86,13 +86,13 @@ public class ApiRequestHandler
         try
         {
             string eventName = request.Url.Segments[request.Url.Segments.Length - 1];
-           var trigger = _triggerManager.Triggers.FirstOrDefault(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
-              if (trigger.Equals(default((string, DateTime?, TriggerSource))))
+            var trigger = _triggerManager.Triggers.FirstOrDefault(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
+            if (trigger.Equals(default((string, DateTime?, TriggerSource))))
             {
                 response.StatusCode = (int)HttpStatusCode.NotFound;
                 return;
             }
-             var triggerObj = new
+            var triggerObj = new
             {
                 triggerEvent = trigger.Event,
                 time = trigger.Time,
@@ -112,13 +112,13 @@ public class ApiRequestHandler
             WriteStringResponse(response, $"Error serving trigger by name: {ex.Message}");
         }
     }
-   /// <summary>
+    /// <summary>
     /// Serves the schedule list
     /// </summary>
     /// <param name="response">The HTTP response object.</param>
     public void ServeScheduleList(HttpListenerResponse response)
     {
-         try
+        try
         {
             // Fetch the list of scheduled items directly from the Scheduler
             var scheduleItems = _scheduler.GetScheduledItems();
@@ -135,7 +135,7 @@ public class ApiRequestHandler
                 TriggerTime = item.TriggerTime != null ? item.TriggerTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "N/A",
                 Status = item.Status.ToString(),
                 TimeToPlay = item.TimeToPlay,
-                PlayList = item.PlayList.Select(x=> new {Path = x.Path}).ToList(),
+                PlayList = item.PlayList.Select(x => new { Path = x.Path }).ToList(),
                 CurrentPlayingIndex = item.CurrentPlayingIndex
 
             });
@@ -152,17 +152,94 @@ public class ApiRequestHandler
         {
             Logger.LogMessage($"Error serving schedule list: {ex.Message}");
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            WriteStringResponse(response,$"Error serving schedule list: {ex.Message}");
+            WriteStringResponse(response, $"Error serving schedule list: {ex.Message}");
         }
     }
-      /// <summary>
+    public void ServePlayListByScheduleItemId(HttpListenerRequest request, HttpListenerResponse response)
+    {
+        try
+        {
+            string itemId = request.Url.Segments[request.Url.Segments.Length - 1];
+            var scheduleItem = _scheduler.ConfigManager.ScheduleItems.FirstOrDefault(t => t.ItemId.Equals(int.Parse(itemId)));
+            if (scheduleItem == null)
+            {
+                response.StatusCode = (int)HttpStatusCode.NotFound;
+                WriteStringResponse(response, $"Schedule item with id {itemId} not found");
+                return;
+            }
+
+            var responseData = scheduleItem.PlayList.Select(item => new { Path = item.Path }).ToList();
+
+            string jsonResponse = JsonConvert.SerializeObject(responseData);
+            byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
+            response.ContentType = "application/json";
+            response.ContentLength64 = buffer.Length;
+            response.OutputStream.Write(buffer, 0, buffer.Length);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error serving playlist by schedule item Id: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            WriteStringResponse(response, $"Error serving playlist by schedule item Id: {ex.Message}");
+        }
+    }
+    public void ReloadScheduleItem(HttpListenerRequest request, HttpListenerResponse response)
+    {
+        string message = "";
+        try
+        {
+            string requestBody;
+            using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+            {
+                requestBody = reader.ReadToEnd();
+            }
+            dynamic data;
+            try
+            {
+                data = JsonConvert.DeserializeObject<dynamic>(requestBody);
+            }
+            catch (JsonSerializationException ex)
+            {
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                message = "Invalid JSON format in the request body.";
+                response.StatusDescription = message;
+                WriteStringResponse(response, message);
+                return;
+            }
+            if (data == null || string.IsNullOrEmpty(data.itemId?.ToString()))
+            {
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
+                message = "The itemId cannot be empty";
+                response.StatusDescription = message;
+                WriteStringResponse(response, message);
+                return;
+            }
+
+            int itemId = int.Parse(data.itemId.ToString());
+            _scheduler.ConfigManager.ReloadScheduleItem(itemId);
+
+            response.StatusCode = (int)HttpStatusCode.OK;
+            message = "Schedule item reloaded successfully.";
+            response.StatusDescription = message;
+            WriteStringResponse(response, message);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogMessage($"Error reloading schedule item: {ex.Message}");
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            message = $"Error reloading schedule item: {ex.Message}";
+            response.StatusDescription = message;
+            WriteStringResponse(response, message);
+        }
+    }
+    /// <summary>
     /// Adds a manual trigger
     /// </summary>
     /// <param name="request">The HTTP request object.</param>
     /// <param name="response">The HTTP response object.</param>
     public void AddTrigger(HttpListenerRequest request, HttpListenerResponse response)
     {
-          string message = "";
+        string message = "";
         try
         {
             string requestBody;
@@ -197,15 +274,16 @@ public class ApiRequestHandler
             if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
             {
                 DateTime parsedTime;
-               if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+                if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
                 {
-                      if(parsedTime.Kind != DateTimeKind.Utc) {
-                           parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local); // If not already local, then set it local
-                         }
+                    if (parsedTime.Kind != DateTimeKind.Utc)
+                    {
+                        parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local); // If not already local, then set it local
+                    }
 
                     try
                     {
-                          triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
+                        triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
                     }
                     catch (Exception ex)
                     {
@@ -219,11 +297,11 @@ public class ApiRequestHandler
                 }
                 else if (DateTime.TryParse(data.time.ToString(), out parsedTime))
                 {
-                     parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local);
+                    parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local);
 
                     try
                     {
-                          triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
+                        triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
                     }
                     catch (Exception ex)
                     {
@@ -300,17 +378,18 @@ public class ApiRequestHandler
             DateTime? triggerTime = null;
             if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
             {
-                 DateTime parsedTime;
-                 if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+                DateTime parsedTime;
+                if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
                 {
-                      if(parsedTime.Kind != DateTimeKind.Utc) {
-                           parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local); // If not already local, then set it local
-                         }
+                    if (parsedTime.Kind != DateTimeKind.Utc)
+                    {
+                        parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local); // If not already local, then set it local
+                    }
                     try
                     {
-                          triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
+                        triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
                     }
-                   catch (Exception ex)
+                    catch (Exception ex)
                     {
                         response.StatusCode = (int)HttpStatusCode.BadRequest;
                         message = $"Time zone Conversion error,  {ex.Message}";
@@ -319,19 +398,19 @@ public class ApiRequestHandler
                         return;
                     }
                 }
-                 else if (DateTime.TryParse(data.time.ToString(), out parsedTime))
+                else if (DateTime.TryParse(data.time.ToString(), out parsedTime))
                 {
-                     parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local);
+                    parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local);
 
                     try
                     {
-                          triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
+                        triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
                     }
-                     catch (Exception ex)
+                    catch (Exception ex)
                     {
                         response.StatusCode = (int)HttpStatusCode.BadRequest;
                         message = $"Time zone Conversion error,  {ex.Message}";
-                         response.StatusDescription = message;
+                        response.StatusDescription = message;
                         WriteStringResponse(response, message);
                         return;
                     }
@@ -421,10 +500,10 @@ public class ApiRequestHandler
     /// <param name="message"></param>
     protected internal void WriteStringResponse(HttpListenerResponse response, string message)
     {
-         byte[] buffer = Encoding.UTF8.GetBytes(message);
-            response.ContentType = "text/plain";
-            response.ContentLength64 = buffer.Length;
-            response.OutputStream.Write(buffer, 0, buffer.Length);
+        byte[] buffer = Encoding.UTF8.GetBytes(message);
+        response.ContentType = "text/plain";
+        response.ContentLength64 = buffer.Length;
+        response.OutputStream.Write(buffer, 0, buffer.Length);
     }
 }
     
