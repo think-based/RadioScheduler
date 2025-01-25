@@ -392,7 +392,6 @@ function formatDateTimeForInput(dateTime) {
 function submitNewTrigger() {
     const triggerEventName = $('#new-trigger-name').val();
     const triggerEventTime = $('#new-trigger-time').val();
-      const triggerEventTimeUtc = convertLocalTimeToUtc(triggerEventTime);
 
     if (!triggerEventName) {
           $('#new-trigger-name-error').show();
@@ -408,7 +407,7 @@ function submitNewTrigger() {
         contentType: 'application/json',
        data: JSON.stringify({
             triggerEvent: triggerEventName,
-            time: triggerEventTimeUtc
+            time: triggerEventTime
         }),
           success: function (result) {
            $('#new-trigger-modal').modal('hide');
@@ -430,14 +429,13 @@ function submitNewTrigger() {
 function submitEditedTrigger() {
     const triggerEventName = $('#edit-trigger-name').val();
     const triggerEventTime = $('#edit-trigger-time').val();
-     const triggerEventTimeUtc = convertLocalTimeToUtc(triggerEventTime);
      $.ajax({
         url: '/api/triggers',
         type: 'PUT',
         contentType: 'application/json',
          data: JSON.stringify({
             triggerEvent: triggerEventName,
-            time: triggerEventTimeUtc
+            time: triggerEventTime
         }),
         success: function (result) {
              $('#edit-trigger-modal').modal('hide');

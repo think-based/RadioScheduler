@@ -274,44 +274,9 @@ public class ApiRequestHandler
             if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
             {
                 DateTime parsedTime;
-                if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+                if (DateTime.TryParse(data.time.ToString(), out parsedTime))
                 {
-                    if (parsedTime.Kind != DateTimeKind.Utc)
-                    {
-                        parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local); // If not already local, then set it local
-                    }
-
-                    try
-                    {
-                        triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
-                    }
-                    catch (Exception ex)
-                    {
-                        response.StatusCode = (int)HttpStatusCode.BadRequest;
-                        message = $"Time zone Conversion error,  {ex.Message}";
-                        response.StatusDescription = message;
-                        WriteStringResponse(response, message);
-                        return;
-                    }
-
-                }
-                else if (DateTime.TryParse(data.time.ToString(), out parsedTime))
-                {
-                    parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local);
-
-                    try
-                    {
-                        triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
-                    }
-                    catch (Exception ex)
-                    {
-                        response.StatusCode = (int)HttpStatusCode.BadRequest;
-                        message = $"Time zone Conversion error,  {ex.Message}";
-                        response.StatusDescription = message;
-                        WriteStringResponse(response, message);
-                        return;
-                    }
-
+                    triggerTime = parsedTime;
                 }
                 else
                 {
@@ -379,41 +344,9 @@ public class ApiRequestHandler
             if (data.time != null && !string.IsNullOrEmpty(data.time.ToString()))
             {
                 DateTime parsedTime;
-                if (DateTime.TryParse(data.time.ToString(), null, System.Globalization.DateTimeStyles.AssumeUniversal, out parsedTime))
+                if (DateTime.TryParse(data.time.ToString(), out parsedTime))
                 {
-                    if (parsedTime.Kind != DateTimeKind.Utc)
-                    {
-                        parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local); // If not already local, then set it local
-                    }
-                    try
-                    {
-                        triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
-                    }
-                    catch (Exception ex)
-                    {
-                        response.StatusCode = (int)HttpStatusCode.BadRequest;
-                        message = $"Time zone Conversion error,  {ex.Message}";
-                        response.StatusDescription = message;
-                        WriteStringResponse(response, message);
-                        return;
-                    }
-                }
-                else if (DateTime.TryParse(data.time.ToString(), out parsedTime))
-                {
-                    parsedTime = DateTime.SpecifyKind(parsedTime, DateTimeKind.Local);
-
-                    try
-                    {
-                        triggerTime = CalendarHelper.ConvertToLocalTimeZone(parsedTime, Settings.Region);
-                    }
-                    catch (Exception ex)
-                    {
-                        response.StatusCode = (int)HttpStatusCode.BadRequest;
-                        message = $"Time zone Conversion error,  {ex.Message}";
-                        response.StatusDescription = message;
-                        WriteStringResponse(response, message);
-                        return;
-                    }
+                    triggerTime = parsedTime;
                 }
                 else
                 {
