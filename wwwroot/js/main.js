@@ -205,18 +205,22 @@ function showPlayList(scheduleItemId) {
                  // Show the playlist modal
                  $('#playlist-modal').modal('show');
 
+                 let table = '<table class="table">';
+                    table += '<thead><tr><th>Path</th><th>Duration</th></tr></thead>';
+                    table += '<tbody>';
+
                 if(data && data.length>0) {
                    data.forEach((playlistItem,index )=> {
-                        const listItem = `<li class="list-group-item">
-                                                ${playlistItem.Path}  ${formatDuration(playlistItem.Duration)}
-                                            </li>`;
-                        playlistItemsBody.append(listItem);
+
+                        table += `<tr><td>${playlistItem.Path}</td><td>${formatDuration(playlistItem.Duration)}</td></tr>`;
                    });
 
                }
               else {
-                   playlistItemsBody.append(`<li class="list-group-item" >No items found in playlist</li>`);
+                   table += `<tr><td colspan="2">No items found in playlist</td></tr>`;
                }
+                table += '</tbody></table>';
+                 playlistItemsBody.append(table);
         })
         .fail(function (error) {
             showError(`Error fetching playlist for  "${scheduleItemId}".`);
@@ -356,8 +360,8 @@ function editTrigger(triggerEventName) {
  * Opens the new trigger modal
  */
 function openNewTriggerModal() {
-	const now = new Date();
-	//now.setTime(now.getTime() - applicationTimeZone * 60000);
+    const now = new Date();
+    //now.setTime(now.getTime() - applicationTimeZone * 60000);
     const year = String(now.getFullYear());
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
