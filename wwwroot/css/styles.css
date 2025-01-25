@@ -1,4 +1,4 @@
-/* Be Naame Khoda */
+      /* Be Naame Khoda */
 /* FileName: wwwroot/css/styles.css */
 
 /* Ensure proper spacing for the content */
@@ -118,3 +118,9 @@
 .sidebar .nav li a:hover {
     background-color: rgba(255, 255, 255, 0.1); /* Add hover effect to sidebar links */
 }
+
+ /* highlight playing schedule item */
+.table-primary {
+    background-color: #cce5ff; /* Light blue background */
+ }
+    
