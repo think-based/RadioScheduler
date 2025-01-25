@@ -168,7 +168,7 @@ public class ApiRequestHandler
                 return;
             }
 
-            var responseData = scheduleItem.PlayList.Select(item => new { Path = item.Path }).ToList();
+            var responseData = scheduleItem.PlayList.Select(item => new { Path = item.Path, Duration = item.Duration }).ToList();
 
             string jsonResponse = JsonConvert.SerializeObject(responseData);
             byte[] buffer = Encoding.UTF8.GetBytes(jsonResponse);
