@@ -21,10 +21,11 @@ public class Scheduler
         _scheduleCalculatorFactory = scheduleCalculatorFactory;
         _checkTimer = new Timer(1000);
         _checkTimer.Elapsed += OnCheckTimerElapsed;
-        _checkTimer.AutoReset = true;
+        _checkTimer.AutoReset = false;
         _checkTimer.Enabled = true;
 
         _configManager.ConfigReloaded += OnConfigReloaded;
+        _audioPlayer.PlaylistFinished += OnPlaylistFinished;
          // Subscribe to the TriggersChanged event
         ActiveTriggers.TriggersChanged += OnTriggersChanged;
     }
@@ -39,9 +40,14 @@ public class Scheduler
     private void OnTriggersChanged()
     {
         Logger.LogMessage("Triggers changed, checking schedule items.");
+        _configManager.ReloadScheduleConfig();
+        //CheckScheduleItems();
+    }
+    private void OnPlaylistFinished(ScheduleItem scheduleItem)
+    {
+        _configManager.ReloadScheduleItem(scheduleItem.ItemId);
         CheckScheduleItems();
     }
-
     private void OnCheckTimerElapsed(object sender, ElapsedEventArgs e)
     {
         CheckScheduleItems();
@@ -56,6 +62,21 @@ public class Scheduler
         {
             ProcessScheduleItem(item, convertedNow);
         }
+        ScheduleItem earliestScheduleItem = GetEarliestScheduleItem();
+        if (earliestScheduleItem != null && earliestScheduleItem.NextOccurrence > CalendarHelper.Now())
+        {
+            TimeSpan timeToNext = earliestScheduleItem.NextOccurrence - CalendarHelper.Now();
+
+            // If the time is negative, do not change timer interval, use default 1000.
+            if (timeToNext.TotalMilliseconds > 0)
+            {
+                _checkTimer.Interval = timeToNext.TotalMilliseconds;
+                _checkTimer.Start();
+                return;
+            }
+        }
+        _checkTimer.Interval = 1000; //Set the default value for the timer interval
+        _checkTimer.Start();
     }
     private void ProcessScheduleItem(ScheduleItem item, DateTime now)
     {
@@ -131,25 +152,28 @@ public class Scheduler
              item.Status = ScheduleStatus.EventWaiting;
         }
     }
-      private (DateTime? triggerTime, string triggerName) GetSoonestTrigger(ScheduleItem item)
+    private (DateTime? triggerTime, string triggerName) GetSoonestTrigger(ScheduleItem item)
     {
-         DateTime? soonestTriggerTime = null;
+        DateTime? soonestTriggerTime = null;
         string soonestTriggerName = null;
+        DateTime now = CalendarHelper.Now();
 
-       foreach (var triggerName in item.Triggers)
+
+        foreach (var triggerName in item.Triggers)
         {
             var trigger = ActiveTriggers.GetTrigger(triggerName);
 
-            if (trigger.HasValue)
+            if (trigger.HasValue && trigger.Value.Time.HasValue)
             {
-                if (trigger.Value.Time.HasValue)
+                if (trigger.Value.Time > now)
                 {
-                     if (soonestTriggerTime == null || trigger.Value.Time < soonestTriggerTime)
-                      {
-                            soonestTriggerTime = trigger.Value.Time;
-                             soonestTriggerName = triggerName;
-                     }
-                  }
+                    if (soonestTriggerTime == null || trigger.Value.Time < soonestTriggerTime)
+                    {
+                        soonestTriggerTime = trigger.Value.Time;
+                        soonestTriggerName = triggerName;
+                    }
+                }
+
             }
         }
 

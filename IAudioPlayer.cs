@@ -1,7 +1,7 @@
-      //Be Naame Khoda
+//Be Naame Khoda
 //FileName: IAudioPlayer.cs
 
-using System.Collections.Generic;
+using System;
 
 public interface IAudioPlayer
 {
@@ -9,5 +9,5 @@ public interface IAudioPlayer
     void Stop();
     bool IsPlaying { get; }
     ScheduleItem GetCurrentScheduledItem(); // Add this line
+    event Action<ScheduleItem> PlaylistFinished;
 }
-    
