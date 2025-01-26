@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using static Enums;
 using System.Linq;
+using System.Threading.Tasks;
 
 public class SchedulerConfigManager : ISchedulerConfigManager
 {
@@ -33,125 +34,149 @@ public class SchedulerConfigManager : ISchedulerConfigManager
 
     public void ReloadScheduleConfig()
     {
-        try
+         try
         {
-            if (File.Exists(_configFilePath))
-            {
-                string json = File.ReadAllText(_configFilePath);
-                var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
-
-                ScheduleItems.Clear();
-
-                foreach (var item in newItems)
-                {
-                    // Skip disabled items
-                    if (item.Disabled)
-                    {
-                        Logger.LogMessage($"Skipping disabled item: {item.Name} (ItemID: {item.ItemId})");
-                        continue;
-                    }
-                    try
-                    {
-                        ProcessScheduleItem(item);
-                        ScheduleItems.Add(item);
-                    }
-                    catch (ArgumentException ex)
-                    {
-                        Logger.LogMessage($"Error loading schedule item: {ex.Message}");
-                    }
-                    catch (JsonSerializationException ex)
-                    {
-                        Logger.LogMessage($"Error deserializing schedule item: {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogMessage($"Error general exception loading schedule item: {ex.Message}");
-                    }
-                }
-
-                Logger.LogMessage($"Loaded {ScheduleItems.Count} items from {_configFilePath}.");
-                ConfigReloaded?.Invoke();
-            }
-            else
+             if (!File.Exists(_configFilePath))
             {
                 Logger.LogMessage($"Config file not found: {_configFilePath}");
+                 ScheduleItems.Clear(); // Ensure the list is clear if the file doesn't exist.
+                 ConfigReloaded?.Invoke();
+                 return;
             }
+
+            string json = File.ReadAllText(_configFilePath);
+            var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
+
+             ScheduleItems.Clear();
+
+             if (newItems == null || !newItems.Any())
+                {
+                     Logger.LogMessage($"No items found in {_configFilePath}.");
+                     ConfigReloaded?.Invoke();
+                     return;
+               }
+
+            foreach (var item in newItems)
+            {
+                // Skip disabled items
+                if (item.Disabled)
+                {
+                    Logger.LogMessage($"Skipping disabled item: {item.Name} (ItemID: {item.ItemId})");
+                    continue;
+                }
+                try
+                {
+                    ProcessScheduleItem(item);
+                    ScheduleItems.Add(item);
+                }
+                catch (ArgumentException ex)
+                {
+                    Logger.LogMessage($"Error loading schedule item: {ex.Message} (ItemID: {item.ItemId})");
+                }
+                  catch (JsonSerializationException ex)
+                {
+                    Logger.LogMessage($"Error deserializing schedule item: {ex.Message} (ItemID: {item.ItemId})");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogMessage($"Error general exception loading schedule item: {ex.Message} (ItemID: {item.ItemId})");
+                }
+            }
+
+            Logger.LogMessage($"Loaded {ScheduleItems.Count} items from {_configFilePath}.");
+           ConfigReloaded?.Invoke();
+
+        }
+        catch (FileNotFoundException ex)
+        {
+            Logger.LogMessage($"Configuration file not found: {ex.Message}");
+             ScheduleItems.Clear(); // Ensure the list is clear if the file doesn't exist.
+              ConfigReloaded?.Invoke();
+         }
+          catch(JsonSerializationException ex)
+        {
+             Logger.LogMessage($"Error deserializing the configuration file: {ex.Message}");
+              ScheduleItems.Clear();
+               ConfigReloaded?.Invoke();
         }
         catch (Exception ex)
         {
             Logger.LogMessage($"Error reloading schedule config: {ex.Message}");
         }
+
     }
 
     public void ReloadScheduleItem(int itemId)
     {
-        int existingItemIndex = -1; // Declare here, outside of the inner try
-        try
+        int existingItemIndex = -1;
+          try
         {
-            if (File.Exists(_configFilePath))
-            {
-                string json = File.ReadAllText(_configFilePath);
-                var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
-
-                var newItem = newItems.FirstOrDefault(i => i.ItemId == itemId);
-
-                if (newItem != null)
-                {
-                    try
-                    {
-                        // Skip disabled items
-                         if (newItem.Disabled)
-                         {
-                            Logger.LogMessage($"Skipping disabled item: {newItem.Name} (ItemID: {newItem.ItemId})");
-                             existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
-                            if (existingItemIndex >= 0)
-                            {
-                              ScheduleItems.RemoveAt(existingItemIndex);
-                            }
-                           ConfigReloaded?.Invoke();
-                           return;
-                         }
-
-
-                        ProcessScheduleItem(newItem);
-
-                         existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
-
-                        if (existingItemIndex >= 0)
-                        {
-                            ScheduleItems[existingItemIndex] = newItem;
-                            Logger.LogMessage($"Reloaded item with ItemId: {itemId}");
-                        }
-                        else
-                        {
-                             ScheduleItems.Add(newItem);
-                             Logger.LogMessage($"Added new item with ItemId: {itemId}");
-                        }
-
-                         ConfigReloaded?.Invoke();
-                    }
-                    catch (ArgumentException ex)
-                    {
-                        Logger.LogMessage($"Error loading schedule item: {ex.Message}");
-                    }
-                    catch (JsonSerializationException ex)
-                    {
-                        Logger.LogMessage($"Error deserializing schedule item: {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogMessage($"Error processing schedule item: {ex.Message}");
-                    }
-                }
-                 else
-                {
-                    Logger.LogMessage($"Item with ItemId {itemId} not found in config file.");
-                }
-            }
-            else
+             if (!File.Exists(_configFilePath))
             {
                 Logger.LogMessage($"Config file not found: {_configFilePath}");
+                return;
             }
+
+            string json = File.ReadAllText(_configFilePath);
+            var newItems = JsonConvert.DeserializeObject<List<ScheduleItem>>(json);
+
+            var newItem = newItems?.FirstOrDefault(i => i.ItemId == itemId);
+              if (newItem == null)
+              {
+                  Logger.LogMessage($"Item with ItemId {itemId} not found in config file.");
+                 return;
+               }
+            // Skip disabled items
+            if (newItem.Disabled)
+             {
+               Logger.LogMessage($"Skipping disabled item: {newItem.Name} (ItemID: {newItem.ItemId})");
+               existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
+                if (existingItemIndex >= 0)
+               {
+                  ScheduleItems.RemoveAt(existingItemIndex);
+               }
+                ConfigReloaded?.Invoke();
+                 return;
+              }
+            try
+            {
+               ProcessScheduleItem(newItem);
+
+               existingItemIndex = ScheduleItems.FindIndex(i => i.ItemId == itemId);
+
+              if (existingItemIndex >= 0)
+              {
+                ScheduleItems[existingItemIndex] = newItem;
+                 Logger.LogMessage($"Reloaded item with ItemId: {itemId}");
+              }
+              else
+               {
+                   ScheduleItems.Add(newItem);
+                  Logger.LogMessage($"Added new item with ItemId: {itemId}");
+               }
+
+                ConfigReloaded?.Invoke();
+            }
+              catch (ArgumentException ex)
+            {
+                 Logger.LogMessage($"Error loading schedule item: {ex.Message}");
+           }
+            catch (JsonSerializationException ex)
+           {
+               Logger.LogMessage($"Error deserializing schedule item: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+               Logger.LogMessage($"Error processing schedule item: {ex.Message}");
+           }
+        }
+         catch (FileNotFoundException ex)
+        {
+             Logger.LogMessage($"Configuration file not found: {ex.Message}");
+          }
+         catch(JsonSerializationException ex)
+        {
+             Logger.LogMessage($"Error deserializing the configuration file: {ex.Message}");
         }
         catch (Exception ex)
         {
@@ -166,9 +191,8 @@ public class SchedulerConfigManager : ISchedulerConfigManager
         if (newFileHash != _currentFileHash)
         {
             Logger.LogMessage("Config file changed, reloading configuration.");
-            ReloadScheduleConfig();
-            _currentFileHash = newFileHash;
-
+             ReloadScheduleConfig();
+           _currentFileHash = newFileHash;
         }
     }
 
@@ -182,9 +206,9 @@ public class SchedulerConfigManager : ISchedulerConfigManager
     public void ProcessScheduleItem(ScheduleItem item)
     {
         // Convert string values to enums with error handling
-        item.Type = Enums.ParseEnum<ScheduleType>(item.Type.ToString(), "ScheduleType");
-        item.CalendarType = Enums.ParseEnum<CalendarTypes>(item.CalendarType.ToString(), "CalendarTypes");
-        item.TriggerType = Enums.ParseEnum<TriggerTypes>(item.TriggerType.ToString(), "TriggerTypes");
+        item.Type = Enums.ParseEnum<ScheduleType>(item.Type.ToString(), nameof(ScheduleType));
+        item.CalendarType = Enums.ParseEnum<CalendarTypes>(item.CalendarType.ToString(), nameof(CalendarTypes));
+        item.TriggerType = Enums.ParseEnum<TriggerTypes>(item.TriggerType.ToString(), nameof(TriggerTypes));
          if (!item.Priority.HasValue)
         {
             item.Priority = Priority.Low;
@@ -199,7 +223,7 @@ public class SchedulerConfigManager : ISchedulerConfigManager
         item.CurrentPlayingIndex = -1;
 
         item.Validate();
-        if (item.TriggerType == TriggerTypes.Delayed && !string.IsNullOrEmpty(item.DelayTime))
+          if (item.TriggerType == TriggerTypes.Delayed && !string.IsNullOrEmpty(item.DelayTime))
         {
              if (!TimeSpan.TryParse(item.DelayTime, out _))
             {
@@ -208,66 +232,77 @@ public class SchedulerConfigManager : ISchedulerConfigManager
             }
 
         }
-
+          if(item.Triggers == null)
+         {
+             item.Triggers = new List<string>();
+         }
 
         item.PlayList.Clear();
+
          foreach (var filePathItem in item.FilePaths)
         {
-            if (!string.IsNullOrEmpty(filePathItem.Text))
+             if (!string.IsNullOrEmpty(filePathItem.Text))
             {
                  item.PlayList.Add(new ScheduleItem.PlayListItem {Path = $"TTS:{filePathItem.Text}"});
             }
-             else if (File.Exists(filePathItem.Path))
+            else if (File.Exists(filePathItem.Path))
             {
                 item.PlayList.Add(new ScheduleItem.PlayListItem {Path = filePathItem.Path});
             }
-           else if (Directory.Exists(filePathItem.Path))
+             else if (Directory.Exists(filePathItem.Path))
             {
-                var audioFiles = Directory.GetFiles(filePathItem.Path, "*.mp3").OrderBy(f => f).ToList();
-                  if(audioFiles.Count == 0)
-                    {
-                        Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and schedule item '{item.Name}'");
-                    }
-                if (filePathItem.FolderPlayMode == "Random")
-                {
-                     if(audioFiles.Any())
-                     {
-                        var random = new Random();
-                        //Ensure using forward slashes
-                       item.PlayList.Add(new ScheduleItem.PlayListItem {Path =  audioFiles[random.Next(audioFiles.Count)].Replace('\\', '/')});
-                     }
+                ProcessFolder(item, filePathItem);
+            }
+        }
+        item.CalculateIndividualItemDuration();
+        item.TotalDuration = item.CalculateTotalDuration();
+    }
+    private void ProcessFolder(ScheduleItem item, FilePathItem filePathItem)
+    {
+       try
+        {
+            var audioFiles = Directory.EnumerateFiles(filePathItem.Path, "*.mp3")
+                .OrderBy(f => f)
+                .ToList();
 
+                if (audioFiles.Count == 0)
+                {
+                   Logger.LogMessage($"No audio files found for folder '{filePathItem.Path}' and schedule item '{item.Name}'");
+                   return;
                 }
-               else if (filePathItem.FolderPlayMode == "Que")
-                {
-                      if (audioFiles.Count > 0)
+
+            if (filePathItem.FolderPlayMode == "Random")
+            {
+                 var random = new Random();
+                  var randomFile = audioFiles[random.Next(audioFiles.Count)].Replace('\\', '/');
+                  item.PlayList.Add(new ScheduleItem.PlayListItem { Path = randomFile });
+            }
+            else if (filePathItem.FolderPlayMode == "Que")
+            {
+                    int lastPlayedIndex = -1;
+
+                    if (!string.IsNullOrEmpty(filePathItem.LastPlayedFile))
                     {
-                        int lastPlayedIndex = -1;
-
-                        if (!string.IsNullOrEmpty(filePathItem.LastPlayedFile))
-                        {
-                            lastPlayedIndex = audioFiles.IndexOf(filePathItem.LastPlayedFile);
-                        }
-                        int nextIndex = (lastPlayedIndex + 1) % audioFiles.Count;
-
-                        //Ensure using forward slashes
-                        item.PlayList.Add(new ScheduleItem.PlayListItem {Path = audioFiles[nextIndex].Replace('\\', '/')});
-                          filePathItem.LastPlayedFile = audioFiles[nextIndex];
-                     }
-
-                }
-                 else
-                {
-                    foreach (var audioFile in audioFiles)
-                    {
-                         //Ensure using forward slashes
-                         item.PlayList.Add(new ScheduleItem.PlayListItem {Path = audioFile.Replace('\\', '/')});
+                        lastPlayedIndex = audioFiles.IndexOf(filePathItem.LastPlayedFile);
                     }
+                    int nextIndex = (lastPlayedIndex + 1) % audioFiles.Count;
+
+                    // Ensure using forward slashes
+                    item.PlayList.Add(new ScheduleItem.PlayListItem { Path = audioFiles[nextIndex].Replace('\\', '/') });
+                    filePathItem.LastPlayedFile = audioFiles[nextIndex];
+            }
+            else
+           {
+                foreach (var audioFile in audioFiles)
+                 {
+                    item.PlayList.Add(new ScheduleItem.PlayListItem {Path = audioFile.Replace('\\', '/')});
                  }
             }
         }
-          item.CalculateIndividualItemDuration();
-           item.TotalDuration = item.CalculateTotalDuration();
+        catch (Exception ex)
+        {
+          Logger.LogMessage($"Error processing folder: {filePathItem.Path}, {ex.Message}");
+        }
     }
 }
     
