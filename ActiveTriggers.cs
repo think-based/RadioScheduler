@@ -13,28 +13,34 @@ public static class ActiveTriggers
         Manual
     }
     public static List<(string Event, DateTime? Time, TriggerSource Type)> Triggers { get; } = new List<(string Event, DateTime? Time, TriggerSource Type)>();
+
+    // Add an event that will be triggered when triggers change
+     public static event Action TriggersChanged;
+
     public static void AddTrigger(string eventName, DateTime? triggerTime, TriggerSource type)
     {
-        // Check if a trigger with the same name already exists
-        int existingIndex = Triggers.FindIndex(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
+          var existingTrigger = Triggers.FirstOrDefault(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
+          if (existingTrigger != default((string, DateTime?, TriggerSource)))
+          {
+             int index = Triggers.IndexOf(existingTrigger);
+            Triggers[index] = (eventName, triggerTime, type);
+           }
+          else
+           {
+              Triggers.Add((eventName, triggerTime, type));
+            }
 
-        if (existingIndex >= 0)
-        {
-            // Update the existing trigger with the new time
-            Triggers[existingIndex] = (eventName, triggerTime, type);
-        }
-        else
-        {
-            // Add the new trigger
-            Triggers.Add((eventName, triggerTime, type));
-        }
-
+            // Trigger the event when a trigger is added or updated
+           TriggersChanged?.Invoke();
     }
 
 
     public static void RemoveTrigger(string eventName)
     {
         Triggers.RemoveAll(t => t.Event == eventName);
+
+        // Trigger the event when a trigger is removed
+       TriggersChanged?.Invoke();
     }
     public static bool ContainsTrigger(string eventName)
     {
@@ -43,14 +49,13 @@ public static class ActiveTriggers
 
     public static (string Event, DateTime? Time, TriggerSource Type)? GetTrigger(string eventName)
     {
-         var foundTrigger = Triggers.FirstOrDefault(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
-           if(foundTrigger.Equals(default((string, DateTime?, TriggerSource))))
-              return null;
-          return foundTrigger;
+        return Triggers.FirstOrDefault(t => t.Event.Equals(eventName, StringComparison.OrdinalIgnoreCase));
     }
     public static void ClearAll()
     {
         Triggers.Clear();
+        // Trigger the event when all triggers are cleared
+         TriggersChanged?.Invoke();
     }
 }
 public class ActiveTriggersManager : ITriggerManager
