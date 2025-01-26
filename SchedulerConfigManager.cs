@@ -218,8 +218,14 @@ public class SchedulerConfigManager : ISchedulerConfigManager
             item.Priority = Priority.Low;
              Logger.LogMessage($"Priority {item.Priority.Value} from ItemId '{item.ItemId}' is invalid. Setting it to Low");
         }
-
-        item.Status = ScheduleStatus.TimeWaiting;
+        if (item.Type == ScheduleType.NonPeriodic)
+        {
+            item.Status = ScheduleStatus.EventWaiting;
+        }
+        else
+        {
+            item.Status = ScheduleStatus.TimeWaiting;
+        }
         item.CurrentPlayingIndex = -1;
 
         item.Validate();
