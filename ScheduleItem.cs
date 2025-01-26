@@ -8,6 +8,7 @@ using System.IO;
 using NAudio.Wave;
 using System.Speech.Synthesis;
 using System.Linq;
+
 using static Enums;
 
 public class ScheduleItem
@@ -41,7 +42,11 @@ public class ScheduleItem
     public ScheduleStatus Status { get; set; }
     public DateTime? LastPlayTime { get; set; }
     public DateTime? TriggerTime { get; set; }
+    
+    // New property to store the last trigger name
+    public string LastTriggerName { get; set; }
     public Enums.Priority? Priority { get; set; }
+
 
     // Add the EndTime property
     public DateTime EndTime
@@ -64,7 +69,7 @@ public class ScheduleItem
 
     public void Validate()
     {
-        if (Type == ScheduleType.Periodic && (Triggers != null && Triggers.Count > 0) )
+         if (Type == ScheduleType.Periodic && (Triggers != null && Triggers.Count > 0) )
         {
             throw new ArgumentException("Triggers should not be set for Periodic items.");
         }
@@ -100,7 +105,7 @@ public class ScheduleItem
             filePathItem.Validate();
         }
     }
-     internal void CalculateIndividualItemDuration()
+    internal void CalculateIndividualItemDuration()
     {
         var ttsEngine = new SpeechSynthesizer();
         var tempPlaylist = new List<PlayListItem>();
@@ -133,14 +138,15 @@ public class ScheduleItem
          ttsEngine.Dispose();
      }
 
-    internal TimeSpan CalculateTotalDuration()
-    {
-        return TimeSpan.FromMilliseconds(this.PlayList.Sum(item => item.Duration));
-    }
 
-     private TimeSpan CalculateTtsDuration(string text, SpeechSynthesizer ttsEngine)
+     internal TimeSpan CalculateTotalDuration()
+     {
+         return TimeSpan.FromMilliseconds(this.PlayList.Sum(item => item.Duration));
+     }
+
+    private TimeSpan CalculateTtsDuration(string text, SpeechSynthesizer ttsEngine)
     {
-        try
+         try
         {
             var prompt = new PromptBuilder();
             prompt.AppendText(text);
@@ -148,8 +154,7 @@ public class ScheduleItem
             var ttsStream = new MemoryStream();
             ttsEngine.SetOutputToWaveStream(ttsStream);
             ttsEngine.Speak(prompt);
-
-            ttsStream.Position = 0;
+             ttsStream.Position = 0;
             using (var reader = new WaveFileReader(ttsStream))
             {
                 return reader.TotalTime;
