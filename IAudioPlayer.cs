@@ -2,7 +2,6 @@
 //FileName: IAudioPlayer.cs
 
 using System.Collections.Generic;
-using RadioScheduler.Entities;
 
 public interface IAudioPlayer
 {

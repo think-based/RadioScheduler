@@ -1,7 +1,6 @@
       // Be Naame Khoda
 // FileName: InstantPlayManager.cs
 
-using RadioScheduler.Entities;
 using System;
 using System.Collections.Generic;
 using System.IO;
