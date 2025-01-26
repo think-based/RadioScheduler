@@ -41,7 +41,6 @@ public class Scheduler
     {
         Logger.LogMessage("Triggers changed, checking schedule items.");
         _configManager.ReloadScheduleConfig();
-        //CheckScheduleItems();
     }
     private void OnPlaylistFinished(ScheduleItem scheduleItem)
     {
