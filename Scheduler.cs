@@ -1,4 +1,4 @@
-//Be Naame Khoda
+      //Be Naame Khoda
 //FileName: Scheduler.cs
 using System;
 using System.Collections.Generic;
@@ -49,23 +49,22 @@ public class Scheduler
             ProcessScheduleItem(item, convertedNow);
         }
     }
-
-    private void ProcessScheduleItem(ScheduleItem item, DateTime now)
+   private void ProcessScheduleItem(ScheduleItem item, DateTime now)
     {
         if (item.Status == ScheduleStatus.Canceled)
             return;
 
         DateTime currentDateTimeTruncated = TruncateDateTimeToSeconds(now);
         DateTime nextOccurrenceTruncated = TruncateDateTimeToSeconds(item.NextOccurrence);
+
         if (item.Type == ScheduleType.Periodic)
         {
             ProcessPeriodicItem(item, now, currentDateTimeTruncated, nextOccurrenceTruncated);
         }
-        else if (item.Type == ScheduleType.NonPeriodic)
+         else if (item.Type == ScheduleType.NonPeriodic)
         {
             ProcessNonPeriodicItem(item, now, currentDateTimeTruncated, nextOccurrenceTruncated);
         }
-
     }
     private void ProcessPeriodicItem(ScheduleItem item, DateTime now, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated)
     {
@@ -87,50 +86,63 @@ public class Scheduler
     }
     private void ProcessNonPeriodicItem(ScheduleItem item, DateTime now, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated)
     {
-        var trigger = ActiveTriggers.GetTrigger(item.Trigger);
 
-        if (nextOccurrenceTruncated == currentDateTimeTruncated)
+         if (nextOccurrenceTruncated == currentDateTimeTruncated)
         {
             HandleScheduledPlayback(item, now);
             return;
         }
 
-        if (nextOccurrenceTruncated <= currentDateTimeTruncated || !trigger.HasValue || (trigger.HasValue && item.TriggerTime != trigger.Value.Time))
-        {
-            var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
-            if (calculator.IsNonPeriodicTriggerValid(item, now))
-                UpdateNonPeriodicNextOccurrence(item, currentDateTimeTruncated, nextOccurrenceTruncated, now);
-            else
+
+         bool anyTriggerValid = false;
+         if(item.Triggers != null && item.Triggers.Any()) {
+            foreach(var triggerName in item.Triggers)
             {
+                var trigger = ActiveTriggers.GetTrigger(triggerName);
+                if(trigger.HasValue)
+                {
+                    anyTriggerValid = true;
+                     if(nextOccurrenceTruncated <= currentDateTimeTruncated  ||  item.TriggerTime != trigger.Value.Time)
+                    {
+                           var calculator = _scheduleCalculatorFactory.CreateCalculator(item.CalendarType);
+                            if (calculator.IsNonPeriodicTriggerValid(item, now))
+                               UpdateNonPeriodicNextOccurrence(item, currentDateTimeTruncated, nextOccurrenceTruncated, now, trigger.Value.Time, triggerName);
+                           else
+                            {
+                               item.Status = ScheduleStatus.EventWaiting;
+                            }
+                         return;
+                      }
+                }
+           }
+         }
+
+          if(!anyTriggerValid) {
                 item.Status = ScheduleStatus.EventWaiting;
-            }
-            return;
-        }
-
-
-        item.Status = ScheduleStatus.EventWaiting;
+          }
+       return;
     }
     private void HandleScheduledPlayback(ScheduleItem item, DateTime now)
     {
         ScheduleItem currentPlayingItem = _audioPlayer.GetCurrentScheduledItem();
 
-        if (currentPlayingItem != null)
+         if (currentPlayingItem != null)
         {
             if (item.Priority >= currentPlayingItem.Priority)
             {
-                _audioPlayer.Stop();
-                Logger.LogMessage($"Conflict: Stopping {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) to play {item.Name} (Priority: {item.Priority})");
-                _audioPlayer.Play(item);
-                item.LastPlayTime = now;
+                 _audioPlayer.Stop();
+                 Logger.LogMessage($"Conflict: Stopping {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) to play {item.Name} (Priority: {item.Priority})");
+                 _audioPlayer.Play(item);
+                 item.LastPlayTime = now;
 
             }
-            else
+           else
             {
-                Logger.LogMessage($"Conflict: Ignoring {item.Name} (Priority: {item.Priority}) because {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) is playing and has higher priority.");
-                _configManager.ReloadScheduleItem(item.ItemId);
-                OnConflictOccurred(item);
+                 Logger.LogMessage($"Conflict: Ignoring {item.Name} (Priority: {item.Priority}) because {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) is playing and has higher priority.");
+                 _configManager.ReloadScheduleItem(item.ItemId);
+                  OnConflictOccurred(item);
                 return;
-            }
+             }
         }
         else
         {
@@ -141,54 +153,29 @@ public class Scheduler
             item.LastPlayTime = now;
         }
     }
-    private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now)
+     private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now, DateTime? triggerTime, string triggerName)
     {
-        var trigger = ActiveTriggers.GetTrigger(item.Trigger);
-        if (!trigger.HasValue)
+        if (!triggerTime.HasValue)
         {
             if (item.NextOccurrence >= now)
             {
                 item.NextOccurrence = DateTime.MinValue;
-                Logger.LogMessage($"Triger '{item.Trigger}' has gone away!");
+                 Logger.LogMessage($"Triger '{triggerName}' has gone away!");
             }
-            return;
+             return;
         }
-        if (item.TriggerTime != trigger.Value.Time)
+       if (item.TriggerTime != triggerTime)
         {
-            item.TriggerTime = trigger.Value.Time;
+            item.TriggerTime = triggerTime;
             if (item.TriggerType == TriggerTypes.Immediate)
             {
-                item.NextOccurrence = trigger.Value.Time.Value;
-            }
-            else if (item.TriggerType == TriggerTypes.Delayed)
-            {
-                if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
-                {
-                    item.NextOccurrence = trigger.Value.Time.Value.Add(delay);
-                }
-                else
-                {
-                    Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
-                    item.NextOccurrence = DateTime.MinValue;
-                }
-            }
-            else if (item.TriggerType == TriggerTypes.Timed)
-            {
-                item.NextOccurrence = trigger.Value.Time.Value.Add(-item.TotalDuration);
-            }
-
-        }
-        else
-        {
-             if (item.TriggerType == TriggerTypes.Immediate || item.TriggerType == TriggerTypes.Timed)
-            {
-                  item.NextOccurrence = trigger.Value.Time.Value;
+                item.NextOccurrence = triggerTime.Value;
             }
              else if (item.TriggerType == TriggerTypes.Delayed)
             {
                  if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
                 {
-                    item.NextOccurrence = trigger.Value.Time.Value.Add(delay);
+                    item.NextOccurrence = triggerTime.Value.Add(delay);
                 }
                  else
                 {
@@ -196,8 +183,32 @@ public class Scheduler
                     item.NextOccurrence = DateTime.MinValue;
                  }
            }
-        }
+            else if (item.TriggerType == TriggerTypes.Timed)
+            {
+                item.NextOccurrence = triggerTime.Value.Add(-item.TotalDuration);
+            }
 
+        }
+         else
+        {
+             if (item.TriggerType == TriggerTypes.Immediate || item.TriggerType == TriggerTypes.Timed)
+            {
+                  item.NextOccurrence = triggerTime.Value;
+            }
+             else if (item.TriggerType == TriggerTypes.Delayed)
+            {
+                  if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
+                  {
+                     item.NextOccurrence = triggerTime.Value.Add(delay);
+                  }
+                  else
+                 {
+                      Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
+                      item.NextOccurrence = DateTime.MinValue;
+                  }
+            }
+
+        }
     }
    private void OnConflictOccurred(object conflictData)
     {
@@ -217,39 +228,37 @@ public class Scheduler
     {
         return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second);
     }
-
      public List<ScheduleItem> GetScheduledItems()
     {
-        DateTime now = DateTime.Now;
-        DateTime convertedNow = CalendarHelper.ConvertToAppTimeZone(now);
+         DateTime now = DateTime.Now;
+         DateTime convertedNow = CalendarHelper.ConvertToAppTimeZone(now);
         // Get the list of scheduled items from the configuration
         var items = _configManager.ScheduleItems
-            .Where(item => item.EndTime >= convertedNow)
-            .OrderBy(item => item.NextOccurrence)
+             .Where(item => item.EndTime >= convertedNow)
+             .OrderBy(item => item.NextOccurrence)
             .Take(30)
-            .ToList();
+             .ToList();
            foreach(var item in items)
             {
                  item.TimeToPlay = CalculateTimeToPlay(item.NextOccurrence, convertedNow);
             }
 
            return items;
-
     }
     private List<ScheduleItem> GetDueScheduleItems(DateTime now)
     {
          return _configManager.ScheduleItems
-              .Where(item => TruncateDateTimeToSeconds(item.NextOccurrence) <= TruncateDateTimeToSeconds(now))
+             .Where(item => TruncateDateTimeToSeconds(item.NextOccurrence) <= TruncateDateTimeToSeconds(now))
             .ToList();
     }
     private string CalculateTimeToPlay(DateTime nextOccurrence , DateTime now)
     {
-          if (nextOccurrence == DateTime.MinValue)
+           if (nextOccurrence == DateTime.MinValue)
                return "N/A";
 
             var timeDiff = nextOccurrence - now;
 
-             if (timeDiff <= TimeSpan.Zero) {
+            if (timeDiff <= TimeSpan.Zero) {
                 return "Playing or Due";
             }
 
