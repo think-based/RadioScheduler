@@ -8,7 +8,6 @@ using System.IO;
 using NAudio.Wave;
 using System.Speech.Synthesis;
 using System.Linq;
-
 using static Enums;
 
 public class ScheduleItem
@@ -29,7 +28,10 @@ public class ScheduleItem
     public string DayOfMonth { get; set; }
     public string Month { get; set; }
     public string DayOfWeek { get; set; }
-    public string Trigger { get; set; }
+
+    //Replace Trigger property with Triggers
+    public List<string> Triggers { get; set; }
+
     public CalendarTypes CalendarType { get; set; }
     public string Region { get; set; }
     public TriggerTypes TriggerType { get; set; }
@@ -62,9 +64,9 @@ public class ScheduleItem
 
     public void Validate()
     {
-        if (Type == ScheduleType.Periodic && Trigger != null)
+        if (Type == ScheduleType.Periodic && (Triggers != null && Triggers.Count > 0) )
         {
-            throw new ArgumentException("Trigger should not be set for Periodic items.");
+            throw new ArgumentException("Triggers should not be set for Periodic items.");
         }
 
         if (Type == ScheduleType.NonPeriodic && (Second != null || Minute != null || Hour != null ))
@@ -98,7 +100,7 @@ public class ScheduleItem
             filePathItem.Validate();
         }
     }
-    internal void CalculateIndividualItemDuration()
+     internal void CalculateIndividualItemDuration()
     {
         var ttsEngine = new SpeechSynthesizer();
         var tempPlaylist = new List<PlayListItem>();
@@ -131,15 +133,9 @@ public class ScheduleItem
          ttsEngine.Dispose();
      }
 
-
-     internal TimeSpan CalculateTotalDuration()
+    internal TimeSpan CalculateTotalDuration()
     {
-        TimeSpan totalDuration = TimeSpan.Zero;
-        foreach (var item in this.PlayList)
-        {
-            totalDuration += TimeSpan.FromMilliseconds(item.Duration);
-        }
-        return totalDuration;
+        return TimeSpan.FromMilliseconds(this.PlayList.Sum(item => item.Duration));
     }
 
      private TimeSpan CalculateTtsDuration(string text, SpeechSynthesizer ttsEngine)
