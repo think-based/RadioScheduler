@@ -215,62 +215,52 @@ public class Scheduler
     }
     private void UpdateNonPeriodicNextOccurrence(ScheduleItem item, DateTime currentDateTimeTruncated, DateTime nextOccurrenceTruncated, DateTime now, DateTime? triggerTime, string triggerName)
     {
-         if (!triggerTime.HasValue)
+        if (!triggerTime.HasValue)
         {
-             if (item.NextOccurrence >= now)
+            if (item.NextOccurrence >= now)
             {
                 item.NextOccurrence = DateTime.MinValue;
-               Logger.LogMessage($"Triger '{triggerName}' has gone away!");
-             }
-              return;
+                Logger.LogMessage($"Triger '{triggerName}' has gone away!");
+            }
+            return;
         }
-       if (item.TriggerTime != triggerTime)
-       {
-          item.TriggerTime = triggerTime;
-           if (item.TriggerType == TriggerTypes.Immediate)
-            {
-                 item.NextOccurrence = triggerTime.Value;
-             }
-             else if (item.TriggerType == TriggerTypes.Delayed)
-            {
+        if (item.TriggerTime != triggerTime)
+        {
+            item.TriggerTime = triggerTime;
+            item.NextOccurrence = CalculateNextOccurrence(item, triggerTime.Value);
+        }
+        /*
+        else
+        {
+            item.NextOccurrence = CalculateNextOccurrence(item, triggerTime.Value);
+        }*/
+        //Set the last trigger name in UpdateNonPeriodicNextOccurrence so we can see the trigger that caused the update.
+        item.LastTriggerName = triggerName;
+    }
+    private DateTime CalculateNextOccurrence(ScheduleItem item, DateTime triggerTime)
+    {
+        switch (item.TriggerType)
+        {
+            case TriggerTypes.Immediate:
+                return triggerTime;
+            case TriggerTypes.Delayed:
                 if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
                 {
-                   item.NextOccurrence = triggerTime.Value.Add(delay);
+                    return triggerTime.Add(delay);
                 }
                 else
                 {
-                     Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
-                    item.NextOccurrence = DateTime.MinValue;
-                 }
-           }
-            else if (item.TriggerType == TriggerTypes.Timed)
-            {
-                 item.NextOccurrence = triggerTime.Value.Add(-item.TotalDuration);
-           }
+                    Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
+                    return item.NextOccurrence;
+                }
+            case TriggerTypes.Timed:
+                TimeSpan playTime = TimeSpan.FromSeconds(Settings.TimedDelay) + item.TotalDuration;
+                return triggerTime.Add(-playTime);
+            default:
+                return item.NextOccurrence;
         }
-        else
-        {
-             if (item.TriggerType == TriggerTypes.Immediate || item.TriggerType == TriggerTypes.Timed)
-            {
-                 item.NextOccurrence = triggerTime.Value;
-            }
-             else if (item.TriggerType == TriggerTypes.Delayed)
-             {
-                 if (TimeSpan.TryParse(item.DelayTime, out TimeSpan delay))
-                 {
-                     item.NextOccurrence = triggerTime.Value.Add(delay);
-                 }
-                 else
-                 {
-                       Logger.LogMessage($"Invalid DelayTime '{item.DelayTime}' for  schedule item  '{item.Name}'.");
-                     item.NextOccurrence = DateTime.MinValue;
-                  }
-            }
-        }
-         //Set the last trigger name in UpdateNonPeriodicNextOccurrence so we can see the trigger that caused the update.
-          item.LastTriggerName = triggerName;
     }
-   private void OnConflictOccurred(object conflictData)
+    private void OnConflictOccurred(object conflictData)
     {
         if (conflictData is ScheduleItem item)
         {

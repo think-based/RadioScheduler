@@ -18,12 +18,14 @@ public static class Settings
     public static int TimerIntervalInMinutes { get; set; }
     public static bool AmplifierEnabled { get; set; }
     public static string AmplifierApiUrl { get; set; }
-      private static double _fajrAngle;
+    private static double _fajrAngle;
     private static double _ishaAngle;
+
 
     public static double FajrAngle => _fajrAngle;
     public static double IshaAngle => _ishaAngle;
 
+    public static int TimedDelay = 1;
     public static void AutoSetAngles()
     {
         if (Math.Abs(Latitude) <= 30)

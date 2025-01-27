@@ -8,7 +8,6 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using static Enums;
 using System.Linq;
-using System.Threading.Tasks;
 
 public class SchedulerConfigManager : ISchedulerConfigManager
 {
