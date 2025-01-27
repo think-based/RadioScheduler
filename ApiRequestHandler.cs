@@ -216,7 +216,7 @@ public class ApiRequestHandler
             }
 
             int itemId = int.Parse(data.itemId.ToString());
-            _scheduler.ConfigManager.ReloadScheduleItem(itemId);
+            _scheduler.ConfigManager.ReloadScheduleItemById(itemId);
 
             response.StatusCode = (int)HttpStatusCode.OK;
             message = "Schedule item reloaded successfully.";

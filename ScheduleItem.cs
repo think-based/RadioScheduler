@@ -1,4 +1,4 @@
-      // Be Naame Khoda
+// Be Naame Khoda
 // FileName: ScheduleItem.cs
 
 using System;
@@ -19,6 +19,8 @@ public class ScheduleItem
         public double Duration { get; set; } // Duration in milliseconds
     }
     public int ItemId { get; set; }
+    public int ConfigId { get; set; }
+
     public string Name { get; set; }
     public ScheduleType Type { get; set; }
     public List<FilePathItem> FilePaths { get; set; }
@@ -41,7 +43,7 @@ public class ScheduleItem
     public ScheduleStatus Status { get; set; }
     public DateTime? LastPlayTime { get; set; }
     public DateTime? TriggerTime { get; set; }
-    
+
     // New property to store the last trigger name
     public string LastTriggerName { get; set; }
     public Enums.Priority? Priority { get; set; }
@@ -55,7 +57,7 @@ public class ScheduleItem
             return NextOccurrence.Add(TotalDuration);
         }
     }
-     // New internal property for the playlist
+    // New internal property for the playlist
     internal List<PlayListItem> PlayList { get; set; } = new List<PlayListItem>();
     // New internal property for current playing index in playlist for "Que"
     internal int CurrentPlayingIndex { get; set; } = -1;
@@ -65,15 +67,48 @@ public class ScheduleItem
     // New Property for Disable
     public bool Disabled { get; set; }
 
+    public static ScheduleItem Clone(ScheduleItem item)
+    {
+        if (item == null)
+        {
+            throw new ArgumentNullException(nameof(item), "ScheduleItem cannot be null");
+        }
+        return new ScheduleItem
+        {
+            ItemId = 0, //Set the id to 0 for new items, it will be updated in SchedulerConfigManager
+            Name = item.Name,
+            Type = item.Type,
+            FilePaths = item.FilePaths?.Select(fp => new FilePathItem
+            {
+                Path = fp.Path,
+                FolderPlayMode = fp.FolderPlayMode,
+                Text = fp.Text,
+                LastPlayedFile = fp.LastPlayedFile
+            }).ToList(),
+            Second = item.Second,
+            Minute = item.Minute,
+            Hour = item.Hour,
+            DayOfMonth = item.DayOfMonth,
+            Month = item.Month,
+            DayOfWeek = item.DayOfWeek,
+            Triggers = new List<string>(), //Do not clone triggers
+            CalendarType = item.CalendarType,
+            Region = item.Region,
+            TriggerType = item.TriggerType,
+            DelayTime = item.DelayTime,
+            Priority = item.Priority,
+            TotalDuration = item.TotalDuration,
+        };
+    }
 
     public void Validate()
     {
-         if (Type == ScheduleType.Periodic && (Triggers != null && Triggers.Count > 0) )
+        if (Type == ScheduleType.Periodic && (Triggers != null && Triggers.Count > 0))
         {
             throw new ArgumentException("Triggers should not be set for Periodic items.");
         }
 
-        if (Type == ScheduleType.NonPeriodic && (Second != null || Minute != null || Hour != null ))
+        if (Type == ScheduleType.NonPeriodic && (Second != null || Minute != null || Hour != null))
         {
             throw new ArgumentException("Periodic fields (Second, Minute, Hour, DayOfMonth, Month, DayOfWeek) should not be set for NonPeriodic items.");
         }
@@ -108,44 +143,44 @@ public class ScheduleItem
     {
         var ttsEngine = new SpeechSynthesizer();
         var tempPlaylist = new List<PlayListItem>();
-         foreach (var playListItem in this.PlayList)
+        foreach (var playListItem in this.PlayList)
         {
-             if (playListItem.Path.StartsWith("TTS:"))
-             {
-                 string text = playListItem.Path.Substring(4);
-                 var duration = CalculateTtsDuration(text, ttsEngine);
-                  tempPlaylist.Add(new PlayListItem {Path = playListItem.Path , Duration = duration.TotalMilliseconds});
-             }
-             else if (File.Exists(playListItem.Path))
+            if (playListItem.Path.StartsWith("TTS:"))
             {
-                 try
+                string text = playListItem.Path.Substring(4);
+                var duration = CalculateTtsDuration(text, ttsEngine);
+                tempPlaylist.Add(new PlayListItem { Path = playListItem.Path, Duration = duration.TotalMilliseconds });
+            }
+            else if (File.Exists(playListItem.Path))
+            {
+                try
                 {
                     using (var reader = new AudioFileReader(playListItem.Path))
                     {
-                           tempPlaylist.Add(new PlayListItem {Path = playListItem.Path, Duration = reader.TotalTime.TotalMilliseconds});
+                        tempPlaylist.Add(new PlayListItem { Path = playListItem.Path, Duration = reader.TotalTime.TotalMilliseconds });
                     }
                 }
                 catch (Exception ex)
                 {
                     Logger.LogMessage($"Error calculating duration for file {playListItem.Path}: {ex.Message}");
-                     tempPlaylist.Add(new PlayListItem {Path = playListItem.Path, Duration = 0});
+                    tempPlaylist.Add(new PlayListItem { Path = playListItem.Path, Duration = 0 });
 
                 }
             }
         }
-         this.PlayList = tempPlaylist; // Assign the new playList that has duration information for each item
-         ttsEngine.Dispose();
-     }
+        this.PlayList = tempPlaylist; // Assign the new playList that has duration information for each item
+        ttsEngine.Dispose();
+    }
 
 
-     internal TimeSpan CalculateTotalDuration()
-     {
-         return TimeSpan.FromMilliseconds(this.PlayList.Sum(item => item.Duration));
-     }
+    internal TimeSpan CalculateTotalDuration()
+    {
+        return TimeSpan.FromMilliseconds(this.PlayList.Sum(item => item.Duration));
+    }
 
     private TimeSpan CalculateTtsDuration(string text, SpeechSynthesizer ttsEngine)
     {
-         try
+        try
         {
             var prompt = new PromptBuilder();
             prompt.AppendText(text);
@@ -153,7 +188,7 @@ public class ScheduleItem
             var ttsStream = new MemoryStream();
             ttsEngine.SetOutputToWaveStream(ttsStream);
             ttsEngine.Speak(prompt);
-             ttsStream.Position = 0;
+            ttsStream.Position = 0;
             using (var reader = new WaveFileReader(ttsStream))
             {
                 return reader.TotalTime;
@@ -166,4 +201,3 @@ public class ScheduleItem
         }
     }
 }
-    

@@ -40,11 +40,12 @@ public class Scheduler
     private void OnTriggersChanged()
     {
         Logger.LogMessage("Triggers changed, checking schedule items.");
-        _configManager.ReloadScheduleConfig();
+        CheckScheduleItems();
+        //_configManager.ReloadScheduleConfig();
     }
     private void OnPlaylistFinished(ScheduleItem scheduleItem)
     {
-        _configManager.ReloadScheduleItem(scheduleItem.ItemId);
+        _configManager.ReloadScheduleItem(scheduleItem.ConfigId);
         CheckScheduleItems();
     }
     private void OnCheckTimerElapsed(object sender, ElapsedEventArgs e)
@@ -197,7 +198,7 @@ public class Scheduler
             else
             {
                  Logger.LogMessage($"Conflict: Ignoring {item.Name} (Priority: {item.Priority}) because {currentPlayingItem.Name} (Priority: {currentPlayingItem.Priority}) is playing and has higher priority.");
-                 _configManager.ReloadScheduleItem(item.ItemId);
+                 _configManager.ReloadScheduleItemById(item.ItemId);
                   OnConflictOccurred(item);
                 return;
             }
@@ -227,7 +228,7 @@ public class Scheduler
         if (item.TriggerTime != triggerTime)
         {
             item.TriggerTime = triggerTime;
-            item.NextOccurrence = CalculateNextOccurrence(item, triggerTime.Value);
+            item.NextOccurrence = GetNonPeriodicNextOccurrence(item, triggerTime.Value);
         }
         /*
         else
@@ -237,7 +238,7 @@ public class Scheduler
         //Set the last trigger name in UpdateNonPeriodicNextOccurrence so we can see the trigger that caused the update.
         item.LastTriggerName = triggerName;
     }
-    private DateTime CalculateNextOccurrence(ScheduleItem item, DateTime triggerTime)
+    private DateTime GetNonPeriodicNextOccurrence(ScheduleItem item, DateTime triggerTime)
     {
         switch (item.TriggerType)
         {
